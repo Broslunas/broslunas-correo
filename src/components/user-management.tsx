@@ -51,7 +51,7 @@ export default function UserManagement() {
   const [success, setSuccess] = useState('');
 
   // Domain states
-  const [activeTab, setActiveTab] = useState<'users' | 'domains' | 'mailboxes'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'domains' | 'mailboxes' | 'invitations'>('users');
   const [domains, setDomains] = useState<AllowedDomain[]>([]);
   const [newDomain, setNewDomain] = useState('');
   const [domainsLoading, setDomainsLoading] = useState(false);
@@ -61,6 +61,16 @@ export default function UserManagement() {
   const [newMailboxEmail, setNewMailboxEmail] = useState('');
   const [newMailboxName, setNewMailboxName] = useState('');
   const [mailboxesLoading, setMailboxesLoading] = useState(false);
+
+  // Invitation states
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(false);
+  const [inviteRole, setInviteRole] = useState<'admin' | 'user'>('user');
+  const [inviteFullAccess, setInviteFullAccess] = useState(false);
+  const [inviteSelectedAddresses, setInviteSelectedAddresses] = useState<string[]>([]);
+  const [inviteRequire2FA, setInviteRequire2FA] = useState(false);
+  const [inviteDropdownOpen, setInviteDropdownOpen] = useState(false);
+  const [generatedInvite, setGeneratedInvite] = useState('');
 
   // Form states for new user
   const [newEmail, setNewEmail] = useState('');
@@ -278,7 +288,103 @@ export default function UserManagement() {
     fetchUsers();
     fetchDomains();
     fetchMailboxes();
+    fetchInvitations();
   }, []);
+
+  const fetchInvitations = async () => {
+    setInvitationsLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/invitations');
+      if (res.ok) {
+        const data = await res.json();
+        setInvitations(data.invitations || []);
+      } else {
+        const data = await res.json();
+        setError(data.error || 'No se pudo cargar la lista de invitaciones');
+      }
+    } catch (err) {
+      console.error('Error fetching invitations:', err);
+      setError('Error al comunicar con el servidor.');
+    } finally {
+      setInvitationsLoading(false);
+    }
+  };
+
+  const handleCreateInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setGeneratedInvite('');
+    setActionLoading(true);
+
+    const assignedAddresses = inviteFullAccess ? ['*'] : inviteSelectedAddresses;
+    if (assignedAddresses.length === 0) {
+      setError('Debes seleccionar al menos una cuenta de correo.');
+      setActionLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: inviteRole,
+          assignedAddresses,
+          require2FA: inviteRequire2FA
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const inviteLink = `${window.location.origin}/invite?token=${data.token}`;
+        setGeneratedInvite(inviteLink);
+        setSuccess('Enlace de invitación generado con éxito.');
+        setInviteSelectedAddresses([]);
+        setInviteFullAccess(false);
+        setInviteRequire2FA(false);
+        fetchInvitations();
+      } else {
+        setError(data.error || 'Error al generar la invitación');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error al conectar con el servidor.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteInvitation = async (id: string) => {
+    if (!confirm('¿Estás seguro de que quieres revocar este enlace de invitación?')) return;
+    setError('');
+    setSuccess('');
+    setActionLoading(true);
+
+    try {
+      const res = await fetch(`/api/admin/invitations?id=${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccess('Enlace de invitación revocado con éxito.');
+        fetchInvitations();
+      } else {
+        setError(data.error || 'Error al eliminar la invitación');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error al comunicar con el servidor.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    alert('¡Enlace de invitación copiado al portapapeles!');
+  };
 
   // Handle Add User submission
   const handleAddUser = async (e: React.FormEvent) => {
@@ -434,23 +540,39 @@ export default function UserManagement() {
           Administración de Accesos
         </h1>
         <button 
-          onClick={activeTab === 'users' ? fetchUsers : activeTab === 'domains' ? fetchDomains : fetchMailboxes}
+          onClick={
+            activeTab === 'users' 
+              ? fetchUsers 
+              : activeTab === 'domains' 
+              ? fetchDomains 
+              : activeTab === 'mailboxes' 
+              ? fetchMailboxes 
+              : fetchInvitations
+          }
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-900 border border-border/45 transition-all cursor-pointer"
           title="Refrescar lista"
         >
-          <RefreshCw className={`h-4 w-4 ${(activeTab === 'users' ? loading : activeTab === 'domains' ? domainsLoading : mailboxesLoading) ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${(
+            activeTab === 'users' 
+              ? loading 
+              : activeTab === 'domains' 
+              ? domainsLoading 
+              : activeTab === 'mailboxes' 
+              ? mailboxesLoading 
+              : invitationsLoading
+          ) ? 'animate-spin' : ''}`} />
         </button>
       </header>
 
       {/* Tab Selector */}
-      <div className="flex px-8 py-2 border-b border-border/40 bg-neutral-950/40 shrink-0 gap-4">
+      <div className="flex px-8 py-2 border-b border-border/40 bg-neutral-950/40 shrink-0 gap-4 overflow-x-auto">
         <button
           onClick={() => {
             setActiveTab('users');
             setError('');
             setSuccess('');
           }}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border ${
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 ${
             activeTab === 'users'
               ? 'bg-primary/10 border-primary/20 text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
@@ -464,7 +586,7 @@ export default function UserManagement() {
             setError('');
             setSuccess('');
           }}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border ${
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 ${
             activeTab === 'domains'
               ? 'bg-primary/10 border-primary/20 text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
@@ -478,13 +600,29 @@ export default function UserManagement() {
             setError('');
             setSuccess('');
           }}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border ${
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 ${
             activeTab === 'mailboxes'
               ? 'bg-primary/10 border-primary/20 text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
           }`}
         >
           Cuentas de Correo
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('invitations');
+            setError('');
+            setSuccess('');
+            setGeneratedInvite('');
+            fetchInvitations();
+          }}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 ${
+            activeTab === 'invitations'
+              ? 'bg-primary/10 border-primary/20 text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
+          }`}
+        >
+          Enlaces de Invitación
         </button>
       </div>
 
@@ -931,7 +1069,7 @@ export default function UserManagement() {
             </div>
           </section>
         </div>
-      ) : (
+      ) : activeTab === 'mailboxes' ? (
         /* Main split viewport for Mailboxes */
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
           {/* Left Side: Add Mailbox Form */}
@@ -1090,7 +1228,248 @@ export default function UserManagement() {
             </div>
           </section>
         </div>
-      )}
+      ) : activeTab === 'invitations' ? (
+        /* Main split viewport for Invitations */
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
+          {/* Left Side: Generate Invitation Form */}
+          <section className="w-full lg:w-96 shrink-0 space-y-4">
+            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative backdrop-blur-md">
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+              
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
+                <UserPlus className="h-4.5 w-4.5 text-primary" />
+                Generar Enlace de Invitación
+              </h3>
+
+              <form onSubmit={handleCreateInvitation} className="space-y-4">
+                {/* Role Selection */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Rol Asignado
+                  </label>
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as 'admin' | 'user')}
+                    className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="user">Usuario Común</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+
+                {/* Wildcard Access Toggle */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="inviteFullAccess"
+                    checked={inviteFullAccess}
+                    onChange={(e) => setInviteFullAccess(e.target.checked)}
+                    className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <label htmlFor="inviteFullAccess" className="text-xs font-medium text-foreground select-none cursor-pointer">
+                    Acceso Total (todas las cuentas)
+                  </label>
+                </div>
+
+                {/* Require 2FA Checkbox */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="inviteRequire2FA"
+                    checked={inviteRequire2FA}
+                    onChange={(e) => setInviteRequire2FA(e.target.checked)}
+                    className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <label htmlFor="inviteRequire2FA" className="text-xs font-medium text-foreground select-none cursor-pointer">
+                    Exigir 2FA Obligatorio
+                  </label>
+                </div>
+
+                {/* Mailboxes Selection Dropdown */}
+                {!inviteFullAccess && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                      Direcciones Asignadas
+                    </label>
+
+                    {mailboxes.length === 0 ? (
+                      <div className="rounded-lg border border-yellow-905/35 bg-yellow-950/20 p-3 text-[10px] text-amber-500 font-medium leading-relaxed">
+                        ⚠️ No hay cuentas de correo registradas. Regístralas primero.
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setInviteDropdownOpen(!inviteDropdownOpen)}
+                          className="w-full flex items-center justify-between rounded-lg border border-border bg-neutral-950 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
+                        >
+                          <span className="truncate">
+                            {inviteSelectedAddresses.length === 0 
+                              ? 'Seleccionar cuentas...' 
+                              : `${inviteSelectedAddresses.length} cuenta(s) seleccionada(s)`}
+                          </span>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                        </button>
+                        
+                        {inviteDropdownOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setInviteDropdownOpen(false)} />
+                            <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-2 shadow-xl animate-fadeIn">
+                              <div className="space-y-1">
+                                {mailboxes.map(box => {
+                                  const isChecked = inviteSelectedAddresses.includes(box.email);
+                                  return (
+                                    <label 
+                                      key={box._id} 
+                                      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-900 cursor-pointer select-none text-xs text-foreground text-left"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => {
+                                          if (isChecked) {
+                                            setInviteSelectedAddresses(inviteSelectedAddresses.filter(addr => addr !== box.email));
+                                          } else {
+                                            setInviteSelectedAddresses([...inviteSelectedAddresses, box.email]);
+                                          }
+                                        }}
+                                        className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                      />
+                                      <div className="truncate flex-1 min-w-0">
+                                        <p className="font-semibold text-[11px] truncate">{box.name}</p>
+                                        <p className="text-[9px] text-muted-foreground truncate">{box.email}</p>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/95 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    'Generar Enlace'
+                  )}
+                </button>
+              </form>
+
+              {/* Quick Copy Link Box */}
+              {generatedInvite && (
+                <div className="rounded-xl border border-teal-500/30 bg-teal-950/10 p-4 space-y-2.5 text-left animate-fadeIn">
+                  <p className="text-[10px] font-bold text-teal-400 uppercase tracking-widest">¡Enlace Generado!</p>
+                  <p className="text-[10px] text-slate-300 font-mono break-all bg-neutral-950 p-2 rounded border border-white/5 select-text">
+                    {generatedInvite}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(generatedInvite, 'generated')}
+                    className="w-full py-1.5 rounded bg-primary text-primary-foreground text-[10px] font-extrabold uppercase tracking-widest transition-all hover:bg-primary/95 cursor-pointer"
+                  >
+                    Copiar Enlace
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Right Side: List of invitations */}
+          <section className="flex-1 flex flex-col min-w-0 bg-neutral-900/10 border border-border/85 rounded-2xl overflow-hidden backdrop-blur-md">
+            <div className="flex-1 overflow-x-auto min-h-0">
+              {invitationsLoading ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : invitations.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                  <Clock className="h-8 w-8 opacity-30 mb-2 animate-pulse" />
+                  <p className="text-xs">No hay enlaces de invitación creados.</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-neutral-900/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                    <tr>
+                      <th className="py-3 px-4">Enlace</th>
+                      <th className="py-3 px-4">Permisos</th>
+                      <th className="py-3 px-4">Estado</th>
+                      <th className="py-3 px-4">Creado Por / Fecha</th>
+                      <th className="py-3 px-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {invitations.map((invite) => {
+                      const isExpired = new Date() > new Date(invite.expiresAt);
+                      const inviteUrl = `${window.location.origin}/invite?token=${invite.token}`;
+                      return (
+                        <tr key={invite._id} className="hover:bg-neutral-900/40 transition-all group">
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-neutral-300 max-w-[180px] truncate select-text">
+                            <span className="text-primary hover:underline cursor-pointer" onClick={() => copyToClipboard(inviteUrl, invite._id)}>
+                              {invite.token.substring(0, 12)}... (Copiar Link)
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-slate-400 capitalize bg-white/5 border border-white/10 px-1.5 py-0.5 rounded">
+                                {invite.role}
+                              </span>
+                              <div className="text-[9px] text-muted-foreground truncate max-w-[200px]">
+                                {invite.assignedAddresses.includes('*') 
+                                  ? 'Acceso Total (*)' 
+                                  : invite.assignedAddresses.join(', ')}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {invite.used ? (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                                Reclamado por: {invite.usedBy}
+                              </span>
+                            ) : isExpired ? (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
+                                Expirado
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                                Activo (Expira {new Date(invite.expiresAt).toLocaleDateString()})
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-neutral-400">
+                            <div>{invite.createdBy}</div>
+                            <div className="text-[9px] opacity-75">{new Date(invite.createdAt).toLocaleDateString()}</div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right select-none">
+                            <button
+                              onClick={() => handleDeleteInvitation(invite._id)}
+                              className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                              title="Eliminar / Revocar enlace"
+                            >
+                              <Trash2 className="h-4.5 w-4.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {/* Edit User Modal Overlay */}
       {editingUser && (

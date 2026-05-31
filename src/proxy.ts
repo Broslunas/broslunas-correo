@@ -17,6 +17,7 @@ export async function proxy(request: NextRequest) {
     pathname === '/api/emails/ingress' ||
     pathname.startsWith('/api/auth/google') ||
     pathname.startsWith('/api/auth/2fa') ||
+    pathname.startsWith('/api/auth/invite') ||
     pathname === '/api/auth' // Logout endpoint
   ) {
     return NextResponse.next();

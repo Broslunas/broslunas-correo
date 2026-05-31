@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { sendEmail2FACode } from '@/lib/mailjet';
 
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced_in_env_local';
 const JWT_SECRET = new TextEncoder().encode(secret);
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   let appUrl = 'http://localhost:3000';
   try {
     const { searchParams, origin } = new URL(request.url);
@@ -100,8 +100,45 @@ export async function GET(request: Request) {
       );
     }
 
+    // Check for an invite token cookie to register the user dynamically
+    const inviteToken = request.cookies.get('webmail_invite_token')?.value;
+    let invitationDetails = null;
+
+    if (inviteToken) {
+      const invitation = await db.collection('invitations').findOne({ token: inviteToken });
+      if (invitation && !invitation.used && new Date() < new Date(invitation.expiresAt)) {
+        invitationDetails = invitation;
+      }
+    }
+
     // Check if the logging in user is authorized in the database
-    const user = await db.collection('users').findOne({ email: cleanEmail });
+    let user = await db.collection('users').findOne({ email: cleanEmail });
+
+    // Claim invitation if user is not yet authorized and has a valid token
+    if (!user && invitationDetails) {
+      console.log(`Registering new user ${cleanEmail} via invitation`);
+      const newUser = {
+        email: cleanEmail,
+        role: invitationDetails.role,
+        twoFactorSecret: null,
+        twoFactorEnabled: false,
+        require2FA: invitationDetails.require2FA === true,
+        assignedAddresses: invitationDetails.assignedAddresses,
+        addedBy: invitationDetails.createdBy,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const insertResult = await db.collection('users').insertOne(newUser);
+      user = { ...newUser, _id: insertResult.insertedId };
+
+      // Mark invitation as claimed
+      await db.collection('invitations').updateOne(
+        { _id: invitationDetails._id },
+        { $set: { used: true, usedBy: cleanEmail, usedAt: new Date() } }
+      );
+    }
+
     if (!user) {
       console.warn(`Unauthorized login attempt by email: ${cleanEmail}`);
       return NextResponse.redirect(`${appUrl}?error=${encodeURIComponent('Acceso no autorizado para esta cuenta')}`);
@@ -121,6 +158,7 @@ export async function GET(request: Request) {
       .sign(JWT_SECRET);
 
     const response = NextResponse.redirect(new URL('/auth/2fa', request.url));
+    response.cookies.delete('webmail_invite_token'); // Clear the invitation cookie
 
     response.cookies.set('webmail_temp_session', tempToken, {
       httpOnly: true,
