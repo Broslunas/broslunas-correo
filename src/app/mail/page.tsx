@@ -55,6 +55,12 @@ function MailContent() {
   const getFolderFromParam = (param: string) => {
     switch (param) {
       case 'main': return 'inbox';
+      case 'unread': return 'unread';
+      case 'personal': return 'personal';
+      case 'work': return 'work';
+      case 'commercial': return 'commercial';
+      case 'newsletter': return 'newsletter';
+      case 'social': return 'social';
       case 'sent': return 'sent';
       case 'spam': return 'spam';
       case 'trash': return 'trash';
@@ -66,6 +72,8 @@ function MailContent() {
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [availableAccounts, setAvailableAccounts] = useState<{ email: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyData, setReplyData] = useState<{ to: string; subject: string; bodyHtml: string } | null>(null);
@@ -171,7 +179,7 @@ function MailContent() {
     }
   };
 
-  // Load user profile
+  // Load user profile and authorized mailboxes
   useEffect(() => {
     try {
       const cachedUser = localStorage.getItem('user_profile_cache');
@@ -195,12 +203,32 @@ function MailContent() {
         console.error('Error fetching user status:', err);
       }
     }
+
+    async function fetchMailboxes() {
+      try {
+        const res = await fetch('/api/mailboxes');
+        if (res.ok) {
+          const data = await res.json();
+          setAvailableAccounts(data.mailboxes || []);
+        }
+      } catch (err) {
+        console.error('Error fetching mailboxes:', err);
+      }
+    }
+
     fetchUserStatus();
+    fetchMailboxes();
   }, []);
 
   const getFolderLabel = (folderId: string) => {
     switch (folderId) {
       case 'inbox': return 'Bandeja de entrada';
+      case 'unread': return 'No leídos';
+      case 'personal': return 'Personal';
+      case 'work': return 'Trabajo';
+      case 'commercial': return 'Comercial';
+      case 'newsletter': return 'Newsletters';
+      case 'social': return 'Redes Sociales';
       case 'sent':  return 'Enviados';
       case 'spam':  return 'Spam';
       case 'trash': return 'Papelera';
@@ -209,10 +237,10 @@ function MailContent() {
   };
 
   const fetchEmails = useCallback(async () => {
-    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
     setSyncing(true);
     try {
-      const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}`);
       if (res.ok) {
         const data = await res.json();
         const freshEmails = data.emails || [];
@@ -227,11 +255,11 @@ function MailContent() {
     } finally {
       setSyncing(false);
     }
-  }, [currentFolder, searchQuery, selectedEmail]);
+  }, [currentFolder, searchQuery, selectedAccount, selectedEmail]);
 
-  // Fetch on folder/search change with stale-while-revalidate
+  // Fetch on folder/search/account change with stale-while-revalidate
   useEffect(() => {
-    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -253,7 +281,7 @@ function MailContent() {
     async function fetchFreshEmails() {
       setSyncing(true);
       try {
-        const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}`);
+        const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}`);
         if (res.ok && isMounted) {
           const data = await res.json();
           const freshEmails = data.emails || [];
@@ -274,17 +302,17 @@ function MailContent() {
     }
     fetchFreshEmails();
     return () => { isMounted = false; };
-  }, [currentFolder, searchQuery]);
+  }, [currentFolder, searchQuery, selectedAccount]);
 
   // Sync state changes to local cache
   useEffect(() => {
-    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
     try {
       localStorage.setItem(cacheKey, JSON.stringify(emails));
     } catch (err) {
       console.error('Error syncing emails state to cache:', err);
     }
-  }, [emails, currentFolder, searchQuery]);
+  }, [emails, currentFolder, searchQuery, selectedAccount]);
 
   // Synchronize URL activeEmailId with selectedEmail state
   useEffect(() => {
@@ -481,6 +509,9 @@ function MailContent() {
               isPushSupported={isPushSupported}
               isPushSubscribed={isPushSubscribed}
               onTogglePush={handleTogglePush}
+              availableAccounts={availableAccounts}
+              selectedAccount={selectedAccount}
+              onAccountChange={setSelectedAccount}
             />
           </div>
 

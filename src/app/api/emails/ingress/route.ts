@@ -67,7 +67,61 @@ export async function POST(request: Request) {
         }))
       : [];
 
-    // 5. Build email document
+    // 5. Auto-classify folder based on content
+    let detectedFolder = 'inbox';
+    const textToAnalyze = `${subject} ${bodyText} ${bodyHtml}`.toLowerCase();
+    const senderToAnalyze = from.address.toLowerCase();
+
+    // 1. Social Media classification
+    const socialDomains = ['linkedin.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'github.com', 'gitlab.com', 'pinterest.com', 'reddit.com'];
+    const isSocialSender = socialDomains.some(domain => senderToAnalyze.endsWith(domain) || senderToAnalyze.includes('@' + domain));
+    const socialKeywords = ['nuevo seguidor', 'solicitud de amistad', 'mencionó', 'comentó', 'te sigue', 'retweet', 'notificación de github', 'pull request', 'issue', 'social'];
+    const isSocialKeyword = socialKeywords.some(kw => textToAnalyze.includes(kw));
+
+    if (isSocialSender || isSocialKeyword) {
+      detectedFolder = 'social';
+    } 
+    // 2. Commercial / Promotional classification
+    else {
+      const commercialKeywords = [
+        'oferta', 'descuento', 'promoción', 'promo', 'compra', 'pedido', 'factura', 'pago', 'descuentos', 'tienda', 'shop', 
+        'sale', 'order', 'invoice', 'payment', 'receipt', 'boleta', 'voucher', 'cupón', 'coupon', 'adquiere', 'suscripción',
+        'suscribete', 'comprar', 'precio', 'tarifa', 'servicio', 'anuncio', 'publicidad'
+      ];
+      const isCommercialKeyword = commercialKeywords.some(kw => textToAnalyze.includes(kw));
+      const commercialDomains = ['paypal.com', 'stripe.com', 'amazon.', 'aliexpress', 'ebay', 'shopify', 'netflix', 'spotify', 'booking.com'];
+      const isCommercialSender = commercialDomains.some(domain => senderToAnalyze.includes(domain));
+
+      if (isCommercialKeyword || isCommercialSender) {
+        detectedFolder = 'commercial';
+      }
+      // 3. Newsletter / Boletines classification
+      else {
+        const newsletterKeywords = [
+          'newsletter', 'boletín', 'boletin', 'weekly digest', 'weekly', 'daily digest', 'digest', 'monthly', 
+          'novedades', 'resumen semanal', 'leído de la semana', 'suscrito', 'suscribirse', 'unsubscribe'
+        ];
+        const isNewsletterKeyword = newsletterKeywords.some(kw => textToAnalyze.includes(kw));
+        
+        if (isNewsletterKeyword) {
+          detectedFolder = 'newsletter';
+        }
+        // 4. Work classification
+        else {
+          const workKeywords = [
+            'reunión', 'proyecto', 'tarea', 'urgente', 'avance', 'minuta', 'trabajo', 'oficina', 'cliente', 
+            'presupuesto', 'propuesta', 'agenda', 'meeting', 'project', 'task', 'client', 'deadline'
+          ];
+          const isWorkKeyword = workKeywords.some(kw => textToAnalyze.includes(kw));
+          
+          if (isWorkKeyword) {
+            detectedFolder = 'work';
+          }
+        }
+      }
+    }
+
+    // 6. Build email document
     const incomingEmailDocument = {
       from: {
         name: from.name || '',
@@ -83,7 +137,7 @@ export async function POST(request: Request) {
         html: bodyHtml || bodyText || '',
       },
       attachments: formattedAttachments,
-      folder: 'inbox',
+      folder: detectedFolder,
       isRead: false,
       createdAt: new Date(),
     };

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, Mail, Eye, EyeOff, Trash2, RefreshCw, Bell, BellOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Mail, Eye, EyeOff, Trash2, RefreshCw, Bell, BellOff, ChevronDown, Globe } from 'lucide-react';
 
 interface Email {
   _id: string;
@@ -29,6 +29,9 @@ interface EmailListProps {
   isPushSupported?: boolean;
   isPushSubscribed?: boolean;
   onTogglePush?: () => void;
+  availableAccounts?: { email: string; name: string }[];
+  selectedAccount?: string;
+  onAccountChange?: (account: string) => void;
 }
 
 function SenderAvatar({ name, address }: { name: string; address: string }) {
@@ -87,7 +90,12 @@ export default function EmailList({
   isPushSupported,
   isPushSubscribed,
   onTogglePush,
+  availableAccounts = [],
+  selectedAccount = '',
+  onAccountChange = () => {},
 }: EmailListProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   return (
     <div
       className="flex flex-col h-full shrink-0 w-full md:w-80 lg:w-[320px]"
@@ -98,12 +106,12 @@ export default function EmailList({
     >
       {/* Header */}
       <div
-        className="shrink-0 px-4 pt-4 pb-3 space-y-3"
+        className="shrink-0 px-4 pt-4 pb-3 space-y-3 relative"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
         <div className="flex items-center justify-between">
           <h2
-            className="text-xs font-bold uppercase tracking-widest"
+            className="text-xs font-bold uppercase tracking-widest animate-fadeIn"
             style={{ color: 'hsl(174 72% 60%)' }}
           >
             {folderLabel}
@@ -155,6 +163,83 @@ export default function EmailList({
             </button>
           </div>
         </div>
+
+        {/* Account Selector */}
+        {availableAccounts && availableAccounts.length > 0 && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center justify-between w-full px-3 py-1.5 rounded-lg border text-left text-[11px] transition-all cursor-pointer select-none"
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                borderColor: dropdownOpen ? 'rgba(45,212,191,0.25)' : 'rgba(255,255,255,0.07)',
+                color: 'hsl(210 40% 90%)',
+              }}
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Globe className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+                <span className="truncate">
+                  {selectedAccount ? availableAccounts.find(a => a.email === selectedAccount)?.name || selectedAccount : 'Todas las cuentas'}
+                </span>
+              </div>
+              <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0 ml-1 ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {dropdownOpen && (
+              <>
+                {/* Click outside backdrop */}
+                <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                <div
+                  className="absolute left-0 right-0 mt-1.5 rounded-xl border p-1 shadow-2xl z-20 max-h-60 overflow-y-auto animate-fadeIn"
+                  style={{
+                    background: 'rgba(10,15,30,0.98)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    boxShadow: '0 10px 30px -10px rgba(0,0,0,0.7)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAccountChange('');
+                      setDropdownOpen(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold transition-all cursor-pointer"
+                    style={{
+                      background: !selectedAccount ? 'rgba(45,212,191,0.1)' : 'transparent',
+                      color: !selectedAccount ? 'hsl(174 72% 60%)' : 'hsl(210 40% 80%)',
+                    }}
+                  >
+                    <Globe className="h-3.5 w-3.5 shrink-0" />
+                    <span>Todas las cuentas</span>
+                  </button>
+
+                  {availableAccounts.map((acc) => {
+                    const isSelected = selectedAccount === acc.email;
+                    return (
+                      <button
+                        type="button"
+                        key={acc.email}
+                        onClick={() => {
+                          onAccountChange(acc.email);
+                          setDropdownOpen(false);
+                        }}
+                        className="flex flex-col w-full px-2.5 py-1.5 rounded-lg text-left transition-all cursor-pointer mt-0.5"
+                        style={{
+                          background: isSelected ? 'rgba(45,212,191,0.1)' : 'transparent',
+                          color: isSelected ? 'hsl(174 72% 60%)' : 'hsl(210 40% 80%)',
+                        }}
+                      >
+                        <span className="text-xs font-semibold truncate">{acc.name || acc.email}</span>
+                        {acc.name && <span className="text-[9px] opacity-60 truncate mt-0.5">{acc.email}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative">

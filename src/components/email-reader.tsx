@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import DOMPurify from 'isomorphic-dompurify';
 import {
   Trash2,
@@ -13,6 +13,8 @@ import {
   FileArchive,
   MailOpen,
   ArrowLeft,
+  Folder,
+  ChevronDown,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
 
@@ -52,6 +54,9 @@ function buildEmailSrcdoc(email: Email): string {
   const imageAttachments = attachments.filter(a => a.contentType?.startsWith('image/'));
 
   let processedHtml = email.body.html || '';
+
+  // Fix double-escaped hair space entities that break rendering
+  processedHtml = processedHtml.replace(/&amp;hairsp;/gi, '&hairsp;');
 
   attachments.forEach((att) => {
     if (att.contentId) {
@@ -131,6 +136,10 @@ function buildEmailSrcdoc(email: Email): string {
 }
 
 function PlainTextBody({ text }: { text: string }) {
+  const cleanedText = (text || '')
+    .replace(/&amp;hairsp;/gi, '')
+    .replace(/&hairsp;/gi, '');
+
   return (
     <div
       style={{
@@ -142,7 +151,7 @@ function PlainTextBody({ text }: { text: string }) {
         wordBreak: 'break-word',
       }}
     >
-      {text}
+      {cleanedText}
     </div>
   );
 }
@@ -218,6 +227,12 @@ export default function EmailReader({
   onReplyClick,
   onBack,
 }: EmailReaderProps) {
+
+  const [moveDropdownOpen, setMoveDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    setMoveDropdownOpen(false);
+  }, [email]);
 
   if (!email) {
     return (
@@ -311,6 +326,76 @@ export default function EmailReader({
 
         {/* Action buttons */}
         <div className="flex items-center gap-1.5">
+          {/* Categorize / Move dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMoveDropdownOpen(!moveDropdownOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: 'hsl(215 20% 60%)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'hsl(210 40% 90%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                if (!moveDropdownOpen) {
+                  e.currentTarget.style.color = 'hsl(215 20% 60%)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                }
+              }}
+            >
+              <Folder className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+              <span className="hidden sm:inline">Mover a</span>
+              <ChevronDown className={`h-3 w-3 opacity-60 transition-transform ${moveDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {moveDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMoveDropdownOpen(false)} />
+                <div
+                  className="absolute right-0 mt-1.5 rounded-xl border p-1 shadow-2xl z-20 w-40 animate-fadeIn"
+                  style={{
+                    background: 'rgba(10,15,30,0.98)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {[
+                    { id: 'inbox', label: 'Principal' },
+                    { id: 'personal', label: 'Personal' },
+                    { id: 'work', label: 'Trabajo' },
+                    { id: 'commercial', label: 'Comercial' },
+                    { id: 'newsletter', label: 'Newsletter' },
+                    { id: 'social', label: 'Redes Sociales' }
+                  ].map(targetFolder => {
+                    const isCurrent = email.folder === targetFolder.id;
+                    return (
+                      <button
+                        type="button"
+                        key={targetFolder.id}
+                        onClick={() => {
+                          onUpdateEmailStatus([email._id], { folder: targetFolder.id });
+                          setMoveDropdownOpen(false);
+                        }}
+                        disabled={isCurrent}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed font-semibold mt-0.5"
+                        style={{
+                          background: isCurrent ? 'rgba(45,212,191,0.08)' : 'transparent',
+                          color: isCurrent ? 'hsl(174 72% 60%)' : 'hsl(210 40% 80%)'
+                        }}
+                      >
+                        {targetFolder.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
           {email.folder !== 'inbox' && (
             <button
               id="btn-restore"

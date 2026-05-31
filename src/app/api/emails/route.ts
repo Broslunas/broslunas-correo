@@ -69,20 +69,44 @@ export async function GET(request: NextRequest) {
 
     const folder = searchParams.get('folder') || 'inbox';
     const searchQuery = searchParams.get('search') || '';
+    const account = (searchParams.get('account') || '').trim().toLowerCase();
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = 30; // Max items per page
     const skip = (page - 1) * limit;
 
     const { db } = await connectToDatabase();
 
+    // Security check: if a specific account is requested, verify access
+    if (account && !assignedAddresses.includes('*') && !assignedAddresses.includes(account)) {
+      return NextResponse.json({ error: 'No autorizado para ver esta cuenta' }, { status: 403 });
+    }
+
     // Build compound query using $and to join filters safely
     const andClauses: any[] = [];
 
-    // 1. Folder condition
-    andClauses.push({ folder });
+    // 1. Folder condition (handle virtual 'unread' folder)
+    if (folder === 'unread') {
+      andClauses.push({ isRead: false, folder: { $nin: ['trash', 'spam', 'sent'] } });
+    } else {
+      andClauses.push({ folder });
+    }
 
-    // 2. Access limit condition (Skip if user has wildcard access "*")
-    if (!assignedAddresses.includes('*')) {
+    // 2. Account filter and Access limit conditions
+    if (account) {
+      // Filter specifically by this account
+      if (folder === 'sent') {
+        andClauses.push({ 'from.address': account });
+      } else {
+        andClauses.push({
+          $or: [
+            { to: account },
+            { cc: account },
+            { bcc: account }
+          ]
+        });
+      }
+    } else if (!assignedAddresses.includes('*')) {
+      // Fallback: Limit view to only user's assigned addresses
       if (folder === 'sent') {
         // Can only view emails sent from their assigned addresses
         andClauses.push({ 'from.address': { $in: assignedAddresses } });
