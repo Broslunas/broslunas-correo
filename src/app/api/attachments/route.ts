@@ -1,8 +1,53 @@
 import { NextResponse } from 'next/server';
-import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client, BUCKET_NAME } from '@/lib/r2';
 
 export const dynamic = 'force-dynamic';
+
+export async function POST(request: Request) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
+
+    if (!file) {
+      return NextResponse.json({ error: 'No se recibió ningún archivo' }, { status: 400 });
+    }
+
+    const filename = file.name;
+    const contentType = file.type || 'application/octet-stream';
+    const size = file.size;
+
+    // Convert file to buffer
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // Generate a unique key for storage to prevent collisions
+    const uniqueId = crypto.randomUUID();
+    const key = `${uniqueId}-${filename}`;
+
+    console.log(`Uploading file to R2: key=${key}, size=${size}, contentType=${contentType}`);
+
+    const command = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    });
+
+    await s3Client.send(command);
+
+    return NextResponse.json({
+      success: true,
+      key,
+      filename,
+      contentType,
+      size,
+    });
+  } catch (error) {
+    console.error('Error uploading file to Cloudflare R2:', error);
+    return NextResponse.json({ error: 'Error al subir el archivo' }, { status: 500 });
+  }
+}
 
 export async function GET(request: Request) {
   try {

@@ -27,6 +27,8 @@ import {
   Maximize2,
   Minimize2,
   ExternalLink,
+  Paperclip,
+  FileText,
 } from 'lucide-react';
 
 interface ComposeModalProps {
@@ -104,6 +106,133 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const [showHtmlModal, setShowHtmlModal] = useState(false);
   const [htmlCode, setHtmlCode] = useState('');
   const [importMode, setImportMode] = useState<'replace' | 'insert'>('replace');
+
+  // Attachment states
+  const [attachments, setAttachments] = useState<{
+    tempId: string;
+    filename: string;
+    contentType: string;
+    size: number;
+    key: string;
+    isUploading?: boolean;
+    error?: string;
+  }[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const handleFiles = async (files: File[]) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    
+    interface TempAttachment {
+      tempId: string;
+      file?: File;
+      filename: string;
+      contentType: string;
+      size: number;
+      key: string;
+      isUploading: boolean;
+      error?: string;
+    }
+
+    const newAttachments: TempAttachment[] = files.map(file => {
+      const tempId = crypto.randomUUID();
+      return {
+        tempId,
+        file,
+        filename: file.name,
+        contentType: file.type,
+        size: file.size,
+        key: '',
+        isUploading: true,
+      };
+    });
+
+    const validAttachments: TempAttachment[] = newAttachments.map(att => {
+      if (att.size > maxSize) {
+        return {
+          ...att,
+          isUploading: false,
+          error: 'El archivo excede el límite de 10 MB.',
+        };
+      }
+      return att;
+    });
+
+    setAttachments(prev => [
+      ...prev,
+      ...validAttachments.map(({ tempId, filename, contentType, size, key, isUploading, error }) => ({
+        tempId,
+        filename,
+        contentType,
+        size,
+        key,
+        isUploading,
+        error
+      }))
+    ]);
+
+    for (const att of validAttachments) {
+      if (att.error || !att.file) continue;
+      
+      const formData = new FormData();
+      formData.append('file', att.file);
+
+      try {
+        const res = await fetch('/api/attachments', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setAttachments(prev => prev.map(item => 
+            item.tempId === att.tempId 
+              ? { ...item, key: data.key, isUploading: false }
+              : item
+          ));
+        } else {
+          setAttachments(prev => prev.map(item => 
+            item.tempId === att.tempId 
+              ? { ...item, isUploading: false, error: data.error || 'Error al subir.' }
+              : item
+          ));
+        }
+      } catch (err) {
+        setAttachments(prev => prev.map(item => 
+          item.tempId === att.tempId 
+            ? { ...item, isUploading: false, error: 'Error de red.' }
+            : item
+        ));
+      }
+    }
+  };
 
   // Auto-maximize if pathname is /compose
   useEffect(() => {
@@ -346,23 +475,41 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     const ccArray = cc ? cc.split(',').map(email => email.trim()).filter(Boolean) : [];
     const bccArray = bcc ? bcc.split(',').map(email => email.trim()).filter(Boolean) : [];
 
-    // Package the HTML with container styles if any custom styling is active
+    // Package the HTML with classic container styles so it looks correct on any client
     let finalHtml = htmlContent;
     if (editorRef.current) {
-      const bg = editorRef.current.style.backgroundColor;
-      const fg = editorRef.current.style.color;
-      const font = editorRef.current.style.fontFamily;
-      if (bg || (fg && fg !== 'hsl(210 40% 88%)') || font) {
-        finalHtml = `<div style="${bg ? `background-color: ${bg};` : ''} ${fg ? `color: ${fg};` : ''} ${font ? `font-family: ${font};` : ''} padding: 20px; min-height: 100%;">${htmlContent}</div>`;
-      }
+      const bg = editorRef.current.style.backgroundColor || '#ffffff';
+      const fg = editorRef.current.style.color || '#1e293b';
+      const font = editorRef.current.style.fontFamily || 'Arial, sans-serif';
+      const cleanFg = fg === 'hsl(210 40% 88%)' || fg === 'rgb(212, 218, 232)' ? '#1e293b' : fg;
+      
+      finalHtml = `<div style="background-color: ${bg}; color: ${cleanFg}; font-family: ${font}; padding: 24px; min-height: 100%; line-height: 1.6; font-size: 14px;">${htmlContent}</div>`;
     }
+
+    const activeAttachments = attachments
+      .filter(att => !att.isUploading && !att.error && att.key)
+      .map(att => ({
+        filename: att.filename,
+        contentType: att.contentType,
+        size: att.size,
+        r2Url: att.key
+      }));
 
     setLoading(true);
     try {
       const res = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: toArray, cc: ccArray, bcc: bccArray, subject, bodyHtml: finalHtml, bodyText: textContent }),
+        body: JSON.stringify({ 
+          from, 
+          to: toArray, 
+          cc: ccArray, 
+          bcc: bccArray, 
+          subject, 
+          bodyHtml: finalHtml, 
+          bodyText: textContent,
+          attachments: activeAttachments
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -403,6 +550,9 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     >
       <div
         className="w-full flex flex-col rounded-t-2xl sm:rounded-2xl overflow-hidden animate-slideInUp"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         style={{
           pointerEvents: 'auto',
           height: isMaximized ? '94vh' : 'min(90vh, 700px)',
@@ -418,6 +568,13 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
+        {isDragging && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md border-2 border-dashed border-teal-500/50 rounded-t-2xl sm:rounded-2xl pointer-events-none animate-fadeIn">
+            <Upload className="h-10 w-10 text-teal-400 animate-bounce mb-3" />
+            <p className="text-sm font-semibold text-white">Suelte los archivos aquí para adjuntar</p>
+            <p className="text-xs text-white/50 mt-1">Límite de 10 MB por archivo</p>
+          </div>
+        )}
         {/* Top shimmer */}
         <div
           className="shrink-0 h-px w-full"
@@ -885,6 +1042,25 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               </button>
               <button
                 type="button"
+                title="Adjuntar archivo"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-teal-400"
+              >
+                <Paperclip className="h-3.5 w-3.5" />
+              </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    handleFiles(Array.from(e.target.files));
+                  }
+                }}
+                className="hidden"
+                multiple
+              />
+              <button
+                type="button"
                 title="Eliminar formato"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleFormat('removeFormat')}
@@ -908,6 +1084,71 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               style={{ color: 'hsl(210 40% 88%)', outline: 'none' }}
             />
           </div>
+
+          {/* Attachments Section */}
+          {attachments.length > 0 && (
+            <div className="shrink-0 px-5 py-2.5 space-y-2 max-h-[140px] overflow-y-auto border-t border-white/5 bg-white/[0.01]">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400">Archivos Adjuntos ({attachments.length})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {attachments.map((att, idx) => {
+                  const isImage = att.contentType.startsWith('image/');
+                  const isPdf = att.contentType === 'application/pdf';
+                  const hasError = !!att.error;
+
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded-xl border transition-all text-xs bg-white/5 border-white/5"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {/* Thumbnail / Icon */}
+                        <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 shrink-0 overflow-hidden">
+                          {att.isUploading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-teal-400" />
+                          ) : hasError ? (
+                            <X className="h-3.5 w-3.5 text-red-400" />
+                          ) : isImage && att.key ? (
+                            <img
+                              src={`/api/attachments?key=${encodeURIComponent(att.key)}&filename=${encodeURIComponent(att.filename)}`}
+                              alt={att.filename}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : isPdf ? (
+                            <FileText className="h-4 w-4 text-red-400" />
+                          ) : (
+                            <FileText className="h-4 w-4 text-teal-400" />
+                          )}
+                        </div>
+
+                        {/* File Details */}
+                        <div className="truncate">
+                          <p className={`font-medium truncate ${hasError ? 'text-red-400' : 'text-white/80'}`} title={att.filename}>
+                            {att.filename}
+                          </p>
+                          <p className="text-[10px] text-white/40">
+                            {hasError ? att.error : formatBytes(att.size)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachments(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                        className="h-6 w-6 rounded-lg flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-white/5 transition-all cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div

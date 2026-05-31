@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { connectToDatabase } from '@/lib/db';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { s3Client, BUCKET_NAME } from '@/lib/r2';
 
 export const dynamic = 'force-dynamic';
 
 const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced_in_env_local';
 const JWT_SECRET = new TextEncoder().encode(secret);
+
+async function streamToBuffer(stream: any): Promise<Buffer> {
+  if (stream.transformToByteArray) {
+    const bytes = await stream.transformToByteArray();
+    return Buffer.from(bytes);
+  }
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json().catch(() => ({}));
-    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName } = body;
+    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, attachments } = body;
 
     // Validate inputs
     if (!from || typeof from !== 'string' || !from.includes('@')) {
@@ -92,6 +107,99 @@ export async function POST(request: NextRequest) {
     const mailjetCc = cc && Array.isArray(cc) ? cc.map((email: string) => ({ Email: email.trim() })) : [];
     const mailjetBcc = bcc && Array.isArray(bcc) ? bcc.map((email: string) => ({ Email: email.trim() })) : [];
 
+    // Parse base64 pasted images in bodyHtml
+    let processedBodyHtml = bodyHtml || bodyText || '';
+    const pastedImageAttachments: any[] = [];
+    const mailjetPastedAttachments: any[] = [];
+
+    const base64ImgRegex = /src=["']data:(image\/[^;]+);base64,([^"']+)["']/g;
+    let match;
+    let imgIdx = 1;
+
+    while ((match = base64ImgRegex.exec(bodyHtml || '')) !== null) {
+      const contentType = match[1];
+      const base64Data = match[2];
+      const extension = contentType.split('/')[1] || 'png';
+      const filename = `imagen_pegada_${imgIdx}.${extension}`;
+      const buffer = Buffer.from(base64Data, 'base64');
+      const size = buffer.length;
+
+      const uniqueId = crypto.randomUUID();
+      const r2Key = `inline-${uniqueId}.${extension}`;
+      const contentId = `cid-${uniqueId}`;
+
+      try {
+        const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+        const putCommand = new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: r2Key,
+          Body: buffer,
+          ContentType: contentType,
+        });
+        await s3Client.send(putCommand);
+
+        pastedImageAttachments.push({
+          filename,
+          contentType,
+          size,
+          r2Url: r2Key,
+          contentId: `<${contentId}>`,
+          disposition: 'inline'
+        });
+
+        mailjetPastedAttachments.push({
+          ContentType: contentType,
+          Filename: filename,
+          Base64Content: base64Data,
+          ContentID: contentId
+        });
+
+        processedBodyHtml = processedBodyHtml.replace(match[0], `src="cid:${contentId}"`);
+        imgIdx++;
+      } catch (r2Err) {
+        console.error('Error processing pasted image:', r2Err);
+      }
+    }
+
+    // Fetch and process attachments from R2 to Base64
+    const mailjetAttachments: any[] = [];
+    if (attachments && Array.isArray(attachments)) {
+      for (const att of attachments) {
+        try {
+          const getCommand = new GetObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: att.r2Url,
+          });
+          const s3Response = await s3Client.send(getCommand);
+          if (s3Response.Body) {
+            const buffer = await streamToBuffer(s3Response.Body);
+            const base64Content = buffer.toString('base64');
+            mailjetAttachments.push({
+              ContentType: att.contentType,
+              Filename: att.filename,
+              Base64Content: base64Content,
+            });
+          }
+        } catch (s3Err) {
+          console.error(`Error reading attachment ${att.filename} from R2:`, s3Err);
+          return NextResponse.json(
+            { error: `No se pudo procesar el archivo adjunto: ${att.filename}` },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
+    const combinedMailjetAttachments = [
+      ...mailjetAttachments,
+      ...mailjetPastedAttachments
+    ];
+
+    const combinedDbAttachments = [
+      ...(attachments || []),
+      ...pastedImageAttachments
+    ];
+
     // 5. Assemble Mailjet payload using the dynamically validated sender
     const mailjetPayload = {
       Messages: [
@@ -105,7 +213,8 @@ export async function POST(request: NextRequest) {
           Bcc: mailjetBcc.length > 0 ? mailjetBcc : undefined,
           Subject: subject || '(Sin Asunto)',
           TextPart: bodyText || '',
-          HTMLPart: bodyHtml || bodyText || ''
+          HTMLPart: processedBodyHtml || bodyText || '',
+          Attachments: combinedMailjetAttachments.length > 0 ? combinedMailjetAttachments : undefined
         }
       ]
     };
@@ -146,9 +255,9 @@ export async function POST(request: NextRequest) {
       date: new Date(),
       body: {
         text: bodyText || '',
-        html: bodyHtml || bodyText || ''
+        html: processedBodyHtml || bodyText || ''
       },
-      attachments: [], 
+      attachments: combinedDbAttachments, 
       folder: 'sent',
       isRead: true,
       messageId: String(mailjetMessageId)
