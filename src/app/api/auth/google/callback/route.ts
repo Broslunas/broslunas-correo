@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
+import { sendEmail2FACode } from '@/lib/mailjet';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,65 +107,61 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${appUrl}?error=${encodeURIComponent('Acceso no autorizado para esta cuenta')}`);
     }
 
-    // 4. Generate token and redirect based on 2FA requirements
-    const requires2FA = user.twoFactorEnabled === true || user.require2FA === true;
+    // 4. Generate temporary session JWT (valid for 10 minutes) and redirect to 2FA page
+    const tempToken = await new SignJWT({
+      email: cleanEmail,
+      name: name || '',
+      picture: picture || '',
+      role: user.role,
+      step: '2fa_pending'
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('10m') // 10 minutes expiration
+      .sign(JWT_SECRET);
 
-    if (requires2FA) {
-      // Generate temporary session JWT (valid for 10 minutes)
-      const tempToken = await new SignJWT({
-        email: cleanEmail,
-        name: name || '',
-        picture: picture || '',
-        role: user.role,
-        step: '2fa_pending'
-      })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('10m') // 10 minutes expiration
-        .sign(JWT_SECRET);
+    const response = NextResponse.redirect(new URL('/auth/2fa', request.url));
 
-      const response = NextResponse.redirect(new URL('/auth/2fa', request.url));
+    response.cookies.set('webmail_temp_session', tempToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 600, // 10 minutes in seconds
+    });
 
-      response.cookies.set('webmail_temp_session', tempToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 600, // 10 minutes in seconds
-      });
+    // Clear any leftover final token
+    response.cookies.delete('webmail_session');
 
-      console.log(`Setting webmail_temp_session cookie and redirecting to /auth/2fa for email: ${cleanEmail}`);
-      return response;
+    if (user.twoFactorEnabled === true) {
+      console.log(`Setting temp session cookie and redirecting to app-based /auth/2fa for email: ${cleanEmail}`);
     } else {
-      // 2FA is optional and NOT enabled: Bypass 2FA, issue final session cookie
-      const finalSessionToken = await new SignJWT({
-        role: user.role || 'user',
-        email: cleanEmail,
-        name: name || '',
-        picture: picture || '',
-        assignedAddresses: user.assignedAddresses || [],
-      })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('7d')
-        .sign(JWT_SECRET);
+      // Email-based 2FA: generate 6-digit code and save to DB
+      const emailCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const emailExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
-      const response = NextResponse.redirect(new URL('/mail?inbox=main', request.url));
+      await db.collection('users').updateOne(
+        { email: cleanEmail },
+        {
+          $set: {
+            email2faCode: emailCode,
+            email2faExpires: emailExpires,
+            updatedAt: new Date()
+          }
+        }
+      );
 
-      response.cookies.set('webmail_session', finalSessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
-      });
+      console.log(`Generated email 2FA code for ${cleanEmail}: ${emailCode}`);
 
-      // Clear any leftover temp token
-      response.cookies.delete('webmail_temp_session');
-
-      console.log(`Bypassing 2FA, setting webmail_session and redirecting to /mail?inbox=main for email: ${cleanEmail}`);
-      return response;
+      // Send the email using Mailjet API
+      try {
+        await sendEmail2FACode(cleanEmail, name || 'Usuario', emailCode);
+      } catch (err) {
+        console.error('Error sending 2FA email in callback:', err);
+      }
     }
+
+    return response;
   } catch (error) {
     console.error('Error in Google Callback Route:', error);
     return NextResponse.redirect(`${appUrl}?error=${encodeURIComponent('Error interno de autenticación')}`);

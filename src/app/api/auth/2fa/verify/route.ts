@@ -75,11 +75,25 @@ export async function GET(request: Request) {
         email: session.email,
         name: session.name,
         picture: session.picture,
+        method: 'app',
         require2FA: user.require2FA === undefined ? false : !!user.require2FA,
       });
     }
 
-    // 2. User does not have 2FA enabled yet. Retrieve or generate secret.
+    // 2. User does not have 2FA enabled yet.
+    // If it's a temporary session (login flow), they MUST verify via email code
+    if (session.isTemp) {
+      return NextResponse.json({
+        enabled: false,
+        email: session.email,
+        name: session.name,
+        picture: session.picture,
+        method: 'email',
+        require2FA: true,
+      });
+    }
+
+    // Otherwise, they are managing security inside the dashboard and can enable app-based 2FA:
     let totpSecret = user.twoFactorSecret;
     if (!totpSecret || totpSecret.length !== 32) {
       totpSecret = generate2FASecret();
@@ -105,6 +119,7 @@ export async function GET(request: Request) {
       email: session.email,
       name: session.name,
       picture: session.picture,
+      method: 'app_setup',
       qrCodeUrl,
       secret: totpSecret, // For manual entry in authenticator app
       require2FA: user.require2FA === undefined ? false : !!user.require2FA,
@@ -133,22 +148,53 @@ export async function POST(request: Request) {
     const { db } = await connectToDatabase();
     const user = await db.collection('users').findOne({ email: session.email });
 
-    if (!user || !user.twoFactorSecret) {
-      return NextResponse.json({ error: 'La configuración de 2FA no se inició correctamente' }, { status: 400 });
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Verify 6-digit TOTP code
-    const isTokenValid = verifyTOTP(code, user.twoFactorSecret);
+    let isTokenValid = false;
+
+    // 1. Try to verify via email code first (if one was generated and hasn't expired)
+    if (user.email2faCode && user.email2faExpires) {
+      const now = new Date();
+      if (now <= new Date(user.email2faExpires) && code.trim() === user.email2faCode.trim()) {
+        isTokenValid = true;
+        // Consume the code
+        await db.collection('users').updateOne(
+          { email: session.email },
+          {
+            $unset: { email2faCode: "", email2faExpires: "" },
+            $set: { updatedAt: new Date() }
+          }
+        );
+      }
+    }
+
+    // 2. If not verified via email code, fallback to TOTP verification
     if (!isTokenValid) {
-      return NextResponse.json({ error: 'Código de autenticación incorrecto. Inténtalo de nuevo.' }, { status: 400 });
+      if (user.twoFactorEnabled === true) {
+        // User has app-based 2FA active: verify via TOTP
+        if (!user.twoFactorSecret) {
+          return NextResponse.json({ error: 'La configuración de 2FA no se inició correctamente' }, { status: 400 });
+        }
+        isTokenValid = verifyTOTP(code, user.twoFactorSecret);
+      } else if (!session.isTemp) {
+        // User is inside the dashboard and verifying app setup: verify via TOTP
+        if (!user.twoFactorSecret) {
+          return NextResponse.json({ error: 'La configuración de 2FA no se inició correctamente' }, { status: 400 });
+        }
+        isTokenValid = verifyTOTP(code, user.twoFactorSecret);
+        if (isTokenValid) {
+          await db.collection('users').updateOne(
+            { email: session.email },
+            { $set: { twoFactorEnabled: true, updatedAt: new Date() } }
+          );
+        }
+      }
     }
 
-    // If verification succeeds and 2FA wasn't enabled yet, enable it
-    if (user.twoFactorEnabled !== true) {
-      await db.collection('users').updateOne(
-        { email: session.email },
-        { $set: { twoFactorEnabled: true, updatedAt: new Date() } }
-      );
+    if (!isTokenValid) {
+      return NextResponse.json({ error: 'Código de verificación incorrecto. Inténtalo de nuevo.' }, { status: 400 });
     }
 
     const response = NextResponse.json({

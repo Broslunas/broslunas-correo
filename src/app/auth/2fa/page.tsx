@@ -10,6 +10,7 @@ interface User2FAStatus {
   picture: string;
   qrCodeUrl?: string;
   secret?: string;
+  method?: 'email' | 'app' | 'app_setup';
 }
 
 export default function TwoFactorPage() {
@@ -17,10 +18,77 @@ export default function TwoFactorPage() {
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [verificationMethod, setVerificationMethod] = useState<'email' | 'app' | 'app_setup' | null>(null);
   
   // 6-digit code array state
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Cooldown timer countdown
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const handleResendEmailCode = async () => {
+    setResending(true);
+    setResendSuccess('');
+    setError('');
+    try {
+      const res = await fetch('/api/auth/2fa/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResendSuccess('Código enviado. Revisa tu bandeja de entrada.');
+        setResendCooldown(60); // 1 minute cooldown
+      } else {
+        setError(data.error || 'No se pudo reenviar el código.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error al conectar con el servidor.');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const handleUseOtherMethod = async () => {
+    setResending(true);
+    setResendSuccess('');
+    setError('');
+    try {
+      const res = await fetch('/api/auth/2fa/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setVerificationMethod('email');
+        setResendSuccess('Código enviado. Revisa tu bandeja de entrada.');
+        setResendCooldown(60);
+        setCode(['', '', '', '', '', '']);
+        setTimeout(() => {
+          inputRefs.current[0]?.focus();
+        }, 100);
+      } else {
+        setError(data.error || 'No se pudo generar el código de correo.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error al conectar con el servidor.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   // Fetch 2FA configuration state on mount
   useEffect(() => {
@@ -30,6 +98,7 @@ export default function TwoFactorPage() {
         if (res.ok) {
           const data = await res.json();
           setStatus(data);
+          setVerificationMethod(data.method || null);
         } else {
           // If unauthenticated or temp session expired, redirect to home
           window.location.href = '/';
@@ -200,20 +269,30 @@ export default function TwoFactorPage() {
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary border border-primary/20 mb-3">
-            {status.enabled ? <ShieldCheck className="h-5.5 w-5.5" /> : <KeyRound className="h-5.5 w-5.5 animate-pulse" />}
+            {verificationMethod === 'app' || verificationMethod === 'email' ? (
+              <ShieldCheck className="h-5.5 w-5.5" />
+            ) : (
+              <KeyRound className="h-5.5 w-5.5 animate-pulse" />
+            )}
           </div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">
-            {status.enabled ? 'Verificación 2FA' : 'Configura tu 2FA'}
+            {verificationMethod === 'email' 
+              ? 'Código por Correo' 
+              : verificationMethod === 'app' 
+                ? 'Verificación 2FA' 
+                : 'Configura tu 2FA'}
           </h1>
           <p className="text-xs text-muted-foreground mt-1 px-4 leading-relaxed">
-            {status.enabled 
-              ? 'Introduce el código de verificación de tu aplicación autenticadora.' 
-              : 'Escanea el código QR en tu app autenticadora para configurar tu cuenta.'}
+            {verificationMethod === 'email'
+              ? 'Introduce el código de 6 dígitos enviado a tu correo electrónico.'
+              : verificationMethod === 'app'
+                ? 'Introduce el código de verificación de tu aplicación autenticadora.'
+                : 'Escanea el código QR en tu app autenticadora para configurar tu cuenta.'}
           </p>
         </div>
 
-        {/* QR Code Setup block if not configured */}
-        {!status.enabled && status.qrCodeUrl && (
+        {/* QR Code Setup block if not configured and using app setup */}
+        {verificationMethod === 'app_setup' && status.qrCodeUrl && (
           <div className="flex flex-col items-center bg-neutral-900/50 border border-neutral-900 rounded-xl p-4 mb-6 space-y-3">
             <div className="bg-white p-2.5 rounded-lg select-none">
               <img 
@@ -256,6 +335,37 @@ export default function TwoFactorPage() {
             </div>
           </div>
 
+          {verificationMethod === 'email' && (
+            <div className="text-center py-1">
+              <button
+                type="button"
+                onClick={handleResendEmailCode}
+                disabled={resending || resendCooldown > 0}
+                className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {resendCooldown > 0 
+                  ? `Reenviar código en ${resendCooldown}s` 
+                  : '¿No recibiste el código? Reenviar por correo'}
+              </button>
+              {resendSuccess && (
+                <p className="text-[10px] text-teal-400 mt-1 font-medium animate-fadeIn">{resendSuccess}</p>
+              )}
+            </div>
+          )}
+
+          {verificationMethod === 'app' && (
+            <div className="text-center py-1">
+              <button
+                type="button"
+                onClick={handleUseOtherMethod}
+                disabled={resending}
+                className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {resending ? 'Generando código...' : '¿No tienes acceso a tu app? Usar otro método (correo)'}
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-3 text-xs text-red-400 font-medium flex items-start gap-2 animate-shake">
               <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500 mt-0.5" />
@@ -282,7 +392,7 @@ export default function TwoFactorPage() {
                   Verificando...
                 </>
               ) : (
-                status.enabled ? 'Verificar y Entrar' : 'Habilitar y Entrar'
+                (status.enabled || verificationMethod === 'email') ? 'Verificar y Entrar' : 'Habilitar y Entrar'
               )}
             </button>
           </div>

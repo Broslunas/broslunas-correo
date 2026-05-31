@@ -16,7 +16,7 @@ export async function proxy(request: NextRequest) {
     pathname === '/favicon.ico' ||
     pathname === '/api/emails/ingress' ||
     pathname.startsWith('/api/auth/google') ||
-    pathname === '/api/auth/2fa/verify' ||
+    pathname.startsWith('/api/auth/2fa') ||
     pathname === '/api/auth' // Logout endpoint
   ) {
     return NextResponse.next();
