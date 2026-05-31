@@ -53,9 +53,8 @@ export async function GET(request: NextRequest) {
     // Auto-bootstrap the default allowed domain if needed
     const totalDomainsCount = await db.collection('domains').countDocuments();
     if (totalDomainsCount === 0) {
-      const fromEmail = (process.env.MAILJET_FROM_EMAIL || 'yo@broslunas.link').trim().toLowerCase();
-      const domainParts = fromEmail.split('@');
-      const defaultDomain = domainParts.length > 1 ? domainParts[1] : 'broslunas.link';
+      const ownerDomain = ownerEmail.split('@')[1] || 'broslunas.link';
+      const defaultDomain = (ownerDomain === 'gmail.com' || ownerDomain === 'googlemail.com') ? 'broslunas.link' : ownerDomain;
       
       console.log(`Bootstrapping default allowed domain: ${defaultDomain}`);
       await db.collection('domains').updateOne(

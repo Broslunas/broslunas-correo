@@ -67,6 +67,14 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Verify if the sender is registered in the mailboxes collection
+    const mailbox = await db.collection('mailboxes').findOne({ email: cleanFrom });
+    if (!mailbox) {
+      return NextResponse.json({
+        error: `La cuenta de correo remitente (${cleanFrom}) no está registrada en el servidor. Regístrala en la sección de administración primero.`
+      }, { status: 400 });
+    }
+
     const apiKey = process.env.MAILJET_API_KEY;
     const apiSecret = process.env.MAILJET_API_SECRET;
 
@@ -77,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const fromName = customFromName || process.env.MAILJET_FROM_NAME || 'Mi Webmail';
+    const fromName = mailbox.name;
 
     // 4. Map arrays into Mailjet format
     const mailjetTo = to.map((email: string) => ({ Email: email.trim() }));

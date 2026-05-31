@@ -33,6 +33,14 @@ interface AllowedDomain {
   createdAt: string;
 }
 
+interface AllowedMailbox {
+  _id: string;
+  email: string;
+  name: string;
+  addedBy: string;
+  createdAt: string;
+}
+
 export default function UserManagement() {
   const [users, setUsers] = useState<AllowedUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,10 +49,16 @@ export default function UserManagement() {
   const [success, setSuccess] = useState('');
 
   // Domain states
-  const [activeTab, setActiveTab] = useState<'users' | 'domains'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'domains' | 'mailboxes'>('users');
   const [domains, setDomains] = useState<AllowedDomain[]>([]);
   const [newDomain, setNewDomain] = useState('');
   const [domainsLoading, setDomainsLoading] = useState(false);
+
+  // Mailbox states
+  const [mailboxes, setMailboxes] = useState<AllowedMailbox[]>([]);
+  const [newMailboxEmail, setNewMailboxEmail] = useState('');
+  const [newMailboxName, setNewMailboxName] = useState('');
+  const [mailboxesLoading, setMailboxesLoading] = useState(false);
 
   // Form states for new user
   const [newEmail, setNewEmail] = useState('');
@@ -166,9 +180,98 @@ export default function UserManagement() {
     }
   };
 
+  // Load authorized mailboxes list
+  const fetchMailboxes = async () => {
+    setMailboxesLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/mailboxes');
+      if (res.ok) {
+        const data = await res.json();
+        setMailboxes(data.mailboxes || []);
+      } else {
+        const data = await res.json();
+        setError(data.error || 'No se pudo cargar la lista de cuentas de correo');
+      }
+    } catch (err) {
+      console.error('Error fetching mailboxes:', err);
+      setError('Error al comunicar con el servidor.');
+    } finally {
+      setMailboxesLoading(false);
+    }
+  };
+
+  // Handle Add Mailbox submission
+  const handleAddMailbox = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMailboxEmail.trim() || !newMailboxName.trim()) return;
+
+    setError('');
+    setSuccess('');
+    setActionLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/mailboxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newMailboxEmail, name: newMailboxName })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSuccess(`Cuenta ${newMailboxEmail} registrada correctamente.`);
+        setNewMailboxEmail('');
+        setNewMailboxName('');
+        fetchMailboxes();
+      } else {
+        setError(data.error || 'Error al registrar la cuenta de correo');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error al conectar con el servidor.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle Delete Mailbox
+  const handleDeleteMailbox = async (email: string) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar la cuenta de correo "${email}"? Los usuarios ya no podrán enviar mensajes desde esta dirección.`)) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setActionLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/mailboxes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSuccess(`Cuenta ${email} eliminada con éxito.`);
+        fetchMailboxes();
+      } else {
+        setError(data.error || 'Error al eliminar la cuenta de correo');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error de red al eliminar la cuenta de correo.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchDomains();
+    fetchMailboxes();
   }, []);
 
   // Handle Add User submission
@@ -321,11 +424,11 @@ export default function UserManagement() {
           Administración de Accesos
         </h1>
         <button 
-          onClick={activeTab === 'users' ? fetchUsers : fetchDomains}
+          onClick={activeTab === 'users' ? fetchUsers : activeTab === 'domains' ? fetchDomains : fetchMailboxes}
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-900 border border-border/45 transition-all cursor-pointer"
           title="Refrescar lista"
         >
-          <RefreshCw className={`h-4 w-4 ${(activeTab === 'users' ? loading : domainsLoading) ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${(activeTab === 'users' ? loading : activeTab === 'domains' ? domainsLoading : mailboxesLoading) ? 'animate-spin' : ''}`} />
         </button>
       </header>
 
@@ -358,6 +461,20 @@ export default function UserManagement() {
           }`}
         >
           Dominios Autorizados
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('mailboxes');
+            setError('');
+            setSuccess('');
+          }}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border ${
+            activeTab === 'mailboxes'
+              ? 'bg-primary/10 border-primary/20 text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
+          }`}
+        >
+          Cuentas de Correo
         </button>
       </div>
 
@@ -605,7 +722,7 @@ export default function UserManagement() {
         </section>
 
       </div>
-      ) : (
+      ) : activeTab === 'domains' ? (
         /* Main split viewport for Domains */
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
           {/* Left Side: Add Domain Form */}
@@ -726,6 +843,165 @@ export default function UserManagement() {
                             onClick={() => handleDeleteDomain(dom.domain)}
                             className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
                             title="Eliminar dominio"
+                          >
+                            <Trash2 className="h-4.5 w-4.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : (
+        /* Main split viewport for Mailboxes */
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
+          {/* Left Side: Add Mailbox Form */}
+          <section className="w-full lg:w-96 shrink-0 space-y-4">
+            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+              
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
+                <Mail className="h-4.5 w-4.5 text-primary" />
+                Registrar Nueva Cuenta
+              </h3>
+
+              <form onSubmit={handleAddMailbox} className="space-y-4">
+                {/* Mailbox Display Name */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Nombre del Remitente (Display Name)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+                      <User className="h-4 w-4" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={newMailboxName}
+                      onChange={(e) => setNewMailboxName(e.target.value)}
+                      placeholder="ej: Pablo Luna (Ventas)"
+                      className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
+                    El nombre que verán los receptores de los correos enviados desde esta cuenta.
+                  </p>
+                </div>
+
+                {/* Mailbox Email Address */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Dirección de Correo
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+                      <Mail className="h-4 w-4" />
+                    </span>
+                    <input
+                      type="email"
+                      required
+                      value={newMailboxEmail}
+                      onChange={(e) => setNewMailboxEmail(e.target.value)}
+                      placeholder="ej: contacto@broslunas.es"
+                      className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
+                    La dirección debe terminar con un dominio previamente registrado en la pestaña de dominios.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={actionLoading || !newMailboxEmail.trim() || !newMailboxName.trim()}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/95 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer mt-4"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Registrando...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-3.5 w-3.5" />
+                      Registrar Cuenta
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Feedback Messages */}
+            {error && (
+              <div className="rounded-xl bg-red-950/20 border border-red-900/30 p-4 text-xs text-red-400 font-medium flex items-start gap-2.5 animate-shake">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+                <p>{error}</p>
+              </div>
+            )}
+            
+            {success && (
+              <div className="rounded-xl bg-emerald-950/20 border border-emerald-900/30 p-4 text-xs text-emerald-400 font-medium flex items-start gap-2.5 animate-fadeIn">
+                <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500 mt-0.5" />
+                <p>{success}</p>
+              </div>
+            )}
+          </section>
+
+          {/* Right Side: Mailboxes List */}
+          <section className="flex-1 min-w-0 bg-neutral-900/20 border border-border rounded-2xl flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-border/50 bg-neutral-950/20 shrink-0">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Cuentas de Correo Registradas ({mailboxes.length})
+              </h3>
+            </div>
+
+            <div className="flex-1 overflow-x-auto overflow-y-auto">
+              {mailboxesLoading ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : mailboxes.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                  <Mail className="h-8 w-8 opacity-30 mb-2" />
+                  <p className="text-xs">No hay cuentas de correo registradas.</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-neutral-900/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                    <tr>
+                      <th className="py-3 px-4">Nombre Remitente</th>
+                      <th className="py-3 px-4">Dirección Email</th>
+                      <th className="py-3 px-4">Registrado por</th>
+                      <th className="py-3 px-4">Fecha</th>
+                      <th className="py-3 px-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {mailboxes.map((box) => (
+                      <tr key={box._id} className="hover:bg-neutral-900/40 transition-all group">
+                        <td className="py-3.5 px-4 font-semibold text-foreground select-text text-xs">
+                          {box.name}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-xs text-neutral-300">
+                          {box.email}
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-400">
+                          {box.addedBy || 'System'}
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-400">
+                          {new Date(box.createdAt).toLocaleDateString('es-ES', {
+                            dateStyle: 'short'
+                          })}
+                        </td>
+                        <td className="py-3.5 px-4 text-right select-none">
+                          <button
+                            onClick={() => handleDeleteMailbox(box.email)}
+                            className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                            title="Eliminar cuenta"
                           >
                             <Trash2 className="h-4.5 w-4.5" />
                           </button>

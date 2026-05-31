@@ -32,6 +32,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [senderMailboxes, setSenderMailboxes] = useState<{ email: string; name: string }[]>([]);
+  const [senderLoading, setSenderLoading] = useState(true);
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Populate data when composing a reply
@@ -53,16 +55,25 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     }
   }, [initialData, isOpen]);
 
-  // Initialize sender selection from assigned addresses
+  // Load registered mailboxes that are authorized for the current user
   useEffect(() => {
-    if (assignedAddresses && assignedAddresses.length > 0) {
-      if (assignedAddresses.includes('*')) {
-        setFrom('');
-      } else {
-        setFrom(assignedAddresses[0]);
-      }
+    if (isOpen) {
+      setSenderLoading(true);
+      fetch('/api/mailboxes')
+        .then(res => res.json())
+        .then(data => {
+          const list = data.mailboxes || [];
+          setSenderMailboxes(list);
+          if (list.length > 0) {
+            setFrom(list[0].email);
+          } else {
+            setFrom('');
+          }
+        })
+        .catch(err => console.error('Error loading sender mailboxes:', err))
+        .finally(() => setSenderLoading(false));
     }
-  }, [assignedAddresses, isOpen]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -146,24 +157,21 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           {/* FROM Field */}
           <div className="flex items-center text-xs border-b border-border/30 pb-2">
             <span className="text-muted-foreground w-12 shrink-0 font-medium">De:</span>
-            {assignedAddresses.includes('*') ? (
-              <input
-                type="email"
-                required
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                placeholder="remitente@tudominio.com"
-                className="flex-1 bg-transparent border-0 outline-none text-foreground py-0.5 focus:ring-0 placeholder:text-muted-foreground/50 font-semibold"
-              />
+            {senderLoading ? (
+              <span className="text-muted-foreground animate-pulse text-[10px]">Cargando remitentes...</span>
+            ) : senderMailboxes.length === 0 ? (
+              <span className="text-red-400 font-semibold text-[10px]">
+                Sin cuentas de correo registradas en el servidor.
+              </span>
             ) : (
               <select
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
                 className="flex-1 bg-transparent border-0 outline-none text-foreground py-0.5 focus:ring-0 font-semibold cursor-pointer"
               >
-                {assignedAddresses.map((addr) => (
-                  <option key={addr} value={addr} className="bg-neutral-900 text-foreground">
-                    {addr}
+                {senderMailboxes.map((box) => (
+                  <option key={box.email} value={box.email} className="bg-neutral-900 text-foreground font-sans">
+                    {box.name} &lt;{box.email}&gt;
                   </option>
                 ))}
               </select>
