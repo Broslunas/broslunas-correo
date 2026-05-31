@@ -494,7 +494,7 @@ export default function UserManagement() {
         
         {/* Left Side: Create User Form */}
         <section className="w-full lg:w-96 shrink-0 space-y-4">
-          <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative overflow-hidden backdrop-blur-md">
+          <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative backdrop-blur-md">
             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
             
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
@@ -803,7 +803,7 @@ export default function UserManagement() {
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
           {/* Left Side: Add Domain Form */}
           <section className="w-full lg:w-96 shrink-0 space-y-4">
-            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative overflow-hidden backdrop-blur-md">
+            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative backdrop-blur-md">
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
@@ -936,7 +936,7 @@ export default function UserManagement() {
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
           {/* Left Side: Add Mailbox Form */}
           <section className="w-full lg:w-96 shrink-0 space-y-4">
-            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative overflow-hidden backdrop-blur-md">
+            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative backdrop-blur-md">
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
