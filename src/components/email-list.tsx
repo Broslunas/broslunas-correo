@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Mail, Eye, EyeOff, Trash2, RefreshCw } from 'lucide-react';
+import { Search, Mail, Eye, EyeOff, Trash2, RefreshCw, Bell, BellOff } from 'lucide-react';
 
 interface Email {
   _id: string;
@@ -26,6 +26,9 @@ interface EmailListProps {
   loading: boolean;
   syncing: boolean;
   onSyncClick: () => void;
+  isPushSupported?: boolean;
+  isPushSubscribed?: boolean;
+  onTogglePush?: () => void;
 }
 
 function SenderAvatar({ name, address }: { name: string; address: string }) {
@@ -81,6 +84,9 @@ export default function EmailList({
   loading,
   syncing,
   onSyncClick,
+  isPushSupported,
+  isPushSubscribed,
+  onTogglePush,
 }: EmailListProps) {
   return (
     <div
@@ -115,6 +121,24 @@ export default function EmailList({
                 <span className="h-1.5 w-1.5 rounded-full bg-current animate-ping" />
                 Sync
               </span>
+            )}
+            {isPushSupported && onTogglePush && (
+              <button
+                onClick={onTogglePush}
+                title={isPushSubscribed ? 'Desactivar notificaciones' : 'Activar notificaciones'}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer lg:hidden"
+                style={{
+                  background: isPushSubscribed ? 'rgba(45,212,191,0.1)' : 'rgba(255,255,255,0.04)',
+                  border: isPushSubscribed ? '1px solid rgba(45,212,191,0.2)' : '1px solid rgba(255,255,255,0.07)',
+                  color: isPushSubscribed ? 'hsl(174 72% 60%)' : 'hsl(215 20% 55%)',
+                }}
+              >
+                {isPushSubscribed ? (
+                  <Bell className="h-3.5 w-3.5" style={{ color: 'hsl(174 72% 55%)' }} />
+                ) : (
+                  <BellOff className="h-3.5 w-3.5" style={{ color: 'hsl(215 20% 45%)' }} />
+                )}
+              </button>
             )}
             <button
               onClick={onSyncClick}

@@ -430,6 +430,9 @@ function MailContent() {
               loading={loading}
               syncing={syncing}
               onSyncClick={fetchEmails}
+              isPushSupported={isPushSupported}
+              isPushSubscribed={isPushSubscribed}
+              onTogglePush={handleTogglePush}
             />
           </div>
 

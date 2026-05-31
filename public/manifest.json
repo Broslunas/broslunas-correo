@@ -1,0 +1,23 @@
+{
+  "name": "Broslunas Correo",
+  "short_name": "Broslunas",
+  "description": "Cliente de correo electrónico seguro y responsivo con diseño Aurora Frost.",
+  "start_url": "/mail?inbox=main",
+  "display": "standalone",
+  "background_color": "#060a14",
+  "theme_color": "#060a14",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
