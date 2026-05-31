@@ -62,6 +62,8 @@ export async function POST(request: Request) {
           contentType: att.contentType || 'application/octet-stream',
           size: att.size || 0,
           r2Url: att.key || '', // Match client-side UI expectation (r2Url parameter is the S3 key)
+          contentId: att.contentId || null,         // e.g. "<image001@domain>" for inline images
+          disposition: att.disposition || 'attachment', // 'inline' or 'attachment'
         }))
       : [];
 

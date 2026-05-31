@@ -31,11 +31,14 @@ export async function GET(request: Request) {
     // S3 Node response body implements ReadableStream interface or can be piped directly
     const stream = s3Response.Body as any;
 
-    // Set download headers
+    // Set response headers
+    const contentType = s3Response.ContentType || 'application/octet-stream';
     const headers = new Headers();
-    // Use encodeURIComponent to support safe filename characters
-    headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-    headers.set('Content-Type', s3Response.ContentType || 'application/octet-stream');
+    // Images are served inline so the browser can render them (e.g. inside email bodies).
+    // All other files force a download.
+    const disposition = contentType.startsWith('image/') ? 'inline' : 'attachment';
+    headers.set('Content-Disposition', `${disposition}; filename="${encodeURIComponent(filename)}"`);
+    headers.set('Content-Type', contentType);
     if (s3Response.ContentLength) {
       headers.set('Content-Length', s3Response.ContentLength.toString());
     }

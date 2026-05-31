@@ -18,6 +18,8 @@ interface Attachment {
   contentType: string;
   size: number;
   r2Url: string;
+  contentId?: string | null;  // e.g. "<image001@domain>" for inline images
+  disposition?: string | null; // 'inline' or 'attachment'
 }
 
 interface Email {
@@ -63,11 +65,46 @@ export default function EmailReader({
   }
 
   // Sanitize the HTML content safely using isomorphic-dompurify
+  // Inline images: replace cid: references with real R2 proxy URLs before sanitizing
   const getSanitizedContent = (htmlContent: string) => {
-    // Configure DOMPurify to allow links opening in new tabs
+    let processedHtml = htmlContent;
+
+    const attachments = email.attachments || [];
+    const imageAttachments = attachments.filter(a => a.contentType?.startsWith('image/'));
+
+    // --- Strategy 1: Exact contentId match (new emails with updated worker) ---
+    attachments.forEach((att) => {
+      if (att.contentId) {
+        const rawCid = att.contentId.replace(/^<|>$/g, '');
+        const r2ProxyUrl = `/api/attachments?key=${encodeURIComponent(att.r2Url)}&filename=${encodeURIComponent(att.filename)}`;
+        processedHtml = processedHtml.replace(
+          new RegExp(`cid:${rawCid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'),
+          r2ProxyUrl
+        );
+      }
+    });
+
+    // --- Strategy 2: Positional fallback (old emails without contentId) ---
+    // Match remaining cid: references to image attachments by order
+    const untaggedImages = imageAttachments.filter(a => !a.contentId);
+    if (untaggedImages.length > 0) {
+      let imgIdx = 0;
+      processedHtml = processedHtml.replace(/cid:[^\s"'>)]+/gi, () => {
+        const att = untaggedImages[imgIdx];
+        if (!att) return '';
+        imgIdx++;
+        return `/api/attachments?key=${encodeURIComponent(att.r2Url)}&filename=${encodeURIComponent(att.filename)}`;
+      });
+    }
+
+    // --- Strategy 3: Remove any still-unresolved cid: img tags ---
+    // Prevents broken image placeholders from cluttering the email view
+    processedHtml = processedHtml.replace(/<img[^>]*src=["'][^"']*cid:[^"']*["'][^>]*\/?>/gi, '');
+
     return {
-      __html: DOMPurify.sanitize(htmlContent, {
-        ADD_ATTR: ['target'],
+      __html: DOMPurify.sanitize(processedHtml, {
+        ADD_ATTR: ['target', 'src'],
+        ADD_URI_SAFE_ATTR: ['src'],
         FORBID_TAGS: ['style', 'script', 'iframe', 'form', 'embed', 'object'],
       })
     };
@@ -196,37 +233,46 @@ export default function EmailReader({
           </div>
         </div>
 
-        {/* Attachments Section */}
-        {email.attachments && email.attachments.length > 0 && (
-          <div className="bg-neutral-900/40 border border-border p-4 rounded-xl space-y-3">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <FileArchive className="h-4 w-4" />
-              Archivos Adjuntos ({email.attachments.length})
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {email.attachments.map((att, index) => (
-                <a
-                  key={index}
-                  href={`/api/attachments?key=${att.r2Url}&filename=${encodeURIComponent(att.filename)}`}
-                  className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-neutral-900 hover:bg-secondary transition-all text-xs group"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <FileText className="h-4 w-4 text-primary shrink-0" />
-                    <div className="truncate">
-                      <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                        {att.filename}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">{formatBytes(att.size)}</p>
+        {/* Attachments Section — only real (non-inline) attachments */}
+        {(() => {
+          const realAttachments = (email.attachments || []).filter(
+            (att) => !(
+              // Treat as inline if disposition is 'inline' OR it has a cid and is an image type
+              att.disposition === 'inline' ||
+              (att.contentId && att.contentType?.startsWith('image/'))
+            )
+          );
+          return realAttachments.length > 0 ? (
+            <div className="bg-neutral-900/40 border border-border p-4 rounded-xl space-y-3">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <FileArchive className="h-4 w-4" />
+                Archivos Adjuntos ({realAttachments.length})
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {realAttachments.map((att, index) => (
+                  <a
+                    key={index}
+                    href={`/api/attachments?key=${att.r2Url}&filename=${encodeURIComponent(att.filename)}`}
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-neutral-900 hover:bg-secondary transition-all text-xs group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <div className="truncate">
+                        <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          {att.filename}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">{formatBytes(att.size)}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="h-7 w-7 rounded-md bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0">
-                    <Download className="h-4 w-4" />
-                  </div>
-                </a>
-              ))}
+                    <div className="h-7 w-7 rounded-md bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0">
+                      <Download className="h-4 w-4" />
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          ) : null;
+        })()}
 
         {/* HTML / Text Content display */}
         <div className="prose prose-invert max-w-none text-sm text-neutral-200 select-text leading-relaxed">

@@ -75,7 +75,9 @@ export default {
             filename: attachment.filename || 'adjunto',
             contentType: attachment.mimeType || 'application/octet-stream',
             size: attachment.content.byteLength,
-            key: key
+            key: key,
+            contentId: attachment.contentId || null,       // e.g. "<image001@domain>" for inline images
+            disposition: attachment.disposition || 'attachment' // 'inline' or 'attachment'
           });
         }
       }
