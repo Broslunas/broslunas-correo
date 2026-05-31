@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [isPushSupported, setIsPushSupported] = useState(false);
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Helper to convert base64 VAPID key to Uint8Array
   const urlBase64ToUint8Array = (base64String: string) => {
@@ -201,6 +202,7 @@ export default function Dashboard() {
   // Fetch emails from API and write to cache
   const fetchEmails = useCallback(async () => {
     const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
+    setSyncing(true);
     try {
       const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}`);
       if (res.ok) {
@@ -216,6 +218,8 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error fetching emails:', error);
+    } finally {
+      setSyncing(false);
     }
   }, [currentFolder, searchQuery, selectedEmail]);
 
@@ -242,6 +246,7 @@ export default function Dashboard() {
 
     let isMounted = true;
     async function fetchFreshEmails() {
+      setSyncing(true);
       try {
         const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}`);
         if (res.ok && isMounted) {
@@ -259,6 +264,7 @@ export default function Dashboard() {
       } finally {
         if (isMounted) {
           setLoading(false);
+          setSyncing(false);
         }
       }
     }
@@ -415,7 +421,6 @@ export default function Dashboard() {
             <UserManagement />
           ) : (
             <>
-              {/* Column 2: Emails List Pane */}
               <EmailList
                 emails={emails}
                 selectedEmailId={selectedEmail?._id || null}
@@ -425,6 +430,8 @@ export default function Dashboard() {
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 loading={loading}
+                syncing={syncing}
+                onSyncClick={fetchEmails}
               />
 
               {/* Column 3: Detailed Email Content Reader */}

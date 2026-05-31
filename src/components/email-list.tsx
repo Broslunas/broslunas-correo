@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Mail, Eye, EyeOff, Trash2, ShieldAlert } from 'lucide-react';
+import { Search, Mail, Eye, EyeOff, Trash2, ShieldAlert, RefreshCw } from 'lucide-react';
 
 interface Email {
   _id: string;
@@ -24,6 +24,8 @@ interface EmailListProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   loading: boolean;
+  syncing: boolean;
+  onSyncClick: () => void;
 }
 
 export default function EmailList({
@@ -34,7 +36,9 @@ export default function EmailList({
   folderLabel,
   searchQuery,
   onSearchChange,
-  loading
+  loading,
+  syncing,
+  onSyncClick
 }: EmailListProps) {
   
   // Format dates elegantly
@@ -63,7 +67,25 @@ export default function EmailList({
       
       {/* Header and Folder Title */}
       <div className="p-4 border-b border-border space-y-3">
-        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">{folderLabel}</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">{folderLabel}</h2>
+          <div className="flex items-center gap-2">
+            {syncing && (
+              <span className="flex items-center gap-1 text-[8px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full select-none tracking-wider animate-pulse">
+                <span className="h-1 w-1 rounded-full bg-primary animate-ping" />
+                Sincronizando
+              </span>
+            )}
+            <button
+              onClick={onSyncClick}
+              disabled={syncing}
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-neutral-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              title="Sincronizar ahora"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
         
         {/* Search Input */}
         <div className="relative">
