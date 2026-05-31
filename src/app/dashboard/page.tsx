@@ -400,11 +400,10 @@ export default function Dashboard() {
               {/* Email List Panel */}
               <div
                 className={`
-                  h-full flex-col overflow-hidden
+                  h-full flex-col overflow-hidden w-full
                   ${mobileView === 'list' ? 'flex' : 'hidden'}
                   lg:flex lg:w-80 lg:shrink-0
                 `}
-                style={{ width: '100%' }}
               >
                 <EmailList
                   emails={emails}
