@@ -36,6 +36,18 @@ function MailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  // Check if we are inside the Google Login popup
+  useEffect(() => {
+    if (window.opener && window.name === 'GoogleLogin') {
+      try {
+        window.opener.postMessage({ type: 'AUTH_SUCCESS' }, window.location.origin);
+        window.close();
+      } catch (err) {
+        console.error('Error communicating with opener window:', err);
+      }
+    }
+  }, []);
+
   // Get and map folder from searchParams: inbox=main -> 'inbox', etc.
   const inboxParam = searchParams.get('inbox') || 'main';
   const getFolderFromParam = (param: string) => {
