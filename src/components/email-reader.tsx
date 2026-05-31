@@ -97,6 +97,11 @@ function buildEmailSrcdoc(email: Email): string {
     WHOLE_DOCUMENT: false,
   });
 
+  // If sanitized is empty but we had original content, show a notice
+  const bodyContent = sanitized.trim().length > 0
+    ? sanitized
+    : '<p style="color:#7d8ba3;font-style:italic;">El contenido de este mensaje no se puede mostrar de forma segura.</p>';
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -138,7 +143,7 @@ function buildEmailSrcdoc(email: Email): string {
   hr { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 16px 0; }
 </style>
 </head>
-<body>${sanitized}</body>
+<body>${bodyContent}</body>
 </html>`;
 }
 
@@ -146,6 +151,22 @@ function PlainTextBody({ text }: { text: string }) {
   const cleanedText = (text || '')
     .replace(/&amp;hairsp;/gi, '')
     .replace(/&hairsp;/gi, '');
+
+  if (!cleanedText.trim()) {
+    return (
+      <div
+        style={{
+          fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif",
+          fontSize: 14,
+          lineHeight: 1.65,
+          color: 'hsl(215 20% 45%)',
+          fontStyle: 'italic',
+        }}
+      >
+        Este mensaje no tiene contenido de texto.
+      </div>
+    );
+  }
 
   return (
     <div
@@ -285,7 +306,9 @@ export default function EmailReader({
     )
   );
 
-  const srcdoc = email.body.html ? buildEmailSrcdoc(email) : null;
+  const rawHtml = email.body.html || '';
+  const hasContent = rawHtml.trim().length > 0;
+  const srcdoc = hasContent ? buildEmailSrcdoc(email) : null;
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden animate-fadeIn">

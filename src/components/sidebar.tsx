@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Inbox,
   Send,
@@ -49,13 +49,14 @@ export default function Sidebar({
   onTogglePush,
 }: SidebarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebar_collapsed');
-      return saved === 'true';
-    }
-    return true; // Default to collapsed (icon-only)
-  });
+  const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed to match SSR
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar_collapsed');
+    setIsCollapsed(saved !== 'false');
+    setIsHydrated(true);
+  }, []);
 
   const toggleCollapse = () => {
     setIsCollapsed((prev) => {
