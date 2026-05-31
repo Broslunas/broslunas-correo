@@ -14,9 +14,10 @@ interface SidebarProps {
   currentFolder: string;
   onFolderChange: (folder: string) => void;
   onComposeClick: () => void;
+  role?: string;
 }
 
-export default function Sidebar({ currentFolder, onFolderChange, onComposeClick }: SidebarProps) {
+export default function Sidebar({ currentFolder, onFolderChange, onComposeClick, role }: SidebarProps) {
   const folders = [
     { id: 'inbox', label: 'Bandeja de entrada', icon: Inbox },
     { id: 'sent', label: 'Enviados', icon: Send },
@@ -89,6 +90,20 @@ export default function Sidebar({ currentFolder, onFolderChange, onComposeClick 
             </button>
           );
         })}
+
+        {role === 'admin' && (
+          <button
+            onClick={() => onFolderChange('admin')}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 cursor-pointer ${
+              currentFolder === 'admin'
+                ? 'bg-secondary text-primary font-medium border-l-2 border-primary pl-2.5'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <ShieldCheck className={`h-4.5 w-4.5 ${currentFolder === 'admin' ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className="flex-1 text-left">Administración</span>
+          </button>
+        )}
       </nav>
 
       {/* Footer system details & Logout */}

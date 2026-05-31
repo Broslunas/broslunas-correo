@@ -1,9 +1,48 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 import { connectToDatabase } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 
-// GET: Retrieve a list of emails with optional folder filtering, searching, and pagination
-export async function GET(request: Request) {
+export const dynamic = 'force-dynamic';
+
+const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced_in_env_local';
+const JWT_SECRET = new TextEncoder().encode(secret);
+
+// Helper to authenticate session and retrieve user permissions in real-time
+async function getAuthenticatedUser(request: NextRequest): Promise<{ success: boolean; email?: string; assignedAddresses?: string[]; errorResponse?: NextResponse }> {
+  const token = request.cookies.get('webmail_session')?.value;
+  if (!token) {
+    return { success: false, errorResponse: NextResponse.json({ error: 'No autenticado' }, { status: 401 }) };
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const email = (payload.email as string || '').trim().toLowerCase();
+
+    const { db } = await connectToDatabase();
+    const user = await db.collection('users').findOne({ email });
+
+    if (!user) {
+      return { success: false, errorResponse: NextResponse.json({ error: 'Usuario no autorizado' }, { status: 403 }) };
+    }
+
+    return {
+      success: true,
+      email,
+      assignedAddresses: user.assignedAddresses || [],
+    };
+  } catch (err) {
+    return { success: false, errorResponse: NextResponse.json({ error: 'Sesión inválida' }, { status: 401 }) };
+  }
+}
+
+// GET: Retrieve a list of emails filtered by folder, search query, and user's assigned addresses
+export async function GET(request: NextRequest) {
+  const auth = await getAuthenticatedUser(request);
+  if (!auth.success) return auth.errorResponse!;
+
+  const assignedAddresses = auth.assignedAddresses!;
+
   try {
     const { searchParams } = new URL(request.url);
     const folder = searchParams.get('folder') || 'inbox';
@@ -14,20 +53,44 @@ export async function GET(request: Request) {
 
     const { db } = await connectToDatabase();
 
-    // Build query filter
-    const query: any = { folder };
+    // Build compound query using $and to join filters safely
+    const andClauses: any[] = [];
 
-    if (searchQuery) {
-      // Create case-insensitive regex searches on multiple text fields
-      const regex = new RegExp(searchQuery, 'i');
-      query.$or = [
-        { subject: regex },
-        { 'body.text': regex },
-        { 'from.name': regex },
-        { 'from.address': regex },
-        { to: regex }
-      ];
+    // 1. Folder condition
+    andClauses.push({ folder });
+
+    // 2. Access limit condition (Skip if user has wildcard access "*")
+    if (!assignedAddresses.includes('*')) {
+      if (folder === 'sent') {
+        // Can only view emails sent from their assigned addresses
+        andClauses.push({ 'from.address': { $in: assignedAddresses } });
+      } else {
+        // Can only view emails received by their assigned addresses (to, cc, bcc)
+        andClauses.push({
+          $or: [
+            { to: { $in: assignedAddresses } },
+            { cc: { $in: assignedAddresses } },
+            { bcc: { $in: assignedAddresses } }
+          ]
+        });
+      }
     }
+
+    // 3. Search query condition (if provided)
+    if (searchQuery) {
+      const regex = new RegExp(searchQuery, 'i');
+      andClauses.push({
+        $or: [
+          { subject: regex },
+          { 'body.text': regex },
+          { 'from.name': regex },
+          { 'from.address': regex },
+          { to: regex }
+        ]
+      });
+    }
+
+    const query = { $and: andClauses };
 
     // Execute query with sorting (newest first) and pagination
     const emails = await db
@@ -56,8 +119,13 @@ export async function GET(request: Request) {
   }
 }
 
-// PATCH: Update properties of multiple emails (e.g. folder, read/unread status)
-export async function PATCH(request: Request) {
+// PATCH: Update properties of multiple emails (only those the user is allowed to access)
+export async function PATCH(request: NextRequest) {
+  const auth = await getAuthenticatedUser(request);
+  if (!auth.success) return auth.errorResponse!;
+
+  const assignedAddresses = auth.assignedAddresses!;
+
   try {
     const body = await request.json().catch(() => ({}));
     const { ids, folder, isRead } = body;
@@ -77,8 +145,20 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Nada que actualizar' }, { status: 400 });
     }
 
+    // Build query with security restriction
+    const updateQuery: any = { _id: { $in: objectIds } };
+
+    if (!assignedAddresses.includes('*')) {
+      updateQuery.$or = [
+        { to: { $in: assignedAddresses } },
+        { cc: { $in: assignedAddresses } },
+        { bcc: { $in: assignedAddresses } },
+        { 'from.address': { $in: assignedAddresses } }
+      ];
+    }
+
     const result = await db.collection('emails').updateMany(
-      { _id: { $in: objectIds } },
+      updateQuery,
       { $set: updateFields }
     );
 
@@ -92,8 +172,13 @@ export async function PATCH(request: Request) {
   }
 }
 
-// DELETE: Permanently delete emails
-export async function DELETE(request: Request) {
+// DELETE: Permanently delete emails (only those the user is allowed to access)
+export async function DELETE(request: NextRequest) {
+  const auth = await getAuthenticatedUser(request);
+  if (!auth.success) return auth.errorResponse!;
+
+  const assignedAddresses = auth.assignedAddresses!;
+
   try {
     const body = await request.json().catch(() => ({}));
     const { ids } = body;
@@ -105,9 +190,19 @@ export async function DELETE(request: Request) {
     const { db } = await connectToDatabase();
     const objectIds = ids.map(id => new ObjectId(id));
 
-    const result = await db.collection('emails').deleteMany({
-      _id: { $in: objectIds }
-    });
+    // Build query with security restriction
+    const deleteQuery: any = { _id: { $in: objectIds } };
+
+    if (!assignedAddresses.includes('*')) {
+      deleteQuery.$or = [
+        { to: { $in: assignedAddresses } },
+        { cc: { $in: assignedAddresses } },
+        { bcc: { $in: assignedAddresses } },
+        { 'from.address': { $in: assignedAddresses } }
+      ];
+    }
+
+    const result = await db.collection('emails').deleteMany(deleteQuery);
 
     return NextResponse.json({
       success: true,

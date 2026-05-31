@@ -5,6 +5,7 @@ import Sidebar from '@/components/sidebar';
 import EmailList from '@/components/email-list';
 import EmailReader from '@/components/email-reader';
 import ComposeModal from '@/components/compose-modal';
+import UserManagement from '@/components/user-management';
 
 interface Attachment {
   filename: string;
@@ -35,6 +36,26 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyData, setReplyData] = useState<{ to: string; subject: string; bodyHtml: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; assignedAddresses: string[] } | null>(null);
+
+  // Load user profile status on mount
+  useEffect(() => {
+    async function fetchUserStatus() {
+      try {
+        const res = await fetch('/api/auth/status');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        } else {
+          // Redirect to login if unauthorized or session expired
+          window.location.href = '/';
+        }
+      } catch (err) {
+        console.error('Error fetching user status:', err);
+      }
+    }
+    fetchUserStatus();
+  }, []);
 
   // Folder labels lookup
   const getFolderLabel = (folderId: string) => {
@@ -179,29 +200,36 @@ export default function Dashboard() {
           setSelectedEmail(null); // Clear selected mail on category change
         }}
         onComposeClick={handleComposeClick}
+        role={user?.role}
       />
 
-      {/* Column 2: Emails List Pane */}
-      <EmailList
-        emails={emails}
-        selectedEmailId={selectedEmail?._id || null}
-        onSelectEmail={handleSelectEmail}
-        onUpdateEmailStatus={handleUpdateEmailStatus}
-        folderLabel={getFolderLabel(currentFolder)}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        loading={loading}
-      />
+      {currentFolder === 'admin' ? (
+        <UserManagement />
+      ) : (
+        <>
+          {/* Column 2: Emails List Pane */}
+          <EmailList
+            emails={emails}
+            selectedEmailId={selectedEmail?._id || null}
+            onSelectEmail={handleSelectEmail}
+            onUpdateEmailStatus={handleUpdateEmailStatus}
+            folderLabel={getFolderLabel(currentFolder)}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            loading={loading}
+          />
 
-      {/* Column 3: Detailed Email Content Reader */}
-      <main className="flex-1 min-w-0 h-full">
-        <EmailReader
-          email={selectedEmail}
-          onUpdateEmailStatus={handleUpdateEmailStatus}
-          onDeletePermanent={handleDeletePermanent}
-          onReplyClick={handleReplyClick}
-        />
-      </main>
+          {/* Column 3: Detailed Email Content Reader */}
+          <main className="flex-1 min-w-0 h-full">
+            <EmailReader
+              email={selectedEmail}
+              onUpdateEmailStatus={handleUpdateEmailStatus}
+              onDeletePermanent={handleDeletePermanent}
+              onReplyClick={handleReplyClick}
+            />
+          </main>
+        </>
+      )}
 
       {/* Compose floating editor overlay */}
       <ComposeModal
@@ -215,6 +243,7 @@ export default function Dashboard() {
           }
         }}
         initialData={replyData}
+        assignedAddresses={user?.assignedAddresses || []}
       />
 
     </div>

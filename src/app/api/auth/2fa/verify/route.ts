@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     }
 
     // Generate otpauth URL and QR code image
-    const otpAuthUrl = `otpauth://totp/WebmailPrivado:${tempSession.email}?secret=${totpSecret}&issuer=WebmailPrivado`;
+    const otpAuthUrl = `otpauth://totp/BroslunasMail:${tempSession.email}?secret=${totpSecret}&issuer=BroslunasMail`;
     const qrCodeUrl = await QRCode.toDataURL(otpAuthUrl);
 
     return NextResponse.json({
@@ -124,10 +124,11 @@ export async function POST(request: Request) {
 
     // Issue permanent session cookie (valid for 7 days)
     const finalSessionToken = await new SignJWT({
-      role: 'admin',
+      role: user.role || 'user',
       email: tempSession.email,
       name: tempSession.name,
       picture: tempSession.picture,
+      assignedAddresses: user.assignedAddresses || [],
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()

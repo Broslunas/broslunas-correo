@@ -66,17 +66,49 @@ export async function GET(request: Request) {
     const profileData = await profileResponse.json();
     const { email, name, picture } = profileData;
 
-    // 3. Verify user email against ALLOWED_USER_EMAIL (case-insensitive)
-    if (!email || email.trim().toLowerCase() !== allowedEmail.trim().toLowerCase()) {
-      console.warn(`Unauthorized login attempt by email: ${email}`);
+    // 3. Connect to Database & Verify user authorization
+    const { connectToDatabase } = await import('@/lib/db');
+    const { db } = await connectToDatabase();
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Auto-bootstrap main administrator if database is empty or owner is missing
+    const ownerEmail = allowedEmail.trim().toLowerCase();
+    const totalUsersCount = await db.collection('users').countDocuments();
+    const ownerUser = await db.collection('users').findOne({ email: ownerEmail });
+
+    if (totalUsersCount === 0 || !ownerUser) {
+      console.log(`Bootstrapping main administrator account in callback: ${ownerEmail}`);
+      await db.collection('users').updateOne(
+        { email: ownerEmail },
+        {
+          $set: {
+            email: ownerEmail,
+            role: 'admin',
+            twoFactorSecret: ownerUser?.twoFactorSecret || null,
+            twoFactorEnabled: ownerUser?.twoFactorEnabled || false,
+            assignedAddresses: ['*'],
+            addedBy: 'SYSTEM',
+            updatedAt: new Date(),
+          },
+          $setOnInsert: { createdAt: new Date() }
+        },
+        { upsert: true }
+      );
+    }
+
+    // Check if the logging in user is authorized in the database
+    const user = await db.collection('users').findOne({ email: cleanEmail });
+    if (!user) {
+      console.warn(`Unauthorized login attempt by email: ${cleanEmail}`);
       return NextResponse.redirect(`${appUrl}?error=${encodeURIComponent('Acceso no autorizado para esta cuenta')}`);
     }
 
     // 4. Generate temporary session JWT (valid for 10 minutes)
     const tempToken = await new SignJWT({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       name: name || '',
       picture: picture || '',
+      role: user.role,
       step: '2fa_pending'
     })
       .setProtectedHeader({ alg: 'HS256' })

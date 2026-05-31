@@ -20,9 +20,11 @@ interface ComposeModalProps {
     subject: string;
     bodyHtml: string;
   } | null;
+  assignedAddresses: string[];
 }
 
-export default function ComposeModal({ isOpen, onClose, initialData }: ComposeModalProps) {
+export default function ComposeModal({ isOpen, onClose, initialData, assignedAddresses }: ComposeModalProps) {
+  const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
@@ -50,6 +52,17 @@ export default function ComposeModal({ isOpen, onClose, initialData }: ComposeMo
       }
     }
   }, [initialData, isOpen]);
+
+  // Initialize sender selection from assigned addresses
+  useEffect(() => {
+    if (assignedAddresses && assignedAddresses.length > 0) {
+      if (assignedAddresses.includes('*')) {
+        setFrom('');
+      } else {
+        setFrom(assignedAddresses[0]);
+      }
+    }
+  }, [assignedAddresses, isOpen]);
 
   if (!isOpen) return null;
 
@@ -86,6 +99,7 @@ export default function ComposeModal({ isOpen, onClose, initialData }: ComposeMo
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          from,
           to: toArray,
           cc: ccArray,
           bcc: bccArray,
@@ -129,6 +143,33 @@ export default function ComposeModal({ isOpen, onClose, initialData }: ComposeMo
         
         <div className="px-4 py-2 space-y-2 border-b border-border bg-neutral-900/50">
           
+          {/* FROM Field */}
+          <div className="flex items-center text-xs border-b border-border/30 pb-2">
+            <span className="text-muted-foreground w-12 shrink-0 font-medium">De:</span>
+            {assignedAddresses.includes('*') ? (
+              <input
+                type="email"
+                required
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                placeholder="remitente@tudominio.com"
+                className="flex-1 bg-transparent border-0 outline-none text-foreground py-0.5 focus:ring-0 placeholder:text-muted-foreground/50 font-semibold"
+              />
+            ) : (
+              <select
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                className="flex-1 bg-transparent border-0 outline-none text-foreground py-0.5 focus:ring-0 font-semibold cursor-pointer"
+              >
+                {assignedAddresses.map((addr) => (
+                  <option key={addr} value={addr} className="bg-neutral-900 text-foreground">
+                    {addr}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           {/* TO Field */}
           <div className="flex items-center text-xs">
             <span className="text-muted-foreground w-12 shrink-0 font-medium">Para:</span>
