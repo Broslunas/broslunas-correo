@@ -13,7 +13,8 @@ import {
   RefreshCw, 
   CheckCircle,
   X,
-  Globe
+  Globe,
+  ChevronDown
 } from 'lucide-react';
 
 interface AllowedUser {
@@ -65,14 +66,16 @@ export default function UserManagement() {
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'user'>('user');
   const [fullAccess, setFullAccess] = useState(false);
-  const [addressesInput, setAddressesInput] = useState('');
+  const [newSelectedAddresses, setNewSelectedAddresses] = useState<string[]>([]);
+  const [newDropdownOpen, setNewDropdownOpen] = useState(false);
   const [newRequire2FA, setNewRequire2FA] = useState(false);
-
+  
   // Edit user modal states
   const [editingUser, setEditingUser] = useState<AllowedUser | null>(null);
   const [editRole, setEditRole] = useState<'admin' | 'user'>('user');
   const [editFullAccess, setEditFullAccess] = useState(false);
-  const [editAddressesInput, setEditAddressesInput] = useState('');
+  const [editSelectedAddresses, setEditSelectedAddresses] = useState<string[]>([]);
+  const [editDropdownOpen, setEditDropdownOpen] = useState(false);
   const [editRequire2FA, setEditRequire2FA] = useState(false);
 
   // Load authorized users list
@@ -289,7 +292,7 @@ export default function UserManagement() {
     // Prepare addresses array
     const assignedAddresses = fullAccess 
       ? ['*'] 
-      : addressesInput.split(',').map(a => a.trim()).filter(Boolean);
+      : newSelectedAddresses;
 
     if (assignedAddresses.length === 0) {
       setError('Debes asignar al menos una dirección o activar el acceso total.');
@@ -314,7 +317,7 @@ export default function UserManagement() {
       if (res.ok && data.success) {
         setSuccess(`Usuario ${newEmail} autorizado correctamente.`);
         setNewEmail('');
-        setAddressesInput('');
+        setNewSelectedAddresses([]);
         setFullAccess(false);
         setNewRole('user');
         setNewRequire2FA(false);
@@ -369,7 +372,7 @@ export default function UserManagement() {
     setEditRole(user.role);
     const isWildcard = user.assignedAddresses.includes('*');
     setEditFullAccess(isWildcard);
-    setEditAddressesInput(isWildcard ? '' : user.assignedAddresses.join(', '));
+    setEditSelectedAddresses(isWildcard ? [] : [...user.assignedAddresses]);
     setEditRequire2FA(!!user.require2FA);
   };
 
@@ -384,7 +387,7 @@ export default function UserManagement() {
 
     const assignedAddresses = editFullAccess 
       ? ['*'] 
-      : editAddressesInput.split(',').map(a => a.trim()).filter(Boolean);
+      : editSelectedAddresses;
 
     if (assignedAddresses.length === 0) {
       setError('Debes asignar al menos una dirección o activar el acceso total.');
@@ -563,26 +566,73 @@ export default function UserManagement() {
                 </label>
               </div>
 
-              {/* Specific Email addresses text input */}
+              {/* Specific Email addresses selector */}
               {!fullAccess && (
                 <div className="space-y-1.5 animate-fadeIn">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
                     Direcciones Asignadas (Cuentas Propias)
                   </label>
-                  <div className="relative">
-                    <span className="absolute top-3 left-3 text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <textarea
-                      value={addressesInput}
-                      onChange={(e) => setAddressesInput(e.target.value)}
-                      placeholder="contacto@broslunas.es, ventas@broslunas.es"
-                      rows={3}
-                      className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none font-mono"
-                    />
-                  </div>
+                  
+                  {mailboxes.length === 0 ? (
+                    <div className="rounded-lg border border-yellow-900/35 bg-yellow-950/20 p-3 text-[10px] text-amber-500 font-medium leading-relaxed">
+                      ⚠️ No hay cuentas de correo registradas en el servidor. 
+                      Registra al menos una cuenta en la pestaña &quot;Cuentas de Correo&quot; primero.
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setNewDropdownOpen(!newDropdownOpen)}
+                        className="w-full flex items-center justify-between rounded-lg border border-border bg-neutral-950 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
+                      >
+                        <span className="truncate">
+                          {newSelectedAddresses.length === 0 
+                            ? 'Seleccionar cuentas...' 
+                            : `${newSelectedAddresses.length} cuenta(s) seleccionada(s)`}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </button>
+                      
+                      {newDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setNewDropdownOpen(false)} />
+                          <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-2 shadow-xl animate-fadeIn">
+                            <div className="space-y-1">
+                              {mailboxes.map(box => {
+                                const isChecked = newSelectedAddresses.includes(box.email);
+                                return (
+                                  <label 
+                                    key={box._id} 
+                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-900 cursor-pointer select-none text-xs text-foreground text-left"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        if (isChecked) {
+                                          setNewSelectedAddresses(newSelectedAddresses.filter(addr => addr !== box.email));
+                                        } else {
+                                          setNewSelectedAddresses([...newSelectedAddresses, box.email]);
+                                        }
+                                      }}
+                                      className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                    />
+                                    <div className="truncate flex-1 min-w-0">
+                                      <p className="font-semibold text-[11px] truncate">{box.name}</p>
+                                      <p className="text-[9px] text-muted-foreground truncate">{box.email}</p>
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  
                   <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
-                    Separa las direcciones de tu dominio con comas. El usuario solo podrá ver e interactuar con estas cuentas.
+                    El usuario solo podrá ver e interactuar con las cuentas seleccionadas.
                   </p>
                 </div>
               )}
@@ -1108,20 +1158,66 @@ export default function UserManagement() {
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
                     Direcciones Asignadas (Cuentas Propias)
                   </label>
-                  <div className="relative">
-                    <span className="absolute top-3 left-3 text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <textarea
-                      value={editAddressesInput}
-                      onChange={(e) => setEditAddressesInput(e.target.value)}
-                      placeholder="contacto@broslunas.es, ventas@broslunas.es"
-                      rows={3}
-                      className="w-full rounded-lg border border-border bg-neutral-900 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none font-mono"
-                    />
-                  </div>
+                  
+                  {mailboxes.length === 0 ? (
+                    <div className="rounded-lg border border-yellow-905/35 bg-yellow-950/20 p-3 text-[10px] text-amber-500 font-medium leading-relaxed animate-fadeIn">
+                      ⚠️ No hay cuentas de correo registradas. Regístralas primero en la pestaña de cuentas.
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setEditDropdownOpen(!editDropdownOpen)}
+                        className="w-full flex items-center justify-between rounded-lg border border-border bg-neutral-900 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
+                      >
+                        <span className="truncate">
+                          {editSelectedAddresses.length === 0 
+                            ? 'Seleccionar cuentas...' 
+                            : `${editSelectedAddresses.length} cuenta(s) seleccionada(s)`}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </button>
+                      
+                      {editDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setEditDropdownOpen(false)} />
+                          <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-2 shadow-xl animate-fadeIn">
+                            <div className="space-y-1">
+                              {mailboxes.map(box => {
+                                const isChecked = editSelectedAddresses.includes(box.email);
+                                return (
+                                  <label 
+                                    key={box._id} 
+                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-900 cursor-pointer select-none text-xs text-foreground text-left"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        if (isChecked) {
+                                          setEditSelectedAddresses(editSelectedAddresses.filter(addr => addr !== box.email));
+                                        } else {
+                                          setEditSelectedAddresses([...editSelectedAddresses, box.email]);
+                                        }
+                                      }}
+                                      className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                    />
+                                    <div className="truncate flex-1 min-w-0">
+                                      <p className="font-semibold text-[11px] truncate">{box.name}</p>
+                                      <p className="text-[9px] text-muted-foreground truncate">{box.email}</p>
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  
                   <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
-                    Separa las direcciones de tu dominio con comas.
+                    Selecciona las cuentas a las que tendrá acceso este usuario.
                   </p>
                 </div>
               )}
