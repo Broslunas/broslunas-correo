@@ -448,22 +448,29 @@ function MailContent() {
   };
 
   const handleReplyClick = (email: Email) => {
-    const cleanSubject = email.subject.toLowerCase().startsWith('re:') ? email.subject : `Re: ${email.subject}`;
+    const subjectText = email.subject || '';
+    const hasRePrefix = /^re:\s*/i.test(subjectText);
+    const cleanSubject = hasRePrefix ? subjectText : `Re: ${subjectText}`;
     const quoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid rgba(45,212,191,0.15);margin:20px 0;"><div style="color:#7d8ba3;font-size:11px;line-height:1.5;">El ${new Date(email.date).toLocaleString('es-ES')} &lt;${email.from.address}&gt; escribió:<br></div><blockquote style="margin:10px 0 0 10px;border-left:2px solid rgba(45,212,191,0.35);padding-left:15px;color:#8d99b3;">${email.body.html || email.body.text}</blockquote>`;
     const inReplyTo = email.messageId || '';
-    const references = [email.references, email.messageId].filter(Boolean).join(' ');
+    // Build references without duplicates: existing references + messageId
+    const existingRefs = email.references ? email.references.split(/[\s]+/).filter(Boolean) : [];
+    const newRefs = email.messageId ? [email.messageId] : [];
+    const allRefs = Array.from(new Set([...existingRefs, ...newRefs])).join(' ');
     setComposeData({
       to: email.from.address,
       subject: cleanSubject,
       bodyHtml: quoteHtml,
       inReplyTo: inReplyTo || undefined,
-      references: references || undefined,
+      references: allRefs || undefined,
     });
     setComposeOpen(true);
   };
 
   const handleReplyAllClick = (email: Email) => {
-    const cleanSubject = email.subject.toLowerCase().startsWith('re:') ? email.subject : `Re: ${email.subject}`;
+    const subjectText = email.subject || '';
+    const hasRePrefix = /^re:\s*/i.test(subjectText);
+    const cleanSubject = hasRePrefix ? subjectText : `Re: ${subjectText}`;
     const quoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid rgba(45,212,191,0.15);margin:20px 0;"><div style="color:#7d8ba3;font-size:11px;line-height:1.5;">El ${new Date(email.date).toLocaleString('es-ES')} &lt;${email.from.address}&gt; escribió:<br></div><blockquote style="margin:10px 0 0 10px;border-left:2px solid rgba(45,212,191,0.35);padding-left:15px;color:#8d99b3;">${email.body.html || email.body.text}</blockquote>`;
     const currentUserEmail = user?.email?.toLowerCase() || '';
     const recipients = new Set<string>();
@@ -483,20 +490,25 @@ function MailContent() {
     }
     const ccStr = Array.from(recipients).join(', ');
     const inReplyTo = email.messageId || '';
-    const references = [email.references, email.messageId].filter(Boolean).join(' ');
+    // Build references without duplicates
+    const existingRefs = email.references ? email.references.split(/[\s]+/).filter(Boolean) : [];
+    const newRefs = email.messageId ? [email.messageId] : [];
+    const allRefs = Array.from(new Set([...existingRefs, ...newRefs])).join(' ');
     setComposeData({
       to: email.from.address,
       subject: cleanSubject,
       bodyHtml: quoteHtml,
       cc: ccStr || undefined,
       inReplyTo: inReplyTo || undefined,
-      references: references || undefined,
+      references: allRefs || undefined,
     });
     setComposeOpen(true);
   };
 
   const handleForwardClick = (email: Email) => {
-    const cleanSubject = email.subject.toLowerCase().startsWith('fwd:') ? email.subject : `Fwd: ${email.subject}`;
+    const subjectText = email.subject || '';
+    const hasFwdPrefix = /^fwd:\s*/i.test(subjectText);
+    const cleanSubject = hasFwdPrefix ? subjectText : `Fwd: ${subjectText}`;
     const fromLine = `${email.from.name || ''} &lt;${email.from.address}&gt;`;
     const toLine = email.to.join(', ');
     const ccLine = email.cc && email.cc.length > 0 ? `<br><b>CC:</b> ${email.cc.join(', ')}` : '';
