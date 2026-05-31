@@ -91,6 +91,24 @@ export async function POST(request: NextRequest) {
 
     const { db } = await connectToDatabase();
 
+    // Validate that all domains in assignedAddresses (excluding '*') are allowed
+    if (cleanAddresses.length > 0 && !cleanAddresses.includes('*')) {
+      const domainsToCheck = Array.from(new Set(cleanAddresses.map(addr => addr.split('@')[1]).filter(Boolean)));
+      
+      // Ensure unique index on domain
+      await db.collection('domains').createIndex({ domain: 1 }, { unique: true }).catch(() => {});
+      
+      const allowedDomains = await db.collection('domains').find({ domain: { $in: domainsToCheck } }).toArray();
+      const allowedDomainNames = new Set(allowedDomains.map(d => d.domain.toLowerCase()));
+      
+      const unallowedDomains = domainsToCheck.filter(domain => !allowedDomainNames.has(domain));
+      if (unallowedDomains.length > 0) {
+        return NextResponse.json({ 
+          error: `Los siguientes dominios no están autorizados en el sistema: ${unallowedDomains.join(', ')}. Registra los dominios en la sección de administración primero.` 
+        }, { status: 400 });
+      }
+    }
+
     // Check if user already exists
     const existingUser = await db.collection('users').findOne({ email: cleanEmail });
     if (existingUser) {
@@ -142,15 +160,34 @@ export async function PATCH(request: NextRequest) {
       updateFields.role = role;
     }
 
+    const { db } = await connectToDatabase();
+
     if (assignedAddresses && Array.isArray(assignedAddresses)) {
       const cleanAddresses = assignedAddresses.map((addr: string) => addr.trim().toLowerCase()).filter(Boolean);
       if (cleanAddresses.length === 0) {
         return NextResponse.json({ error: 'Debes asignar al menos una dirección o usar "*" para acceso total.' }, { status: 400 });
       }
+
+      // Validate that all domains in assignedAddresses (excluding '*') are allowed
+      if (cleanAddresses.length > 0 && !cleanAddresses.includes('*')) {
+        const domainsToCheck = Array.from(new Set(cleanAddresses.map(addr => addr.split('@')[1]).filter(Boolean)));
+        
+        // Ensure unique index on domain
+        await db.collection('domains').createIndex({ domain: 1 }, { unique: true }).catch(() => {});
+        
+        const allowedDomains = await db.collection('domains').find({ domain: { $in: domainsToCheck } }).toArray();
+        const allowedDomainNames = new Set(allowedDomains.map(d => d.domain.toLowerCase()));
+        
+        const unallowedDomains = domainsToCheck.filter(domain => !allowedDomainNames.has(domain));
+        if (unallowedDomains.length > 0) {
+          return NextResponse.json({ 
+            error: `Los siguientes dominios no están autorizados en el sistema: ${unallowedDomains.join(', ')}. Registra los dominios en la sección de administración primero.` 
+          }, { status: 400 });
+        }
+      }
+
       updateFields.assignedAddresses = cleanAddresses;
     }
-
-    const { db } = await connectToDatabase();
 
     // Prevent administrators from de-admining or altering themselves to avoid locking themselves out
     if (cleanEmail === auth.email && updateFields.role === 'user') {

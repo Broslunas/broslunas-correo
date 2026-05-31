@@ -54,6 +54,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `No tienes permisos para enviar correos desde la cuenta: ${cleanFrom}` }, { status: 403 });
     }
 
+    // Verify if the sender's domain is in the allowed domains collection
+    const fromDomain = cleanFrom.split('@')[1];
+    if (!fromDomain) {
+      return NextResponse.json({ error: 'Dirección del remitente (From) inválida' }, { status: 400 });
+    }
+
+    const domainDoc = await db.collection('domains').findOne({ domain: fromDomain });
+    if (!domainDoc) {
+      return NextResponse.json({ 
+        error: `El dominio del remitente (${fromDomain}) no está permitido en este servidor.` 
+      }, { status: 400 });
+    }
+
     const apiKey = process.env.MAILJET_API_KEY;
     const apiSecret = process.env.MAILJET_API_SECRET;
 

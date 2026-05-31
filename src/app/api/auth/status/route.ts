@@ -50,6 +50,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Auto-bootstrap the default allowed domain if needed
+    const totalDomainsCount = await db.collection('domains').countDocuments();
+    if (totalDomainsCount === 0) {
+      const fromEmail = (process.env.MAILJET_FROM_EMAIL || 'yo@broslunas.link').trim().toLowerCase();
+      const domainParts = fromEmail.split('@');
+      const defaultDomain = domainParts.length > 1 ? domainParts[1] : 'broslunas.link';
+      
+      console.log(`Bootstrapping default allowed domain: ${defaultDomain}`);
+      await db.collection('domains').updateOne(
+        { domain: defaultDomain },
+        {
+          $set: {
+            domain: defaultDomain,
+            addedBy: 'SYSTEM',
+            createdAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
+    }
+
     // 4. Fetch the user's real-time configuration
     const user = await db.collection('users').findOne({ email });
 

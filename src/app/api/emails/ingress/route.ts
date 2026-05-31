@@ -29,6 +29,29 @@ export async function POST(request: Request) {
     // 3. Connect to DB
     const { db } = await connectToDatabase();
 
+    // Verify that at least one recipient belongs to an allowed domain in the system
+    const recipients = [
+      ...(Array.isArray(to) ? to : []),
+      ...(Array.isArray(cc) ? cc : []),
+      ...(Array.isArray(bcc) ? bcc : [])
+    ].map((r: string) => r.trim().toLowerCase());
+
+    const recipientDomains = Array.from(new Set(recipients.map(r => r.split('@')[1]).filter(Boolean)));
+    
+    // Ensure unique index on domain
+    await db.collection('domains').createIndex({ domain: 1 }, { unique: true }).catch(() => {});
+    
+    const allowedDomains = await db.collection('domains').find({}).toArray();
+    const allowedDomainNames = new Set(allowedDomains.map(d => d.domain.toLowerCase()));
+    
+    if (allowedDomainNames.size > 0) {
+      const hasAllowedRecipient = recipientDomains.some(domain => allowedDomainNames.has(domain));
+      if (!hasAllowedRecipient) {
+        console.warn(`Ingress email rejected: No recipient domains match allowed domains list. Recipient domains: ${recipientDomains.join(', ')}`);
+        return NextResponse.json({ error: 'El dominio del destinatario no está permitido en este servidor.' }, { status: 400 });
+      }
+    }
+
     // 4. Map attachments to frontend schema (key -> r2Url)
     const formattedAttachments = Array.isArray(attachments)
       ? attachments.map((att: any) => ({

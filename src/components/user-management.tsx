@@ -12,7 +12,8 @@ import {
   AlertCircle, 
   RefreshCw, 
   CheckCircle,
-  X
+  X,
+  Globe
 } from 'lucide-react';
 
 interface AllowedUser {
@@ -25,12 +26,25 @@ interface AllowedUser {
   createdAt: string;
 }
 
+interface AllowedDomain {
+  _id: string;
+  domain: string;
+  addedBy: string;
+  createdAt: string;
+}
+
 export default function UserManagement() {
   const [users, setUsers] = useState<AllowedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Domain states
+  const [activeTab, setActiveTab] = useState<'users' | 'domains'>('users');
+  const [domains, setDomains] = useState<AllowedDomain[]>([]);
+  const [newDomain, setNewDomain] = useState('');
+  const [domainsLoading, setDomainsLoading] = useState(false);
 
   // Form states for new user
   const [newEmail, setNewEmail] = useState('');
@@ -65,8 +79,96 @@ export default function UserManagement() {
     }
   };
 
+  // Load authorized domains list
+  const fetchDomains = async () => {
+    setDomainsLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/domains');
+      if (res.ok) {
+        const data = await res.json();
+        setDomains(data.domains || []);
+      } else {
+        const data = await res.json();
+        setError(data.error || 'No se pudo cargar la lista de dominios');
+      }
+    } catch (err) {
+      console.error('Error fetching domains:', err);
+      setError('Error al comunicar con el servidor.');
+    } finally {
+      setDomainsLoading(false);
+    }
+  };
+
+  // Handle Add Domain submission
+  const handleAddDomain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDomain.trim()) return;
+
+    setError('');
+    setSuccess('');
+    setActionLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/domains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: newDomain })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSuccess(`Dominio ${newDomain} registrado correctamente.`);
+        setNewDomain('');
+        fetchDomains();
+      } else {
+        setError(data.error || 'Error al registrar el dominio');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error al conectar con el servidor.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle Delete Domain
+  const handleDeleteDomain = async (domainName: string) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar el dominio "${domainName}"? Esto podría impedir que se asignen cuentas de este dominio o bloquear correos entrantes/salientes.`)) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setActionLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/domains', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: domainName })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSuccess(`Dominio ${domainName} eliminado con éxito.`);
+        fetchDomains();
+      } else {
+        setError(data.error || 'Error al eliminar el dominio');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error de red al eliminar el dominio.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchDomains();
   }, []);
 
   // Handle Add User submission
@@ -219,16 +321,49 @@ export default function UserManagement() {
           Administración de Accesos
         </h1>
         <button 
-          onClick={fetchUsers}
+          onClick={activeTab === 'users' ? fetchUsers : fetchDomains}
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-900 border border-border/45 transition-all cursor-pointer"
           title="Refrescar lista"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${(activeTab === 'users' ? loading : domainsLoading) ? 'animate-spin' : ''}`} />
         </button>
       </header>
 
-      {/* Main split viewport */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6">
+      {/* Tab Selector */}
+      <div className="flex px-8 py-2 border-b border-border/40 bg-neutral-950/40 shrink-0 gap-4">
+        <button
+          onClick={() => {
+            setActiveTab('users');
+            setError('');
+            setSuccess('');
+          }}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border ${
+            activeTab === 'users'
+              ? 'bg-primary/10 border-primary/20 text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
+          }`}
+        >
+          Gestión de Usuarios
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('domains');
+            setError('');
+            setSuccess('');
+          }}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border ${
+            activeTab === 'domains'
+              ? 'bg-primary/10 border-primary/20 text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
+          }`}
+        >
+          Dominios Autorizados
+        </button>
+      </div>
+
+      {activeTab === 'users' ? (
+        /* Main split viewport for Users */
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6">
         
         {/* Left Side: Create User Form */}
         <section className="w-full lg:w-96 shrink-0 space-y-4">
@@ -470,6 +605,140 @@ export default function UserManagement() {
         </section>
 
       </div>
+      ) : (
+        /* Main split viewport for Domains */
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
+          {/* Left Side: Add Domain Form */}
+          <section className="w-full lg:w-96 shrink-0 space-y-4">
+            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+              
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
+                <Globe className="h-4.5 w-4.5 text-primary" />
+                Registrar Nuevo Dominio
+              </h3>
+
+              <form onSubmit={handleAddDomain} className="space-y-4">
+                {/* Domain Input */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Nombre de Dominio
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+                      <Globe className="h-4 w-4" />
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={newDomain}
+                      onChange={(e) => setNewDomain(e.target.value)}
+                      placeholder="ej: broslunas.es"
+                      className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
+                    Solo letras, números, guiones y puntos (ej: midominio.com). No incluyas "http://" ni "@".
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={actionLoading || !newDomain.trim()}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/95 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer mt-4"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Registrando...
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="h-3.5 w-3.5" />
+                      Registrar Dominio
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Feedback Messages */}
+            {error && (
+              <div className="rounded-xl bg-red-950/20 border border-red-900/30 p-4 text-xs text-red-400 font-medium flex items-start gap-2.5 animate-shake">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+                <p>{error}</p>
+              </div>
+            )}
+            
+            {success && (
+              <div className="rounded-xl bg-emerald-950/20 border border-emerald-900/30 p-4 text-xs text-emerald-400 font-medium flex items-start gap-2.5 animate-fadeIn">
+                <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500 mt-0.5" />
+                <p>{success}</p>
+              </div>
+            )}
+          </section>
+
+          {/* Right Side: Domains List */}
+          <section className="flex-1 min-w-0 bg-neutral-900/20 border border-border rounded-2xl flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-border/50 bg-neutral-950/20 shrink-0">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Dominios Permitidos ({domains.length})
+              </h3>
+            </div>
+
+            <div className="flex-1 overflow-x-auto overflow-y-auto">
+              {domainsLoading ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : domains.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                  <Globe className="h-8 w-8 opacity-30 mb-2" />
+                  <p className="text-xs">No hay dominios autorizados registrados.</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-neutral-900/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                    <tr>
+                      <th className="py-3 px-4">Dominio</th>
+                      <th className="py-3 px-4">Registrado por</th>
+                      <th className="py-3 px-4">Fecha de Registro</th>
+                      <th className="py-3 px-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {domains.map((dom) => (
+                      <tr key={dom._id} className="hover:bg-neutral-900/40 transition-all group">
+                        <td className="py-3.5 px-4 font-semibold text-foreground select-text font-mono text-xs">
+                          {dom.domain}
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-300">
+                          {dom.addedBy || 'System'}
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-400">
+                          {new Date(dom.createdAt).toLocaleString('es-ES', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                          })}
+                        </td>
+                        <td className="py-3.5 px-4 text-right select-none">
+                          <button
+                            onClick={() => handleDeleteDomain(dom.domain)}
+                            className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                            title="Eliminar dominio"
+                          >
+                            <Trash2 className="h-4.5 w-4.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Edit User Modal Overlay */}
       {editingUser && (
