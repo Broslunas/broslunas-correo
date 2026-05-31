@@ -21,6 +21,7 @@ interface AllowedUser {
   email: string;
   role: 'admin' | 'user';
   twoFactorEnabled: boolean;
+  require2FA?: boolean;
   assignedAddresses: string[];
   addedBy: string;
   createdAt: string;
@@ -65,12 +66,14 @@ export default function UserManagement() {
   const [newRole, setNewRole] = useState<'admin' | 'user'>('user');
   const [fullAccess, setFullAccess] = useState(false);
   const [addressesInput, setAddressesInput] = useState('');
+  const [newRequire2FA, setNewRequire2FA] = useState(false);
 
   // Edit user modal states
   const [editingUser, setEditingUser] = useState<AllowedUser | null>(null);
   const [editRole, setEditRole] = useState<'admin' | 'user'>('user');
   const [editFullAccess, setEditFullAccess] = useState(false);
   const [editAddressesInput, setEditAddressesInput] = useState('');
+  const [editRequire2FA, setEditRequire2FA] = useState(false);
 
   // Load authorized users list
   const fetchUsers = async () => {
@@ -301,7 +304,8 @@ export default function UserManagement() {
         body: JSON.stringify({
           email: newEmail,
           role: newRole,
-          assignedAddresses
+          assignedAddresses,
+          require2FA: newRequire2FA
         })
       });
 
@@ -313,6 +317,7 @@ export default function UserManagement() {
         setAddressesInput('');
         setFullAccess(false);
         setNewRole('user');
+        setNewRequire2FA(false);
         fetchUsers();
       } else {
         setError(data.error || 'Error al agregar usuario');
@@ -365,6 +370,7 @@ export default function UserManagement() {
     const isWildcard = user.assignedAddresses.includes('*');
     setEditFullAccess(isWildcard);
     setEditAddressesInput(isWildcard ? '' : user.assignedAddresses.join(', '));
+    setEditRequire2FA(!!user.require2FA);
   };
 
   // Handle Update User submission (from Edit modal)
@@ -393,7 +399,8 @@ export default function UserManagement() {
         body: JSON.stringify({
           email: editingUser.email,
           role: editRole,
-          assignedAddresses
+          assignedAddresses,
+          require2FA: editRequire2FA
         })
       });
 
@@ -542,6 +549,20 @@ export default function UserManagement() {
                 </label>
               </div>
 
+              {/* Require 2FA Toggle */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="newRequire2FA"
+                  checked={newRequire2FA}
+                  onChange={(e) => setNewRequire2FA(e.target.checked)}
+                  className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-4 w-4"
+                />
+                <label htmlFor="newRequire2FA" className="text-xs font-medium text-foreground select-none cursor-pointer">
+                  Exigir 2FA Obligatorio
+                </label>
+              </div>
+
               {/* Specific Email addresses text input */}
               {!fullAccess && (
                 <div className="space-y-1.5 animate-fadeIn">
@@ -664,17 +685,22 @@ export default function UserManagement() {
 
                       {/* 2FA Status */}
                       <td className="py-3.5 px-4 select-none">
-                        {user.twoFactorEnabled ? (
-                          <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
-                            <Check className="h-3.5 w-3.5" />
-                            Activo
+                        <div className="flex flex-col gap-0.5">
+                          {user.twoFactorEnabled ? (
+                            <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
+                              <Check className="h-3.5 w-3.5" />
+                              Activo
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[10px] text-amber-500 font-semibold">
+                              <Clock className="h-3.5 w-3.5 animate-pulse" />
+                              Inactivo
+                            </span>
+                          )}
+                          <span className="text-[9px] text-muted-foreground/60 select-none">
+                            {user.require2FA ? 'Obligatorio' : 'Recomendado'}
                           </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-[10px] text-amber-500 font-semibold">
-                            <Clock className="h-3.5 w-3.5 animate-pulse" />
-                            Pendiente
-                          </span>
-                        )}
+                        </div>
                       </td>
 
                       {/* Assigned Addresses */}
@@ -1059,6 +1085,20 @@ export default function UserManagement() {
                 />
                 <label htmlFor="editFullAccess" className="text-xs font-medium text-foreground select-none cursor-pointer">
                   Acceso Total (todas las cuentas)
+                </label>
+              </div>
+
+              {/* Edit Require 2FA Checkbox */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="editRequire2FA"
+                  checked={editRequire2FA}
+                  onChange={(e) => setEditRequire2FA(e.target.checked)}
+                  className="rounded border-border bg-neutral-900 text-primary focus:ring-primary h-4 w-4"
+                />
+                <label htmlFor="editRequire2FA" className="text-xs font-medium text-foreground select-none cursor-pointer">
+                  Exigir 2FA Obligatorio
                 </label>
               </div>
 

@@ -15,9 +15,11 @@ interface SidebarProps {
   onFolderChange: (folder: string) => void;
   onComposeClick: () => void;
   role?: string;
+  twoFactorEnabled?: boolean;
+  onSecurityClick?: () => void;
 }
 
-export default function Sidebar({ currentFolder, onFolderChange, onComposeClick, role }: SidebarProps) {
+export default function Sidebar({ currentFolder, onFolderChange, onComposeClick, role, twoFactorEnabled, onSecurityClick }: SidebarProps) {
   const folders = [
     { id: 'inbox', label: 'Bandeja de entrada', icon: Inbox },
     { id: 'sent', label: 'Enviados', icon: Send },
@@ -108,6 +110,21 @@ export default function Sidebar({ currentFolder, onFolderChange, onComposeClick,
 
       {/* Footer system details & Logout */}
       <div className="p-4 border-t border-border flex flex-col gap-3">
+        <button
+          onClick={onSecurityClick}
+          className={`flex items-center gap-2.5 text-[10px] p-2 rounded-md border w-full transition-all text-left cursor-pointer hover:bg-neutral-900/40 ${
+            twoFactorEnabled 
+              ? 'bg-emerald-950/20 border-emerald-900/30 text-emerald-400' 
+              : 'bg-amber-950/20 border-amber-900/30 text-amber-400 animate-pulse'
+          }`}
+        >
+          <ShieldCheck className={`h-3.5 w-3.5 shrink-0 ${twoFactorEnabled ? 'text-emerald-500' : 'text-amber-500'}`} />
+          <div className="truncate flex-1">
+            <p className="font-semibold">{twoFactorEnabled ? '2FA Activo' : '2FA Inactivo'}</p>
+            <p className="text-[8px] opacity-75">{twoFactorEnabled ? 'Tu cuenta está segura' : 'Configurar (Recomendado)'}</p>
+          </div>
+        </button>
+
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-neutral-900/60 p-2 rounded-md border border-border/50">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
           <div className="truncate">

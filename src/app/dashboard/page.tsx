@@ -6,6 +6,7 @@ import EmailList from '@/components/email-list';
 import EmailReader from '@/components/email-reader';
 import ComposeModal from '@/components/compose-modal';
 import UserManagement from '@/components/user-management';
+import TwoFactorModal from '@/components/two-factor-modal';
 
 interface Attachment {
   filename: string;
@@ -36,7 +37,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyData, setReplyData] = useState<{ to: string; subject: string; bodyHtml: string } | null>(null);
-  const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; assignedAddresses: string[] } | null>(null);
+  const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; twoFactorEnabled: boolean; assignedAddresses: string[] } | null>(null);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
 
   // Load user profile status on mount
   useEffect(() => {
@@ -201,35 +203,56 @@ export default function Dashboard() {
         }}
         onComposeClick={handleComposeClick}
         role={user?.role}
+        twoFactorEnabled={user?.twoFactorEnabled}
+        onSecurityClick={() => setTwoFactorModalOpen(true)}
       />
 
-      {currentFolder === 'admin' ? (
-        <UserManagement />
-      ) : (
-        <>
-          {/* Column 2: Emails List Pane */}
-          <EmailList
-            emails={emails}
-            selectedEmailId={selectedEmail?._id || null}
-            onSelectEmail={handleSelectEmail}
-            onUpdateEmailStatus={handleUpdateEmailStatus}
-            folderLabel={getFolderLabel(currentFolder)}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            loading={loading}
-          />
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {user && !user.twoFactorEnabled && (
+          <div className="bg-amber-955/15 border-b border-amber-900/25 px-6 py-2.5 flex items-center justify-between text-amber-400 select-none animate-fadeIn shrink-0">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span><strong>Recomendación de Seguridad:</strong> Tu cuenta no tiene activada la verificación de dos pasos (2FA). Protégela para evitar accesos no autorizados.</span>
+            </div>
+            <button 
+              onClick={() => setTwoFactorModalOpen(true)}
+              className="text-[9px] bg-amber-500 hover:bg-amber-400 text-neutral-950 font-extrabold px-2.5 py-1 rounded-md transition-all cursor-pointer tracking-wider uppercase"
+            >
+              Configurar 2FA
+            </button>
+          </div>
+        )}
 
-          {/* Column 3: Detailed Email Content Reader */}
-          <main className="flex-1 min-w-0 h-full">
-            <EmailReader
-              email={selectedEmail}
-              onUpdateEmailStatus={handleUpdateEmailStatus}
-              onDeletePermanent={handleDeletePermanent}
-              onReplyClick={handleReplyClick}
-            />
-          </main>
-        </>
-      )}
+        <div className="flex-1 flex overflow-hidden">
+          {currentFolder === 'admin' ? (
+            <UserManagement />
+          ) : (
+            <>
+              {/* Column 2: Emails List Pane */}
+              <EmailList
+                emails={emails}
+                selectedEmailId={selectedEmail?._id || null}
+                onSelectEmail={handleSelectEmail}
+                onUpdateEmailStatus={handleUpdateEmailStatus}
+                folderLabel={getFolderLabel(currentFolder)}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                loading={loading}
+              />
+
+              {/* Column 3: Detailed Email Content Reader */}
+              <main className="flex-1 min-w-0 h-full">
+                <EmailReader
+                  email={selectedEmail}
+                  onUpdateEmailStatus={handleUpdateEmailStatus}
+                  onDeletePermanent={handleDeletePermanent}
+                  onReplyClick={handleReplyClick}
+                />
+              </main>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Compose floating editor overlay */}
       <ComposeModal
@@ -244,6 +267,15 @@ export default function Dashboard() {
         }}
         initialData={replyData}
         assignedAddresses={user?.assignedAddresses || []}
+      />
+
+      {/* 2FA Setup Modal */}
+      <TwoFactorModal
+        isOpen={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
+        onStatusChange={(enabled) => {
+          setUser(prev => prev ? { ...prev, twoFactorEnabled: enabled } : null);
+        }}
       />
 
     </div>

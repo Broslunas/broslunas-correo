@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
       name: payload.name || user.email.split('@')[0],
       picture: payload.picture || '',
       role: user.role,
+      twoFactorEnabled: !!user.twoFactorEnabled,
       assignedAddresses: user.assignedAddresses || [],
     });
   } catch (err) {

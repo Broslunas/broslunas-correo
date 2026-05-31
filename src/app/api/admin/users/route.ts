@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       email: u.email,
       role: u.role,
       twoFactorEnabled: !!u.twoFactorEnabled,
+      require2FA: u.require2FA === undefined ? false : !!u.require2FA,
       assignedAddresses: u.assignedAddresses || [],
       addedBy: u.addedBy || 'System',
       createdAt: u.createdAt,
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { email, role, assignedAddresses } = body;
+    const { email, role, assignedAddresses, require2FA } = body;
 
     // Validate inputs
     if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -121,6 +122,7 @@ export async function POST(request: NextRequest) {
       role: cleanRole,
       twoFactorSecret: null,
       twoFactorEnabled: false,
+      require2FA: require2FA === true,
       assignedAddresses: cleanAddresses,
       addedBy: auth.email,
       createdAt: new Date(),
@@ -147,7 +149,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { email, role, assignedAddresses } = body;
+    const { email, role, assignedAddresses, require2FA } = body;
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'El correo del usuario es obligatorio' }, { status: 400 });
@@ -158,6 +160,10 @@ export async function PATCH(request: NextRequest) {
 
     if (role === 'admin' || role === 'user') {
       updateFields.role = role;
+    }
+
+    if (require2FA !== undefined) {
+      updateFields.require2FA = require2FA === true;
     }
 
     const { db } = await connectToDatabase();

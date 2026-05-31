@@ -103,38 +103,75 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${appUrl}?error=${encodeURIComponent('Acceso no autorizado para esta cuenta')}`);
     }
 
-    // 4. Generate temporary session JWT (valid for 10 minutes)
-    const tempToken = await new SignJWT({
-      email: cleanEmail,
-      name: name || '',
-      picture: picture || '',
-      role: user.role,
-      step: '2fa_pending'
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('10m') // 10 minutes expiration
-      .sign(JWT_SECRET);
+    // 4. Generate token and redirect based on 2FA requirements
+    const requires2FA = user.twoFactorEnabled === true || user.require2FA === true;
 
-    // 5. Build manual redirect response to ensure cookies are preserved in all Next.js versions
-    const response = new NextResponse(null, {
-      status: 307,
-      headers: {
-        Location: `${appUrl}/auth/2fa`,
-      },
-    });
+    if (requires2FA) {
+      // Generate temporary session JWT (valid for 10 minutes)
+      const tempToken = await new SignJWT({
+        email: cleanEmail,
+        name: name || '',
+        picture: picture || '',
+        role: user.role,
+        step: '2fa_pending'
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('10m') // 10 minutes expiration
+        .sign(JWT_SECRET);
 
-    response.cookies.set('webmail_temp_session', tempToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 600, // 10 minutes in seconds
-    });
+      const response = new NextResponse(null, {
+        status: 307,
+        headers: {
+          Location: `${appUrl}/auth/2fa`,
+        },
+      });
 
-    console.log(`Setting webmail_temp_session cookie and redirecting to /auth/2fa for email: ${email}`);
+      response.cookies.set('webmail_temp_session', tempToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 600, // 10 minutes in seconds
+      });
 
-    return response;
+      console.log(`Setting webmail_temp_session cookie and redirecting to /auth/2fa for email: ${cleanEmail}`);
+      return response;
+    } else {
+      // 2FA is optional and NOT enabled: Bypass 2FA, issue final session cookie
+      const finalSessionToken = await new SignJWT({
+        role: user.role || 'user',
+        email: cleanEmail,
+        name: name || '',
+        picture: picture || '',
+        assignedAddresses: user.assignedAddresses || [],
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('7d')
+        .sign(JWT_SECRET);
+
+      const response = new NextResponse(null, {
+        status: 307,
+        headers: {
+          Location: `${appUrl}/dashboard`,
+        },
+      });
+
+      response.cookies.set('webmail_session', finalSessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
+      });
+
+      // Clear any leftover temp token
+      response.cookies.delete('webmail_temp_session');
+
+      console.log(`Bypassing 2FA, setting webmail_session and redirecting to /dashboard for email: ${cleanEmail}`);
+      return response;
+    }
   } catch (error) {
     console.error('Error in Google Callback Route:', error);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
