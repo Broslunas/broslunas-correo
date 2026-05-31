@@ -20,11 +20,11 @@ function LoginContent() {
 
       {/* Brand Header */}
       <div className="flex flex-col items-center text-center mb-8">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary border border-primary/20 mb-4 animate-pulse">
-          <Mail className="h-6 w-6" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-900 border border-neutral-800 mb-4">
+          <img src="/favicon.png" alt="Broslunas Correo" className="h-7 w-7 object-contain pointer-events-none" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground bg-clip-text bg-gradient-to-b from-white to-neutral-400 text-transparent">
-          Webmail Privado
+          Broslunas Correo
         </h1>
         <p className="text-sm text-muted-foreground mt-1">Accede a tu bandeja de correo de forma segura</p>
       </div>
@@ -61,7 +61,7 @@ function LoginContent() {
         <div className="flex items-center gap-2 text-xs text-muted-foreground/60 leading-relaxed bg-neutral-900/40 p-3 rounded-lg border border-neutral-900">
           <ShieldAlert className="h-4.5 w-4.5 shrink-0 text-primary/70" />
           <p>
-            Este es un sistema privado de webmail. El acceso está restringido únicamente a la cuenta de Google autorizada.
+            Este es un sistema privado de Broslunas Correo. El acceso está restringido únicamente a la cuenta de Google autorizada.
           </p>
         </div>
       </div>

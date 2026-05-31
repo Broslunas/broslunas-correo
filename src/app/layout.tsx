@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Webmail Corporativo Privado',
-  description: 'Sistema de correo electrónico corporativo privado, auto-alojado y 100% serverless.',
+  title: 'Broslunas Correo',
+  description: 'Sistema de correo electrónico privado, auto-alojado y 100% serverless.',
 };
 
 export default function RootLayout({

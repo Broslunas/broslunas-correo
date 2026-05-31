@@ -64,11 +64,11 @@ export default function Sidebar({
       
       {/* App brand */}
       <div className="h-14 border-b border-border flex items-center px-6 gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-          <Mail className="h-4.5 w-4.5" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 border border-border">
+          <img src="/favicon.png" alt="Broslunas Correo" className="h-5 w-5 object-contain pointer-events-none" />
         </div>
         <div>
-          <span className="font-semibold text-sm tracking-wide text-foreground">SelfMail</span>
+          <span className="font-semibold text-sm tracking-wide text-foreground">Broslunas Correo</span>
           <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-full ml-2 font-medium">
             v1.0
           </span>
