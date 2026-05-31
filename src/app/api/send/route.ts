@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json().catch(() => ({}));
-    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, attachments } = body;
+    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, attachments, draftId } = body;
 
     // Validate inputs
     if (!from || typeof from !== 'string' || !from.includes('@')) {
@@ -264,6 +264,15 @@ export async function POST(request: NextRequest) {
     };
 
     await db.collection('emails').insertOne(sentEmailDocument);
+
+    if (draftId) {
+      try {
+        const { ObjectId } = await import('mongodb');
+        await db.collection('emails').deleteOne({ _id: new ObjectId(draftId), folder: 'drafts' });
+      } catch (draftDelErr) {
+        console.error('Error deleting draft after sending:', draftDelErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,

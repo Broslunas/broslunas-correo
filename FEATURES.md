@@ -5,10 +5,10 @@ Este documento detalla una lista estructurada de 50 funcionalidades indispensabl
 ---
 
 ## 📬 1. Operaciones Principales de Correo (Core Email)
-1. **Redactor de texto enriquecido (WYSIWYG)**: Soporte para formato de texto (negrita, cursiva, listas, enlaces) e inserción de imágenes en línea.
-2. **Gestión de archivos adjuntos**: Carga de archivos por arrastrar y soltar (drag-and-drop) con límites configurables y previsualización de imágenes/PDFs.
+[x] 1. **Redactor de texto enriquecido (WYSIWYG)**: Soporte para formato de texto (negrita, cursiva, listas, enlaces) e inserción de imágenes en línea.
+[x] 2. **Gestión de archivos adjuntos**: Carga de archivos por arrastrar y soltar (drag-and-drop) con límites configurables y previsualización de imágenes/PDFs.
 3. **Búsqueda indexada y avanzada**: Filtrado instantáneo por remitente, destinatario, fecha, palabras clave, etiquetas y presencia de adjuntos.
-4. **Borradores automáticos (Auto-save)**: Guardado en tiempo real en segundo plano del correo en redacción para evitar pérdidas por desconexión.
+[x] 4. **Borradores automáticos (Auto-save)**: Guardado en tiempo real en segundo plano del correo en redacción para evitar pérdidas por desconexión.
 5. **Carpetas estándar**: Separación por defecto en Bandeja de entrada, Enviados, Borradores, Spam, Papelera y Archivo.
 6. **Paginación e Infinite Scroll**: Carga rápida y eficiente de listados de correos mediante scroll infinito inteligente o paginación ágil.
 7. **Responder, Responder a todos y Reenviar**: Flujos estándar de respuesta manteniendo correctamente los hilos y referencias del correo original.

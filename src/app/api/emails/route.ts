@@ -107,8 +107,8 @@ export async function GET(request: NextRequest) {
       }
     } else if (!assignedAddresses.includes('*')) {
       // Fallback: Limit view to only user's assigned addresses
-      if (folder === 'sent') {
-        // Can only view emails sent from their assigned addresses
+      if (folder === 'sent' || folder === 'drafts') {
+        // Can only view emails sent or drafted from their assigned addresses
         andClauses.push({ 'from.address': { $in: assignedAddresses } });
       } else {
         // Can only view emails received by their assigned addresses (to, cc, bcc)

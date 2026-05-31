@@ -29,17 +29,20 @@ import {
   ExternalLink,
   Paperclip,
   FileText,
+  Check,
 } from 'lucide-react';
 
 interface ComposeModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialData: {
+    id?: string;
     to: string;
     subject: string;
     bodyHtml: string;
     cc?: string;
     bcc?: string;
+    attachments?: any[];
   } | null;
   assignedAddresses: string[];
 }
@@ -86,6 +89,16 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const [senderMailboxes, setSenderMailboxes] = useState<{ email: string; name: string }[]>([]);
   const [senderLoading, setSenderLoading] = useState(true);
   const editorRef = useRef<HTMLDivElement>(null);
+
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [editorContent, setEditorContent] = useState('');
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const draftIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    draftIdRef.current = draftId;
+  }, [draftId]);
 
   // Styling & Dropdown States
   const [showFontDropdown, setShowFontDropdown] = useState(false);
@@ -247,9 +260,12 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       setCc(initialData.cc || '');
       setBcc(initialData.bcc || '');
       setSubject(initialData.subject || '');
+      setDraftId(initialData.id || null);
+      setAttachments(initialData.attachments || []);
       if (editorRef.current) {
         editorRef.current.innerHTML = initialData.bodyHtml || '';
       }
+      setEditorContent(initialData.bodyHtml || '');
       if (initialData.cc || initialData.bcc) {
         setShowCcBcc(true);
       }
@@ -258,11 +274,89 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       setCc('');
       setBcc('');
       setSubject('');
+      setDraftId(null);
+      setAttachments([]);
+      setEditorContent('');
       if (editorRef.current) {
         editorRef.current.innerHTML = '';
       }
     }
+    setAutoSaveStatus('idle');
+    setLastSavedTime(null);
   }, [initialData, isOpen]);
+
+  // Debounced Auto-save Draft effect
+  useEffect(() => {
+    if (!isOpen || !from) return;
+
+    // Check if there is any content to save (avoid blank draft creation spam)
+    const hasContent = to.trim() || cc.trim() || bcc.trim() || subject.trim() || editorContent.trim() || attachments.length > 0;
+    if (!hasContent) return;
+
+    const delayDebounce = setTimeout(async () => {
+      setAutoSaveStatus('saving');
+      try {
+        const bodyData = {
+          id: draftIdRef.current || undefined,
+          from,
+          to: to.split(',').map(email => email.trim()).filter(Boolean),
+          cc: cc ? cc.split(',').map(email => email.trim()).filter(Boolean) : [],
+          bcc: bcc ? bcc.split(',').map(email => email.trim()).filter(Boolean) : [],
+          subject: subject || '',
+          bodyHtml: editorContent,
+          bodyText: editorRef.current?.innerText || '',
+          attachments: attachments.filter(att => !att.isUploading && !att.error && att.key)
+        };
+
+        const res = await fetch('/api/drafts', {
+          method: draftIdRef.current ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (data.draftId) {
+            setDraftId(data.draftId);
+          }
+          setAutoSaveStatus('saved');
+          setLastSavedTime(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        } else {
+          setAutoSaveStatus('error');
+        }
+      } catch (err) {
+        console.error('Error auto-saving draft:', err);
+        setAutoSaveStatus('error');
+      }
+    }, 2000);
+
+    return () => clearTimeout(delayDebounce);
+  }, [from, to, cc, bcc, subject, editorContent, attachments, isOpen]);
+
+  const handleDiscardDraft = async () => {
+    const currentId = draftIdRef.current;
+    if (currentId) {
+      if (!confirm('¿Estás seguro de que deseas eliminar permanentemente este borrador?')) return;
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/drafts?id=${currentId}`, {
+          method: 'DELETE',
+        });
+        if (res.ok) {
+          onClose();
+        } else {
+          const data = await res.json();
+          setError(data.error || 'Error al eliminar el borrador.');
+        }
+      } catch (err) {
+        setError('Error al conectar para eliminar el borrador.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      onClose();
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -508,7 +602,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           subject, 
           bodyHtml: finalHtml, 
           bodyText: textContent,
-          attachments: activeAttachments
+          attachments: activeAttachments,
+          draftId: draftId || undefined
         }),
       });
       const data = await res.json();
@@ -1079,6 +1174,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               ref={editorRef}
               contentEditable
               suppressContentEditableWarning
+              onInput={() => setEditorContent(editorRef.current?.innerHTML || '')}
+              onBlur={() => setEditorContent(editorRef.current?.innerHTML || '')}
               className="editor-content w-full min-h-[180px] leading-relaxed text-sm"
               data-placeholder="Comienza a escribir tu mensaje aquí..."
               style={{ color: 'hsl(210 40% 88%)', outline: 'none' }}
@@ -1155,22 +1252,49 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             className="shrink-0 flex items-center justify-between px-5 py-3"
             style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <div className="text-xs shrink-0 max-w-[200px] sm:max-w-[320px] truncate">
+            <div className="flex items-center gap-3 text-[11px] text-white/50 min-w-0 flex-1 mr-4">
+              {autoSaveStatus === 'saving' && (
+                <span className="flex items-center gap-1.5 animate-pulse text-teal-400 font-medium shrink-0">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Sincronizando...
+                </span>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <span className="flex items-center gap-1.5 text-emerald-400/90 font-medium shrink-0">
+                  <Check className="h-3.5 w-3.5" />
+                  Sincronizado {lastSavedTime && `a las ${lastSavedTime}`}
+                </span>
+              )}
+              {autoSaveStatus === 'error' && (
+                <span className="text-red-400 font-medium shrink-0">
+                  Error al sincronizar borrador
+                </span>
+              )}
               {error && (
                 <span
-                  className="px-2.5 py-1 rounded-lg"
+                  className="px-2.5 py-1 rounded-lg truncate"
                   style={{
                     background: 'rgba(239,68,68,0.1)',
                     border: '1px solid rgba(239,68,68,0.2)',
                     color: 'hsl(0 78% 65%)',
                   }}
+                  title={error}
                 >
                   {error}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleDiscardDraft}
+                className="h-8 w-8 flex items-center justify-center rounded-xl transition-all cursor-pointer text-white/40 hover:text-red-400 hover:bg-red-500/10 mr-1"
+                title="Descartar borrador"
+              >
+                <Trash className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 disabled={loading}

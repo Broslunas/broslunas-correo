@@ -64,6 +64,7 @@ function MailContent() {
       case 'sent': return 'sent';
       case 'spam': return 'spam';
       case 'trash': return 'trash';
+      case 'drafts': return 'drafts';
       default: return 'inbox';
     }
   };
@@ -76,7 +77,7 @@ function MailContent() {
   const [availableAccounts, setAvailableAccounts] = useState<{ email: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [composeOpen, setComposeOpen] = useState(false);
-  const [replyData, setReplyData] = useState<{ to: string; subject: string; bodyHtml: string } | null>(null);
+  const [composeData, setComposeData] = useState<{ id?: string; to: string; subject: string; bodyHtml: string; cc?: string; bcc?: string; attachments?: any[] } | null>(null);
   const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; twoFactorEnabled: boolean; assignedAddresses: string[] } | null>(null);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [isPushSupported, setIsPushSupported] = useState(false);
@@ -232,6 +233,7 @@ function MailContent() {
       case 'sent':  return 'Enviados';
       case 'spam':  return 'Spam';
       case 'trash': return 'Papelera';
+      case 'drafts': return 'Borradores';
       default: return 'Correos';
     }
   };
@@ -320,16 +322,30 @@ function MailContent() {
     if (activeEmailId) {
       const found = emails.find(e => e._id === activeEmailId);
       if (found) {
-        setSelectedEmail(found);
-        setMobileView('reader');
+        if (found.folder === 'drafts') {
+          setComposeData({
+            id: found._id,
+            to: found.to.join(', '),
+            subject: found.subject,
+            bodyHtml: found.body.html,
+            cc: found.cc?.join(', '),
+            bcc: found.bcc?.join(', '),
+            attachments: found.attachments || []
+          });
+          setComposeOpen(true);
+          router.push(`/mail?inbox=drafts`);
+        } else {
+          setSelectedEmail(found);
+          setMobileView('reader');
 
-        if (!found.isRead) {
-          setEmails(prev => prev.map(e => e._id === found._id ? { ...e, isRead: true } : e));
-          fetch('/api/emails', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: [found._id], isRead: true })
-          }).catch(err => console.error('Error marking email as read:', err));
+          if (!found.isRead) {
+            setEmails(prev => prev.map(e => e._id === found._id ? { ...e, isRead: true } : e));
+            fetch('/api/emails', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ids: [found._id], isRead: true })
+            }).catch(err => console.error('Error marking email as read:', err));
+          }
         }
       } else {
         // Fetch detailed email if list cache is empty / not loaded yet
@@ -341,16 +357,30 @@ function MailContent() {
           .then(data => {
             if (data.email && isMounted) {
               const fetchedEmail: Email = data.email;
-              setSelectedEmail(fetchedEmail);
-              setMobileView('reader');
+              if (fetchedEmail.folder === 'drafts') {
+                setComposeData({
+                  id: fetchedEmail._id,
+                  to: fetchedEmail.to.join(', '),
+                  subject: fetchedEmail.subject,
+                  bodyHtml: fetchedEmail.body.html,
+                  cc: fetchedEmail.cc?.join(', '),
+                  bcc: fetchedEmail.bcc?.join(', '),
+                  attachments: fetchedEmail.attachments || []
+                });
+                setComposeOpen(true);
+                router.push(`/mail?inbox=drafts`);
+              } else {
+                setSelectedEmail(fetchedEmail);
+                setMobileView('reader');
 
-              if (!fetchedEmail.isRead) {
-                setEmails(prev => prev.map(e => e._id === fetchedEmail._id ? { ...e, isRead: true } : e));
-                fetch('/api/emails', {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ ids: [fetchedEmail._id], isRead: true })
-                }).catch(err => console.error('Error marking email as read:', err));
+                if (!fetchedEmail.isRead) {
+                  setEmails(prev => prev.map(e => e._id === fetchedEmail._id ? { ...e, isRead: true } : e));
+                  fetch('/api/emails', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: [fetchedEmail._id], isRead: true })
+                  }).catch(err => console.error('Error marking email as read:', err));
+                }
               }
             }
           })
@@ -362,7 +392,7 @@ function MailContent() {
     }
 
     return () => { isMounted = false; };
-  }, [activeEmailId, emails]);
+  }, [activeEmailId, emails, router]);
 
   const handleSelectEmail = (email: Email) => {
     router.push(`/mail?inbox=${folderPart}/${email._id}`);
@@ -415,12 +445,12 @@ function MailContent() {
   const handleReplyClick = (email: Email) => {
     const cleanSubject = email.subject.toLowerCase().startsWith('re:') ? email.subject : `Re: ${email.subject}`;
     const quoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid rgba(45,212,191,0.15);margin:20px 0;"><div style="color:#7d8ba3;font-size:11px;line-height:1.5;">El ${new Date(email.date).toLocaleString('es-ES')} &lt;${email.from.address}&gt; escribió:<br></div><blockquote style="margin:10px 0 0 10px;border-left:2px solid rgba(45,212,191,0.35);padding-left:15px;color:#8d99b3;">${email.body.html || email.body.text}</blockquote>`;
-    setReplyData({ to: email.from.address, subject: cleanSubject, bodyHtml: quoteHtml });
+    setComposeData({ to: email.from.address, subject: cleanSubject, bodyHtml: quoteHtml });
     setComposeOpen(true);
   };
 
   const handleComposeClick = () => {
-    setReplyData(null);
+    setComposeData(null);
     setComposeOpen(true);
   };
 
@@ -544,10 +574,10 @@ function MailContent() {
         isOpen={composeOpen}
         onClose={() => {
           setComposeOpen(false);
-          setReplyData(null);
-          if (currentFolder === 'sent') fetchEmails();
+          setComposeData(null);
+          if (currentFolder === 'sent' || currentFolder === 'drafts') fetchEmails();
         }}
-        initialData={replyData}
+        initialData={composeData}
         assignedAddresses={user?.assignedAddresses || []}
       />
 

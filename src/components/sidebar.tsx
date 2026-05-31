@@ -22,6 +22,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -68,6 +69,7 @@ export default function Sidebar({
     { id: 'inbox', label: 'Bandeja de entrada', icon: Inbox, group: 'core' },
     { id: 'unread', label: 'No leídos', icon: Mail, group: 'core' },
     { id: 'sent',  label: 'Enviados',           icon: Send, group: 'core' },
+    { id: 'drafts', label: 'Borradores',         icon: FileText, group: 'core' },
     
     { id: 'personal', label: 'Personal', icon: User, group: 'categories' },
     { id: 'work', label: 'Trabajo', icon: Briefcase, group: 'categories' },
