@@ -5,6 +5,8 @@ import DOMPurify from 'isomorphic-dompurify';
 import {
   Trash2,
   CornerUpLeft,
+  CornerUpRight,
+  Forward,
   Download,
   FileText,
   ArchiveRestore,
@@ -39,6 +41,9 @@ interface Email {
   attachments?: Attachment[];
   folder: string;
   isRead: boolean;
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string;
 }
 
 interface EmailReaderProps {
@@ -46,6 +51,8 @@ interface EmailReaderProps {
   onUpdateEmailStatus: (ids: string[], updates: { folder?: string; isRead?: boolean }) => void;
   onDeletePermanent: (ids: string[]) => void;
   onReplyClick: (email: Email) => void;
+  onReplyAllClick?: (email: Email) => void;
+  onForwardClick?: (email: Email) => void;
   onBack?: () => void; // Mobile back button
 }
 
@@ -225,6 +232,8 @@ export default function EmailReader({
   onUpdateEmailStatus,
   onDeletePermanent,
   onReplyClick,
+  onReplyAllClick,
+  onForwardClick,
   onBack,
 }: EmailReaderProps) {
 
@@ -322,6 +331,56 @@ export default function EmailReader({
             <CornerUpLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Responder</span>
           </button>
+
+          {/* Reply All */}
+          {onReplyAllClick && (
+            <button
+              id="btn-reply-all"
+              onClick={() => onReplyAllClick(email)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: 'hsl(215 20% 60%)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'hsl(210 40% 90%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'hsl(215 20% 60%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+              }}
+            >
+              <CornerUpRight className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Responder a todos</span>
+            </button>
+          )}
+
+          {/* Forward */}
+          {onForwardClick && (
+            <button
+              id="btn-forward"
+              onClick={() => onForwardClick(email)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: 'hsl(215 20% 60%)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'hsl(210 40% 90%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'hsl(215 20% 60%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+              }}
+            >
+              <Forward className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Reenviar</span>
+            </button>
+          )}
         </div>
 
         {/* Action buttons */}

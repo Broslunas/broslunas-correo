@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json().catch(() => ({}));
-    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, attachments, draftId } = body;
+    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, attachments, draftId, inReplyTo, references } = body;
 
     // Validate inputs
     if (!from || typeof from !== 'string' || !from.includes('@')) {
@@ -201,6 +201,10 @@ export async function POST(request: NextRequest) {
     ];
 
     // 5. Assemble Mailjet payload using the dynamically validated sender
+    const threadHeaders: Record<string, string> = {};
+    if (inReplyTo) threadHeaders['In-Reply-To'] = inReplyTo;
+    if (references) threadHeaders['References'] = references;
+
     const mailjetPayload = {
       Messages: [
         {
@@ -214,7 +218,8 @@ export async function POST(request: NextRequest) {
           Subject: subject || '(Sin Asunto)',
           TextPart: bodyText || '',
           HTMLPart: processedBodyHtml || bodyText || '',
-          Attachments: combinedMailjetAttachments.length > 0 ? combinedMailjetAttachments : undefined
+          Attachments: combinedMailjetAttachments.length > 0 ? combinedMailjetAttachments : undefined,
+          ...(Object.keys(threadHeaders).length > 0 ? { Headers: threadHeaders } : {})
         }
       ]
     };
@@ -243,7 +248,7 @@ export async function POST(request: NextRequest) {
     const mailjetMessageId = responseData.Messages?.[0]?.To?.[0]?.MessageID || `sent-${crypto.randomUUID()}`;
 
     // 7. Store copy in MongoDB 'sent' folder
-    const sentEmailDocument = {
+    const sentEmailDocument: Record<string, any> = {
       from: {
         name: fromName,
         address: cleanFrom
@@ -257,10 +262,12 @@ export async function POST(request: NextRequest) {
         text: bodyText || '',
         html: processedBodyHtml || bodyText || ''
       },
-      attachments: combinedDbAttachments, 
+      attachments: combinedDbAttachments,
       folder: 'sent',
       isRead: true,
-      messageId: String(mailjetMessageId)
+      messageId: String(mailjetMessageId),
+      ...(inReplyTo ? { inReplyTo } : {}),
+      ...(references ? { references } : {}),
     };
 
     await db.collection('emails').insertOne(sentEmailDocument);

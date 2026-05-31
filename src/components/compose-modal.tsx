@@ -43,6 +43,9 @@ interface ComposeModalProps {
     cc?: string;
     bcc?: string;
     attachments?: any[];
+    inReplyTo?: string;
+    references?: string;
+    forwardMode?: boolean;
   } | null;
   assignedAddresses: string[];
 }
@@ -261,7 +264,15 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       setBcc(initialData.bcc || '');
       setSubject(initialData.subject || '');
       setDraftId(initialData.id || null);
-      setAttachments(initialData.attachments || []);
+      const normalizedAttachments = (initialData.attachments || []).map((att: any) => ({
+        tempId: att.tempId || crypto.randomUUID(),
+        filename: att.filename,
+        contentType: att.contentType,
+        size: att.size,
+        key: att.key || att.r2Url,
+        isUploading: false,
+      }));
+      setAttachments(normalizedAttachments);
       if (editorRef.current) {
         editorRef.current.innerHTML = initialData.bodyHtml || '';
       }
@@ -305,7 +316,9 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           subject: subject || '',
           bodyHtml: editorContent,
           bodyText: editorRef.current?.innerText || '',
-          attachments: attachments.filter(att => !att.isUploading && !att.error && att.key)
+          attachments: attachments.filter(att => !att.isUploading && !att.error && att.key),
+          inReplyTo: initialData?.inReplyTo || undefined,
+          references: initialData?.references || undefined,
         };
 
         const res = await fetch('/api/drafts', {
@@ -603,7 +616,9 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           bodyHtml: finalHtml, 
           bodyText: textContent,
           attachments: activeAttachments,
-          draftId: draftId || undefined
+          draftId: draftId || undefined,
+          inReplyTo: initialData?.inReplyTo || undefined,
+          references: initialData?.references || undefined,
         }),
       });
       const data = await res.json();
@@ -692,7 +707,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               <PenSquare className="h-3.5 w-3.5" style={{ color: 'hsl(174 72% 60%)' }} />
             </div>
             <h3 className="text-sm font-semibold" style={{ color: 'hsl(210 40% 92%)' }}>
-              {initialData ? 'Responder correo' : 'Mensaje nuevo'}
+              {initialData?.forwardMode ? 'Reenviar correo' : initialData ? 'Responder correo' : 'Mensaje nuevo'}
             </h3>
           </div>
 

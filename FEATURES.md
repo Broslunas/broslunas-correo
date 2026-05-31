@@ -1,15 +1,9 @@
-# 50 Features Indispensables para Broslunas Correo (Full Mail Service)
-
-Este documento detalla una lista estructurada de 50 funcionalidades indispensables organizadas por categorías estratégicas para convertir esta plataforma en un servicio de correo electrónico moderno, seguro y altamente competitivo.
-
----
-
 ## 📬 1. Operaciones Principales de Correo (Core Email)
 [x] 1. **Redactor de texto enriquecido (WYSIWYG)**: Soporte para formato de texto (negrita, cursiva, listas, enlaces) e inserción de imágenes en línea.
 [x] 2. **Gestión de archivos adjuntos**: Carga de archivos por arrastrar y soltar (drag-and-drop) con límites configurables y previsualización de imágenes/PDFs.
 3. **Búsqueda indexada y avanzada**: Filtrado instantáneo por remitente, destinatario, fecha, palabras clave, etiquetas y presencia de adjuntos.
 [x] 4. **Borradores automáticos (Auto-save)**: Guardado en tiempo real en segundo plano del correo en redacción para evitar pérdidas por desconexión.
-5. **Carpetas estándar**: Separación por defecto en Bandeja de entrada, Enviados, Borradores, Spam, Papelera y Archivo.
+[x] 5. **Carpetas estándar**: Separación por defecto en Bandeja de entrada, Enviados, Borradores, Spam, Papelera y Archivo.
 6. **Paginación e Infinite Scroll**: Carga rápida y eficiente de listados de correos mediante scroll infinito inteligente o paginación ágil.
 7. **Responder, Responder a todos y Reenviar**: Flujos estándar de respuesta manteniendo correctamente los hilos y referencias del correo original.
 8. **Gestión de hilos de conversación**: Agrupación inteligente de correos con el mismo asunto/referencia en una sola conversación continua.
@@ -17,7 +11,7 @@ Este documento detalla una lista estructurada de 50 funcionalidades indispensabl
 ---
 
 ## 🔒 2. Seguridad y Privacidad
-9. **Verificación en Dos Pasos (2FA)**: Autenticación de doble factor compatible con aplicaciones TOTP (Google Authenticator, Authy, etc.).
+[x] 9. **Verificación en Dos Pasos (2FA)**: Autenticación de doble factor compatible con aplicaciones TOTP (Google Authenticator, Authy, etc.).
 10. **Filtro Anti-Spam Inteligente**: Clasificación automática de correos sospechosos y posibilidad de marcar/desmarcar elementos manualmente.
 11. **Configuración y validación DNS (SPF, DKIM, DMARC)**: Panel para configurar y verificar las claves criptográficas y registros de seguridad del dominio emisor.
 12. **Bloqueo y lista negra de remitentes**: Capacidad de bloquear direcciones o dominios completos directamente desde la interfaz del correo.
@@ -29,7 +23,7 @@ Este documento detalla una lista estructurada de 50 funcionalidades indispensabl
 ---
 
 ## 🎨 3. Interfaz y Experiencia de Usuario (UI/UX)
-17. **Diseño completamente responsivo**: Adaptabilidad impecable a dispositivos móviles, tablets y pantallas de escritorio.
+[x] 17. **Diseño completamente responsivo**: Adaptabilidad impecable a dispositivos móviles, tablets y pantallas de escritorio.
 18. **Tema Oscuro y Claro nativos**: Soporte para cambio de tema dinámico y detección automática de la preferencia del sistema operativo.
 19. **Atajos de teclado**: Navegación rápida, lectura, eliminación y redacción mediante combinaciones de teclas (estilo Gmail/Outlook).
 20. **Acciones rápidas al pasar el cursor (Hover Actions)**: Botones rápidos para archivar, borrar, marcar como leído o posponer sin abrir el correo.

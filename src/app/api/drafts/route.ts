@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { from, to, cc, bcc, subject, bodyHtml, bodyText, attachments } = body;
+    const { from, to, cc, bcc, subject, bodyHtml, bodyText, attachments, inReplyTo, references } = body;
 
     if (!from || typeof from !== 'string' || !from.includes('@')) {
       return NextResponse.json({ error: 'La dirección del remitente es requerida' }, { status: 400 });
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const mailbox = await db.collection('mailboxes').findOne({ email: cleanFrom });
     const fromName = mailbox ? mailbox.name : '';
 
-    const draftDoc = {
+    const draftDoc: Record<string, any> = {
       from: {
         name: fromName,
         address: cleanFrom
@@ -77,7 +77,9 @@ export async function POST(request: NextRequest) {
       },
       attachments: attachments || [],
       folder: 'drafts',
-      isRead: true
+      isRead: true,
+      ...(inReplyTo ? { inReplyTo } : {}),
+      ...(references ? { references } : {}),
     };
 
     const result = await db.collection('emails').insertOne(draftDoc);
@@ -101,7 +103,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { id, from, to, cc, bcc, subject, bodyHtml, bodyText, attachments } = body;
+    const { id, from, to, cc, bcc, subject, bodyHtml, bodyText, attachments, inReplyTo, references } = body;
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'ID de borrador inválido' }, { status: 400 });
@@ -134,26 +136,28 @@ export async function PUT(request: NextRequest) {
     const mailbox = await db.collection('mailboxes').findOne({ email: cleanFrom });
     const fromName = mailbox ? mailbox.name : '';
 
+    const updateFields: Record<string, any> = {
+      from: {
+        name: fromName,
+        address: cleanFrom
+      },
+      to: to || [],
+      cc: cc || [],
+      bcc: bcc || [],
+      subject: subject || '',
+      date: new Date(),
+      body: {
+        text: bodyText || '',
+        html: bodyHtml || ''
+      },
+      attachments: attachments || [],
+      ...(inReplyTo !== undefined ? { inReplyTo: inReplyTo || null } : {}),
+      ...(references !== undefined ? { references: references || null } : {}),
+    };
+
     await db.collection('emails').updateOne(
       { _id: new ObjectId(id) },
-      {
-        $set: {
-          from: {
-            name: fromName,
-            address: cleanFrom
-          },
-          to: to || [],
-          cc: cc || [],
-          bcc: bcc || [],
-          subject: subject || '',
-          date: new Date(),
-          body: {
-            text: bodyText || '',
-            html: bodyHtml || ''
-          },
-          attachments: attachments || []
-        }
-      }
+      { $set: updateFields }
     );
 
     return NextResponse.json({ success: true });

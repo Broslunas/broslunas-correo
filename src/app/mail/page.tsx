@@ -13,6 +13,8 @@ interface Attachment {
   contentType: string;
   size: number;
   r2Url: string;
+  contentId?: string | null;
+  disposition?: string | null;
 }
 
 interface Email {
@@ -27,6 +29,9 @@ interface Email {
   attachments?: Attachment[];
   folder: string;
   isRead: boolean;
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string;
 }
 
 // Mobile view states: 'list' | 'reader'
@@ -77,7 +82,7 @@ function MailContent() {
   const [availableAccounts, setAvailableAccounts] = useState<{ email: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [composeOpen, setComposeOpen] = useState(false);
-  const [composeData, setComposeData] = useState<{ id?: string; to: string; subject: string; bodyHtml: string; cc?: string; bcc?: string; attachments?: any[] } | null>(null);
+  const [composeData, setComposeData] = useState<{ id?: string; to: string; subject: string; bodyHtml: string; cc?: string; bcc?: string; attachments?: any[]; inReplyTo?: string; references?: string; forwardMode?: boolean } | null>(null);
   const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; twoFactorEnabled: boolean; assignedAddresses: string[] } | null>(null);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [isPushSupported, setIsPushSupported] = useState(false);
@@ -445,7 +450,65 @@ function MailContent() {
   const handleReplyClick = (email: Email) => {
     const cleanSubject = email.subject.toLowerCase().startsWith('re:') ? email.subject : `Re: ${email.subject}`;
     const quoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid rgba(45,212,191,0.15);margin:20px 0;"><div style="color:#7d8ba3;font-size:11px;line-height:1.5;">El ${new Date(email.date).toLocaleString('es-ES')} &lt;${email.from.address}&gt; escribió:<br></div><blockquote style="margin:10px 0 0 10px;border-left:2px solid rgba(45,212,191,0.35);padding-left:15px;color:#8d99b3;">${email.body.html || email.body.text}</blockquote>`;
-    setComposeData({ to: email.from.address, subject: cleanSubject, bodyHtml: quoteHtml });
+    const inReplyTo = email.messageId || '';
+    const references = [email.references, email.messageId].filter(Boolean).join(' ');
+    setComposeData({
+      to: email.from.address,
+      subject: cleanSubject,
+      bodyHtml: quoteHtml,
+      inReplyTo: inReplyTo || undefined,
+      references: references || undefined,
+    });
+    setComposeOpen(true);
+  };
+
+  const handleReplyAllClick = (email: Email) => {
+    const cleanSubject = email.subject.toLowerCase().startsWith('re:') ? email.subject : `Re: ${email.subject}`;
+    const quoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid rgba(45,212,191,0.15);margin:20px 0;"><div style="color:#7d8ba3;font-size:11px;line-height:1.5;">El ${new Date(email.date).toLocaleString('es-ES')} &lt;${email.from.address}&gt; escribió:<br></div><blockquote style="margin:10px 0 0 10px;border-left:2px solid rgba(45,212,191,0.35);padding-left:15px;color:#8d99b3;">${email.body.html || email.body.text}</blockquote>`;
+    const currentUserEmail = user?.email?.toLowerCase() || '';
+    const recipients = new Set<string>();
+    email.to.forEach(addr => {
+      const lower = addr.toLowerCase();
+      if (lower !== currentUserEmail && lower !== email.from.address.toLowerCase()) {
+        recipients.add(addr);
+      }
+    });
+    if (email.cc) {
+      email.cc.forEach(addr => {
+        const lower = addr.toLowerCase();
+        if (lower !== currentUserEmail && lower !== email.from.address.toLowerCase()) {
+          recipients.add(addr);
+        }
+      });
+    }
+    const ccStr = Array.from(recipients).join(', ');
+    const inReplyTo = email.messageId || '';
+    const references = [email.references, email.messageId].filter(Boolean).join(' ');
+    setComposeData({
+      to: email.from.address,
+      subject: cleanSubject,
+      bodyHtml: quoteHtml,
+      cc: ccStr || undefined,
+      inReplyTo: inReplyTo || undefined,
+      references: references || undefined,
+    });
+    setComposeOpen(true);
+  };
+
+  const handleForwardClick = (email: Email) => {
+    const cleanSubject = email.subject.toLowerCase().startsWith('fwd:') ? email.subject : `Fwd: ${email.subject}`;
+    const fromLine = `${email.from.name || ''} &lt;${email.from.address}&gt;`;
+    const toLine = email.to.join(', ');
+    const ccLine = email.cc && email.cc.length > 0 ? `<br><b>CC:</b> ${email.cc.join(', ')}` : '';
+    const dateStr = new Date(email.date).toLocaleString('es-ES');
+    const forwardQuoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid rgba(45,212,191,0.15);margin:20px 0;"><div style="color:#7d8ba3;font-size:11px;line-height:1.5;"><b>---------- Mensaje reenviado ----------</b><br><b>De:</b> ${fromLine}<br><b>Para:</b> ${toLine}${ccLine}<br><b>Fecha:</b> ${dateStr}<br><b>Asunto:</b> ${email.subject}<br></div><br>${email.body.html || email.body.text}`;
+    setComposeData({
+      to: '',
+      subject: cleanSubject,
+      bodyHtml: forwardQuoteHtml,
+      attachments: email.attachments?.filter(a => !a.contentId || !a.contentType?.startsWith('image/')),
+      forwardMode: true,
+    });
     setComposeOpen(true);
   };
 
@@ -558,6 +621,8 @@ function MailContent() {
               onUpdateEmailStatus={handleUpdateEmailStatus}
               onDeletePermanent={handleDeletePermanent}
               onReplyClick={handleReplyClick}
+              onReplyAllClick={handleReplyAllClick}
+              onForwardClick={handleForwardClick}
               onBack={() => {
                 router.push(`/mail?inbox=${folderPart}`);
               }}
