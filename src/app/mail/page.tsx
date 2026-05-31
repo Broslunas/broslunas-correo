@@ -286,22 +286,58 @@ function MailContent() {
     }
   }, [emails, currentFolder, searchQuery]);
 
-  const handleSelectEmail = async (email: Email) => {
-    setSelectedEmail(email);
-    setMobileView('reader'); // Switch to reader on mobile
+  // Synchronize URL activeEmailId with selectedEmail state
+  useEffect(() => {
+    let isMounted = true;
+    if (activeEmailId) {
+      const found = emails.find(e => e._id === activeEmailId);
+      if (found) {
+        setSelectedEmail(found);
+        setMobileView('reader');
 
-    if (!email.isRead) {
-      setEmails(prev => prev.map(e => e._id === email._id ? { ...e, isRead: true } : e));
-      try {
-        await fetch('/api/emails', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: [email._id], isRead: true })
-        });
-      } catch (err) {
-        console.error('Error marking email as read:', err);
+        if (!found.isRead) {
+          setEmails(prev => prev.map(e => e._id === found._id ? { ...e, isRead: true } : e));
+          fetch('/api/emails', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: [found._id], isRead: true })
+          }).catch(err => console.error('Error marking email as read:', err));
+        }
+      } else {
+        // Fetch detailed email if list cache is empty / not loaded yet
+        fetch(`/api/emails?id=${activeEmailId}`)
+          .then(res => {
+            if (!res.ok) throw new Error('Not found');
+            return res.json();
+          })
+          .then(data => {
+            if (data.email && isMounted) {
+              const fetchedEmail: Email = data.email;
+              setSelectedEmail(fetchedEmail);
+              setMobileView('reader');
+
+              if (!fetchedEmail.isRead) {
+                setEmails(prev => prev.map(e => e._id === fetchedEmail._id ? { ...e, isRead: true } : e));
+                fetch('/api/emails', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ids: [fetchedEmail._id], isRead: true })
+                }).catch(err => console.error('Error marking email as read:', err));
+              }
+            }
+          })
+          .catch(err => console.error('Error fetching email details:', err));
       }
+    } else {
+      setSelectedEmail(null);
+      setMobileView('list');
     }
+
+    return () => { isMounted = false; };
+  }, [activeEmailId, emails]);
+
+  const handleSelectEmail = (email: Email) => {
+    router.push(`/mail?inbox=${folderPart}/${email._id}`);
   };
 
   const handleUpdateEmailStatus = async (ids: string[], updates: { folder?: string; isRead?: boolean }) => {
@@ -315,8 +351,7 @@ function MailContent() {
         if (updates.folder !== undefined) {
           setEmails(prev => prev.filter(e => !ids.includes(e._id)));
           if (selectedEmail && ids.includes(selectedEmail._id)) {
-            setSelectedEmail(null);
-            setMobileView('list');
+            router.push(`/mail?inbox=${folderPart}`);
           }
         } else if (updates.isRead !== undefined) {
           setEmails(prev => prev.map(e => ids.includes(e._id) ? { ...e, isRead: updates.isRead! } : e));
@@ -341,8 +376,7 @@ function MailContent() {
       if (res.ok) {
         setEmails(prev => prev.filter(e => !ids.includes(e._id)));
         if (selectedEmail && ids.includes(selectedEmail._id)) {
-          setSelectedEmail(null);
-          setMobileView('list');
+          router.push(`/mail?inbox=${folderPart}`);
         }
       }
     } catch (error) {
@@ -464,8 +498,7 @@ function MailContent() {
               onDeletePermanent={handleDeletePermanent}
               onReplyClick={handleReplyClick}
               onBack={() => {
-                setMobileView('list');
-                setSelectedEmail(null);
+                router.push(`/mail?inbox=${folderPart}`);
               }}
             />
           </main>
