@@ -128,7 +128,7 @@ export async function POST(request: Request) {
             const pushPayload = JSON.stringify({
               title: pushTitle,
               body: pushBody,
-              url: '/dashboard'
+              url: '/mail?inbox=main'
             });
 
             const pushPromises = subscriptions.map(async (subDoc: any) => {

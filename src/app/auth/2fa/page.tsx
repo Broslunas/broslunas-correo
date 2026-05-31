@@ -122,7 +122,7 @@ export default function TwoFactorPage() {
 
       if (res.ok && data.success) {
         // Redirect to dashboard by reloading to let Next.js middleware update
-        window.location.href = '/dashboard';
+        window.location.href = '/mail?inbox=main';
       } else {
         setError(data.error || 'Código incorrecto o vencido');
       }

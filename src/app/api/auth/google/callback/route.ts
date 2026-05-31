@@ -7,12 +7,13 @@ const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced
 const JWT_SECRET = new TextEncoder().encode(secret);
 
 export async function GET(request: Request) {
+  let appUrl = 'http://localhost:3000';
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams, origin } = new URL(request.url);
+    appUrl = origin;
     const code = searchParams.get('code');
     const errorParam = searchParams.get('error');
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const redirectUri = `${appUrl}/api/auth/google/callback`;
 
     if (errorParam) {
@@ -148,7 +149,7 @@ export async function GET(request: Request) {
         .setExpirationTime('7d')
         .sign(JWT_SECRET);
 
-      const response = NextResponse.redirect(new URL('/dashboard', request.url));
+      const response = NextResponse.redirect(new URL('/mail?inbox=main', request.url));
 
       response.cookies.set('webmail_session', finalSessionToken, {
         httpOnly: true,
@@ -161,12 +162,11 @@ export async function GET(request: Request) {
       // Clear any leftover temp token
       response.cookies.delete('webmail_temp_session');
 
-      console.log(`Bypassing 2FA, setting webmail_session and redirecting to /dashboard for email: ${cleanEmail}`);
+      console.log(`Bypassing 2FA, setting webmail_session and redirecting to /mail?inbox=main for email: ${cleanEmail}`);
       return response;
     }
   } catch (error) {
     console.error('Error in Google Callback Route:', error);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     return NextResponse.redirect(`${appUrl}?error=${encodeURIComponent('Error interno de autenticación')}`);
   }
 }

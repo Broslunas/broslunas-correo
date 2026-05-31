@@ -23,7 +23,7 @@ self.addEventListener('push', function (event) {
     icon: data.icon || '/favicon.ico',
     badge: data.badge || '/favicon.ico',
     data: {
-      url: data.url || '/dashboard'
+      url: data.url || '/mail?inbox=main'
     },
     // Prevent default system sound/vibration conflicts on some mobile browsers
     vibrate: [100, 50, 100],
@@ -40,7 +40,7 @@ self.addEventListener('push', function (event) {
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/dashboard';
+  const targetUrl = event.notification.data?.url || '/mail?inbox=main';
 
   // Wait until the browser attempts to find/open the window
   event.waitUntil(

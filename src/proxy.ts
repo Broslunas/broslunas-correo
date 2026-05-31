@@ -6,7 +6,7 @@ import { jwtVerify } from 'jose';
 const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced_in_env_local';
 const JWT_SECRET = new TextEncoder().encode(secret);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Bypass check for next assets, public files, and auth callback/ingress endpoints
@@ -30,10 +30,12 @@ export async function middleware(request: NextRequest) {
   let isTempAuthenticated = false;
 
   // Verify permanent session token
+  let userRole = 'user';
   if (token) {
     try {
-      await jwtVerify(token, JWT_SECRET);
+      const { payload } = await jwtVerify(token, JWT_SECRET);
       isFullyAuthenticated = true;
+      userRole = (payload.role as string) || 'user';
     } catch (e: any) {
       console.warn('Invalid webmail_session token in middleware:', e.message || e);
     }
@@ -55,9 +57,18 @@ export async function middleware(request: NextRequest) {
 
   // Scenario A: Fully Authenticated User
   if (isFullyAuthenticated) {
-    // Prevent access to Login page or 2FA verification page, redirect to Dashboard
+    // Redirect old dashboard to new mail page
+    if (pathname === '/dashboard') {
+      return NextResponse.redirect(new URL('/mail?inbox=main', request.url));
+    }
+    // Prevent access to Login page or 2FA verification page, redirect to Mail
     if (pathname === '/' || pathname === '/auth/2fa') {
-      const url = new URL('/dashboard', request.url);
+      const url = new URL('/mail?inbox=main', request.url);
+      return NextResponse.redirect(url);
+    }
+    // Protect /admin from non-admin users
+    if (pathname.startsWith('/admin') && userRole !== 'admin') {
+      const url = new URL('/mail?inbox=main', request.url);
       return NextResponse.redirect(url);
     }
     return NextResponse.next();
@@ -74,8 +85,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // Scenario C: Unauthenticated User
-  // Redirect access to dashboard, 2FA, or API endpoints to login page '/'
+  // Redirect access to mail, admin, dashboard, 2FA, or API endpoints to login page '/'
   if (
+    pathname.startsWith('/mail') ||
+    pathname.startsWith('/admin') ||
     pathname.startsWith('/dashboard') ||
     pathname === '/auth/2fa' ||
     (pathname.startsWith('/api') && pathname !== '/')
@@ -87,7 +100,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Config to run middleware on all routes except static resource routes
+// Config to run proxy on all routes except static resource routes
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

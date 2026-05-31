@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Sidebar from '@/components/sidebar';
 import EmailList from '@/components/email-list';
 import EmailReader from '@/components/email-reader';
 import ComposeModal from '@/components/compose-modal';
-import UserManagement from '@/components/user-management';
 import TwoFactorModal from '@/components/two-factor-modal';
 
 interface Attachment {
@@ -32,8 +32,23 @@ interface Email {
 // Mobile view states: 'list' | 'reader'
 type MobileView = 'list' | 'reader';
 
-export default function Dashboard() {
-  const [currentFolder, setCurrentFolder] = useState('inbox');
+function MailContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Get and map folder from searchParams: inbox=main -> 'inbox', etc.
+  const inboxParam = searchParams.get('inbox') || 'main';
+  const getFolderFromParam = (param: string) => {
+    switch (param) {
+      case 'main': return 'inbox';
+      case 'sent': return 'sent';
+      case 'spam': return 'spam';
+      case 'trash': return 'trash';
+      default: return 'inbox';
+    }
+  };
+  const currentFolder = getFolderFromParam(inboxParam);
+
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +62,12 @@ export default function Dashboard() {
   const [syncing, setSyncing] = useState(false);
   // Responsive: track which "panel" is visible on mobile/tablet
   const [mobileView, setMobileView] = useState<MobileView>('list');
+
+  // Reset selected email and mobile view when folder changes in URL
+  useEffect(() => {
+    setSelectedEmail(null);
+    setMobileView('list');
+  }, [inboxParam]);
 
   // Helper to convert base64 VAPID key to Uint8Array
   const urlBase64ToUint8Array = (base64String: string) => {
@@ -328,9 +349,12 @@ export default function Dashboard() {
   };
 
   const handleFolderChange = (folder: string) => {
-    setCurrentFolder(folder);
-    setSelectedEmail(null);
-    setMobileView('list'); // Always go back to list when changing folder
+    if (folder === 'admin') {
+      router.push('/admin');
+    } else {
+      const paramVal = folder === 'inbox' ? 'main' : folder;
+      router.push(`/mail?inbox=${paramVal}`);
+    }
   };
 
   return (
@@ -387,59 +411,47 @@ export default function Dashboard() {
 
         {/* Content: three-column on desktop, adaptive on mobile/tablet */}
         <div className="flex-1 flex overflow-hidden min-h-0">
-          {currentFolder === 'admin' ? (
-            <UserManagement />
-          ) : (
-            <>
-              {/*
-                RESPONSIVE LAYOUT STRATEGY:
-                - Mobile (< lg): Show either email list OR email reader (never both).
-                - Desktop (lg+): Show both side by side.
-              */}
+          {/* Email List Panel */}
+          <div
+            className={`
+              h-full flex-col overflow-hidden w-full
+              ${mobileView === 'list' ? 'flex' : 'hidden'}
+              lg:flex lg:w-80 lg:shrink-0
+            `}
+          >
+            <EmailList
+              emails={emails}
+              selectedEmailId={selectedEmail?._id || null}
+              onSelectEmail={handleSelectEmail}
+              onUpdateEmailStatus={handleUpdateEmailStatus}
+              folderLabel={getFolderLabel(currentFolder)}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              loading={loading}
+              syncing={syncing}
+              onSyncClick={fetchEmails}
+            />
+          </div>
 
-              {/* Email List Panel */}
-              <div
-                className={`
-                  h-full flex-col overflow-hidden w-full
-                  ${mobileView === 'list' ? 'flex' : 'hidden'}
-                  lg:flex lg:w-80 lg:shrink-0
-                `}
-              >
-                <EmailList
-                  emails={emails}
-                  selectedEmailId={selectedEmail?._id || null}
-                  onSelectEmail={handleSelectEmail}
-                  onUpdateEmailStatus={handleUpdateEmailStatus}
-                  folderLabel={getFolderLabel(currentFolder)}
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  loading={loading}
-                  syncing={syncing}
-                  onSyncClick={fetchEmails}
-                />
-              </div>
-
-              {/* Email Reader Panel */}
-              <main
-                className={`
-                  h-full flex-col overflow-hidden flex-1 min-w-0
-                  ${mobileView === 'reader' ? 'flex' : 'hidden'}
-                  lg:flex
-                `}
-              >
-                <EmailReader
-                  email={selectedEmail}
-                  onUpdateEmailStatus={handleUpdateEmailStatus}
-                  onDeletePermanent={handleDeletePermanent}
-                  onReplyClick={handleReplyClick}
-                  onBack={() => {
-                    setMobileView('list');
-                    setSelectedEmail(null);
-                  }}
-                />
-              </main>
-            </>
-          )}
+          {/* Email Reader Panel */}
+          <main
+            className={`
+              h-full flex-col overflow-hidden flex-1 min-w-0
+              ${mobileView === 'reader' ? 'flex' : 'hidden'}
+              lg:flex
+            `}
+          >
+            <EmailReader
+              email={selectedEmail}
+              onUpdateEmailStatus={handleUpdateEmailStatus}
+              onDeletePermanent={handleDeletePermanent}
+              onReplyClick={handleReplyClick}
+              onBack={() => {
+                setMobileView('list');
+                setSelectedEmail(null);
+              }}
+            />
+          </main>
         </div>
 
         {/* Bottom nav spacing on mobile (avoid content behind nav bar) */}
@@ -467,5 +479,17 @@ export default function Dashboard() {
         }}
       />
     </div>
+  );
+}
+
+export default function MailPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-screen items-center justify-center bg-[hsl(222_47%_4%)]">
+        <div className="h-8 w-8 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+      </div>
+    }>
+      <MailContent />
+    </Suspense>
   );
 }
