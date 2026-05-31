@@ -120,17 +120,12 @@ export async function GET(request: Request) {
         .setExpirationTime('10m') // 10 minutes expiration
         .sign(JWT_SECRET);
 
-      const response = new NextResponse(null, {
-        status: 307,
-        headers: {
-          Location: `${appUrl}/auth/2fa`,
-        },
-      });
+      const response = NextResponse.redirect(new URL('/auth/2fa', request.url));
 
       response.cookies.set('webmail_temp_session', tempToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         path: '/',
         maxAge: 600, // 10 minutes in seconds
       });
@@ -151,17 +146,12 @@ export async function GET(request: Request) {
         .setExpirationTime('7d')
         .sign(JWT_SECRET);
 
-      const response = new NextResponse(null, {
-        status: 307,
-        headers: {
-          Location: `${appUrl}/dashboard`,
-        },
-      });
+      const response = NextResponse.redirect(new URL('/dashboard', request.url));
 
       response.cookies.set('webmail_session', finalSessionToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
       });
