@@ -7,7 +7,9 @@ import {
   PenSquare, 
   LogOut,
   Mail,
-  ShieldCheck
+  ShieldCheck,
+  Bell,
+  BellOff
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -17,9 +19,22 @@ interface SidebarProps {
   role?: string;
   twoFactorEnabled?: boolean;
   onSecurityClick?: () => void;
+  isPushSupported: boolean;
+  isPushSubscribed: boolean;
+  onTogglePush: () => void;
 }
 
-export default function Sidebar({ currentFolder, onFolderChange, onComposeClick, role, twoFactorEnabled, onSecurityClick }: SidebarProps) {
+export default function Sidebar({ 
+  currentFolder, 
+  onFolderChange, 
+  onComposeClick, 
+  role, 
+  twoFactorEnabled, 
+  onSecurityClick,
+  isPushSupported,
+  isPushSubscribed,
+  onTogglePush
+}: SidebarProps) {
   const folders = [
     { id: 'inbox', label: 'Bandeja de entrada', icon: Inbox },
     { id: 'sent', label: 'Enviados', icon: Send },
@@ -124,6 +139,29 @@ export default function Sidebar({ currentFolder, onFolderChange, onComposeClick,
             <p className="text-[8px] opacity-75">{twoFactorEnabled ? 'Tu cuenta está segura' : 'Configurar (Recomendado)'}</p>
           </div>
         </button>
+
+        {isPushSupported && (
+          <button
+            onClick={onTogglePush}
+            className={`flex items-center gap-2.5 text-[10px] p-2 rounded-md border w-full transition-all text-left cursor-pointer hover:bg-neutral-900/40 ${
+              isPushSubscribed
+                ? 'bg-primary/10 border-primary/20 text-primary'
+                : 'bg-neutral-900/40 border-border text-muted-foreground'
+            }`}
+          >
+            {isPushSubscribed ? (
+              <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
+            ) : (
+              <BellOff className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            )}
+            <div className="truncate flex-1">
+              <p className="font-semibold">{isPushSubscribed ? 'Notificaciones Activas' : 'Notificaciones Desactivadas'}</p>
+              <p className="text-[8px] opacity-75">
+                {isPushSubscribed ? 'Alertas push configuradas' : 'Activar notificaciones'}
+              </p>
+            </div>
+          </button>
+        )}
 
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-neutral-900/60 p-2 rounded-md border border-border/50">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />

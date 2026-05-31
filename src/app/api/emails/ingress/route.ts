@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
+import webPush from 'web-push';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
@@ -86,6 +89,67 @@ export async function POST(request: Request) {
     const result = await db.collection('emails').insertOne(incomingEmailDocument);
 
     console.log(`Successfully ingested incoming email from ${from.address} with ID: ${result.insertedId}`);
+
+    // 6. Trigger push notifications for recipients
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+    const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:pablo.luna.perez.008@gmail.com';
+
+    if (vapidPublicKey && vapidPrivateKey) {
+      try {
+        webPush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+
+        // Find users with wildcard or with assigned address matching any recipient
+        const targetUsers = await db.collection('users').find({
+          $or: [
+            { assignedAddresses: '*' },
+            { assignedAddresses: { $in: recipients } }
+          ]
+        }).toArray();
+
+        const targetUserEmails = targetUsers.map((u: any) => u.email);
+
+        if (targetUserEmails.length > 0) {
+          // Find subscriptions for those users
+          const subscriptions = await db.collection('push_subscriptions').find({
+            userId: { $in: targetUserEmails }
+          }).toArray();
+
+          if (subscriptions.length > 0) {
+            const senderName = incomingEmailDocument.from.name || incomingEmailDocument.from.address;
+            const pushTitle = `Nuevo correo de: ${senderName}`;
+            const subjectSnippet = incomingEmailDocument.subject;
+            const textBodySnippet = incomingEmailDocument.body.text
+              ? incomingEmailDocument.body.text.substring(0, 80) + (incomingEmailDocument.body.text.length > 80 ? '...' : '')
+              : '';
+            const pushBody = `Asunto: ${subjectSnippet}${textBodySnippet ? `\n\n${textBodySnippet}` : ''}`;
+            const pushPayload = JSON.stringify({
+              title: pushTitle,
+              body: pushBody,
+              url: '/dashboard'
+            });
+
+            const pushPromises = subscriptions.map(async (subDoc: any) => {
+              try {
+                await webPush.sendNotification(subDoc.subscription, pushPayload);
+              } catch (err: any) {
+                console.error(`Error sending push notification to user ${subDoc.userId}:`, err);
+                if (err.statusCode === 410 || err.statusCode === 404) {
+                  console.log(`Removing expired or invalid push subscription for user ${subDoc.userId}`);
+                  await db.collection('push_subscriptions').deleteOne({ _id: subDoc._id });
+                }
+              }
+            });
+
+            await Promise.allSettled(pushPromises);
+          }
+        }
+      } catch (pushErr) {
+        console.error('Error during push notification dispatching:', pushErr);
+      }
+    } else {
+      console.warn('VAPID keys not fully configured. Skipping push notification dispatch.');
+    }
 
     return NextResponse.json({
       success: true,

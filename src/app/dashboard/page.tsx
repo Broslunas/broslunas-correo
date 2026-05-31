@@ -39,6 +39,121 @@ export default function Dashboard() {
   const [replyData, setReplyData] = useState<{ to: string; subject: string; bodyHtml: string } | null>(null);
   const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; twoFactorEnabled: boolean; assignedAddresses: string[] } | null>(null);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [isPushSupported, setIsPushSupported] = useState(false);
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+
+  // Helper to convert base64 VAPID key to Uint8Array
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  // Register SW and check status or auto-sync subscription
+  useEffect(() => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      setIsPushSupported(true);
+      
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('Service Worker registrado correctamente');
+          
+          return registration.pushManager.getSubscription().then(async (existingSub) => {
+            setIsPushSubscribed(!!existingSub);
+            
+            // Auto-sync if notification permission is already granted
+            if (Notification.permission === 'granted') {
+              try {
+                const keyRes = await fetch('/api/push/subscribe');
+                if (keyRes.ok) {
+                  const { publicKey } = await keyRes.json();
+                  
+                  const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicKey)
+                  });
+                  
+                  await fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscription, action: 'subscribe' })
+                  });
+                  
+                  setIsPushSubscribed(true);
+                }
+              } catch (syncErr) {
+                console.error('Error syncing push subscription on mount:', syncErr);
+              }
+            }
+          });
+        })
+        .catch((error) => {
+          console.error('Error registering Service Worker:', error);
+        });
+    }
+  }, []);
+
+  const handleTogglePush = async () => {
+    if (!isPushSupported) return;
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const existingSub = await registration.pushManager.getSubscription();
+
+      if (existingSub) {
+        // Unsubscribe
+        await existingSub.unsubscribe();
+        
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: existingSub, action: 'unsubscribe' })
+        });
+        
+        setIsPushSubscribed(false);
+      } else {
+        // Request permission
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          alert('Permiso de notificaciones denegado. Habilita las notificaciones en tu navegador.');
+          return;
+        }
+
+        const keyRes = await fetch('/api/push/subscribe');
+        if (!keyRes.ok) {
+          throw new Error('No se pudo recuperar la clave pública de notificaciones.');
+        }
+        const { publicKey } = await keyRes.json();
+
+        const newSub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+        const subRes = await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: newSub, action: 'subscribe' })
+        });
+
+        if (subRes.ok) {
+          setIsPushSubscribed(true);
+        } else {
+          throw new Error('Error al registrar la suscripción en el servidor.');
+        }
+      }
+    } catch (err: any) {
+      console.error('Error toggling push notifications:', err);
+      alert(`Error al configurar notificaciones: ${err.message || err}`);
+    }
+  };
 
   // Load user profile status on mount
   useEffect(() => {
@@ -205,6 +320,9 @@ export default function Dashboard() {
         role={user?.role}
         twoFactorEnabled={user?.twoFactorEnabled}
         onSecurityClick={() => setTwoFactorModalOpen(true)}
+        isPushSupported={isPushSupported}
+        isPushSubscribed={isPushSubscribed}
+        onTogglePush={handleTogglePush}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">

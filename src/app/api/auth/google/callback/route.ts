@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 
+export const dynamic = 'force-dynamic';
+
 const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced_in_env_local';
 const JWT_SECRET = new TextEncoder().encode(secret);
 
