@@ -78,7 +78,8 @@ function buildEmailSrcdoc(email: Email): string {
   processedHtml = processedHtml.replace(/<img[^>]*src=["'][^"']*cid:[^"']*["'][^>]*\/?>/gi, '');
 
   const sanitized = DOMPurify.sanitize(processedHtml, {
-    ADD_ATTR: ['target', 'src'],
+    ADD_TAGS: ['style'],
+    ADD_ATTR: ['target', 'src', 'style', 'class', 'id', 'align', 'valign', 'bgcolor', 'border', 'cellpadding', 'cellspacing', 'width', 'height'],
     ADD_URI_SAFE_ATTR: ['src'],
     FORBID_TAGS: ['script', 'iframe', 'form', 'embed', 'object'],
     WHOLE_DOCUMENT: false,

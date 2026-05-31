@@ -200,6 +200,9 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   };
 
   const handleFormat = (command: string, value: string | undefined = undefined) => {
+    try {
+      document.execCommand('styleWithCSS', false, 'true');
+    } catch (e) {}
     document.execCommand(command, false, value);
     editorRef.current?.focus();
   };
@@ -246,6 +249,42 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
     if (importMode === 'replace') {
       if (editorRef.current) {
+        // Reset editor styles first to defaults
+        editorRef.current.removeAttribute('style');
+        editorRef.current.style.color = 'hsl(210 40% 88%)';
+        editorRef.current.style.outline = 'none';
+
+        // Extract style properties from <body> tag of imported HTML
+        const bodyMatch = htmlCode.match(/<body([^>]*)>/i);
+        if (bodyMatch) {
+          const attrs = bodyMatch[1];
+          const styleMatch = attrs.match(/style=["']([^"']*)["']/i);
+          const bgcolorMatch = attrs.match(/bgcolor=["']([^"']*)["']/i);
+          
+          if (styleMatch) {
+            const styles = styleMatch[1].split(';');
+            styles.forEach(style => {
+              const parts = style.split(':');
+              if (parts.length >= 2) {
+                const prop = parts[0].trim().toLowerCase();
+                const val = parts.slice(1).join(':').trim();
+                if (prop && val && editorRef.current) {
+                  if (prop === 'background-color' || prop === 'background') {
+                    editorRef.current.style.backgroundColor = val;
+                  } else if (prop === 'color') {
+                    editorRef.current.style.color = val;
+                  } else if (prop === 'font-family') {
+                    editorRef.current.style.fontFamily = val;
+                  }
+                }
+              }
+            });
+          }
+          if (bgcolorMatch && bgcolorMatch[1] && !editorRef.current.style.backgroundColor) {
+            editorRef.current.style.backgroundColor = bgcolorMatch[1];
+          }
+        }
+
         editorRef.current.innerHTML = htmlCode;
       }
     } else {
@@ -307,12 +346,23 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     const ccArray = cc ? cc.split(',').map(email => email.trim()).filter(Boolean) : [];
     const bccArray = bcc ? bcc.split(',').map(email => email.trim()).filter(Boolean) : [];
 
+    // Package the HTML with container styles if any custom styling is active
+    let finalHtml = htmlContent;
+    if (editorRef.current) {
+      const bg = editorRef.current.style.backgroundColor;
+      const fg = editorRef.current.style.color;
+      const font = editorRef.current.style.fontFamily;
+      if (bg || (fg && fg !== 'hsl(210 40% 88%)') || font) {
+        finalHtml = `<div style="${bg ? `background-color: ${bg};` : ''} ${fg ? `color: ${fg};` : ''} ${font ? `font-family: ${font};` : ''} padding: 20px; min-height: 100%;">${htmlContent}</div>`;
+      }
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: toArray, cc: ccArray, bcc: bccArray, subject, bodyHtml: htmlContent, bodyText: textContent }),
+        body: JSON.stringify({ from, to: toArray, cc: ccArray, bcc: bccArray, subject, bodyHtml: finalHtml, bodyText: textContent }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
