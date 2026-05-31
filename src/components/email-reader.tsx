@@ -11,7 +11,8 @@ import {
   AlertOctagon,
   CheckCircle,
   FileArchive,
-  MailOpen
+  MailOpen,
+  ArrowLeft,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
 
@@ -43,16 +44,15 @@ interface EmailReaderProps {
   onUpdateEmailStatus: (ids: string[], updates: { folder?: string; isRead?: boolean }) => void;
   onDeletePermanent: (ids: string[]) => void;
   onReplyClick: (email: Email) => void;
+  onBack?: () => void; // Mobile back button
 }
 
-/** Build a sanitized srcdoc string for the email iframe */
 function buildEmailSrcdoc(email: Email): string {
   const attachments = email.attachments || [];
   const imageAttachments = attachments.filter(a => a.contentType?.startsWith('image/'));
 
   let processedHtml = email.body.html || '';
 
-  // --- Strategy 1: Exact contentId match ---
   attachments.forEach((att) => {
     if (att.contentId) {
       const rawCid = att.contentId.replace(/^<|>$/g, '');
@@ -64,7 +64,6 @@ function buildEmailSrcdoc(email: Email): string {
     }
   });
 
-  // --- Strategy 2: Positional fallback (old emails without contentId) ---
   const untaggedImages = imageAttachments.filter(a => !a.contentId);
   if (untaggedImages.length > 0) {
     let imgIdx = 0;
@@ -76,7 +75,6 @@ function buildEmailSrcdoc(email: Email): string {
     });
   }
 
-  // --- Strategy 3: Remove any still-unresolved cid: img tags ---
   processedHtml = processedHtml.replace(/<img[^>]*src=["'][^"']*cid:[^"']*["'][^>]*\/?>/gi, '');
 
   const sanitized = DOMPurify.sanitize(processedHtml, {
@@ -86,7 +84,6 @@ function buildEmailSrcdoc(email: Email): string {
     WHOLE_DOCUMENT: false,
   });
 
-  // Wrap in a minimal HTML document with reset styles
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -96,50 +93,50 @@ function buildEmailSrcdoc(email: Email): string {
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   html, body {
-    margin: 0;
-    padding: 0;
+    margin: 0; padding: 0;
     background: transparent;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 14px;
-    line-height: 1.6;
-    color: #e5e5e5;
+    line-height: 1.65;
+    color: #d4dae8;
     word-break: break-word;
     overflow-x: hidden;
   }
-  a { color: #7c6af7; }
+  a { color: #2dd4bf; text-decoration: underline; }
+  a:hover { color: #5eead4; }
   img { max-width: 100%; height: auto; display: block; }
   table { border-collapse: collapse; max-width: 100%; }
   td, th { padding: 4px 8px; vertical-align: top; }
   blockquote {
     margin: 8px 0 8px 16px;
     padding-left: 12px;
-    border-left: 3px solid #555;
-    color: #999;
+    border-left: 2px solid rgba(45,212,191,0.4);
+    color: #7d8ba3;
   }
   pre, code {
-    background: #1a1a1a;
-    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
     padding: 2px 6px;
     font-size: 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     overflow-x: auto;
   }
   pre { padding: 12px; }
-  hr { border: none; border-top: 1px solid #333; margin: 16px 0; }
+  hr { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 16px 0; }
 </style>
 </head>
 <body>${sanitized}</body>
 </html>`;
 }
 
-/** Plain text fallback renderer */
 function PlainTextBody({ text }: { text: string }) {
   return (
     <div
       style={{
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif",
         fontSize: 14,
-        lineHeight: 1.6,
-        color: '#e5e5e5',
+        lineHeight: 1.65,
+        color: '#d4dae8',
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
       }}
@@ -149,7 +146,6 @@ function PlainTextBody({ text }: { text: string }) {
   );
 }
 
-/** Auto-resizing iframe that renders the email body in a fully isolated CSS context */
 function EmailIframe({ srcdoc }: { srcdoc: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -163,18 +159,13 @@ function EmailIframe({ srcdoc }: { srcdoc: string }) {
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-
     const onLoad = () => {
       resize();
-      // Re-check after images finish loading
       const doc = iframe.contentDocument;
       if (!doc) return;
       const imgs = doc.querySelectorAll('img');
-      imgs.forEach(img => {
-        if (!img.complete) img.addEventListener('load', resize);
-      });
+      imgs.forEach(img => { if (!img.complete) img.addEventListener('load', resize); });
     };
-
     iframe.addEventListener('load', onLoad);
     return () => iframe.removeEventListener('load', onLoad);
   }, [srcdoc, resize]);
@@ -196,22 +187,58 @@ function EmailIframe({ srcdoc }: { srcdoc: string }) {
   );
 }
 
+function SenderAvatar({ name, address }: { name: string; address: string }) {
+  const letter = (name || address)[0]?.toUpperCase() ?? '?';
+  const colors = [
+    ['#2dd4bf', '#0f766e'], ['#22d3ee', '#0e7490'], ['#34d399', '#059669'],
+    ['#60a5fa', '#1d4ed8'], ['#a78bfa', '#6d28d9'], ['#f472b6', '#be185d'],
+    ['#fb923c', '#c2410c'],
+  ];
+  const idx = (name || address).charCodeAt(0) % colors.length;
+  const [from, to] = colors[idx];
+  return (
+    <div
+      className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 select-none"
+      style={{
+        background: `linear-gradient(135deg, ${from}, ${to})`,
+        color: '#fff',
+        boxShadow: `0 4px 12px ${from}40`,
+      }}
+    >
+      {letter}
+    </div>
+  );
+}
+
 export default function EmailReader({
   email,
   onUpdateEmailStatus,
   onDeletePermanent,
   onReplyClick,
+  onBack,
 }: EmailReaderProps) {
 
   if (!email) {
     return (
-      <div className="flex-1 bg-neutral-950 flex flex-col items-center justify-center p-8 text-center text-muted-foreground select-none">
-        <div className="h-16 w-16 rounded-full bg-secondary/30 flex items-center justify-center mb-4 border border-border/30">
-          <MailOpen className="h-8 w-8 text-muted-foreground/40" />
+      <div
+        className="flex-1 h-full flex flex-col items-center justify-center p-8 text-center select-none"
+        style={{ background: 'transparent' }}
+      >
+        <div
+          className="h-20 w-20 rounded-2xl flex items-center justify-center mb-5"
+          style={{
+            background: 'rgba(45,212,191,0.06)',
+            border: '1px solid rgba(45,212,191,0.12)',
+            boxShadow: '0 0 32px rgba(45,212,191,0.05)',
+          }}
+        >
+          <MailOpen className="h-9 w-9" style={{ color: 'hsl(174 72% 45%)' }} />
         </div>
-        <h3 className="text-sm font-semibold text-foreground">Ningún correo seleccionado</h3>
-        <p className="text-xs text-muted-foreground/70 mt-1 max-w-xs">
-          Selecciona un mensaje de la lista para ver su contenido, responder o descargar archivos adjuntos.
+        <h3 className="text-base font-semibold mb-1.5" style={{ color: 'hsl(210 40% 85%)' }}>
+          Ningún correo seleccionado
+        </h3>
+        <p className="text-sm max-w-xs leading-relaxed" style={{ color: 'hsl(215 20% 45%)' }}>
+          Selecciona un mensaje de la lista para ver su contenido, responder o gestionar archivos adjuntos.
         </p>
       </div>
     );
@@ -226,7 +253,6 @@ export default function EmailReader({
     minute: '2-digit',
   });
 
-  // Only real (non-inline) attachments shown in the panel
   const realAttachments = (email.attachments || []).filter(
     (att) => !(
       att.disposition === 'inline' ||
@@ -237,110 +263,202 @@ export default function EmailReader({
   const srcdoc = email.body.html ? buildEmailSrcdoc(email) : null;
 
   return (
-    <div className="flex-1 bg-neutral-950 flex flex-col h-full overflow-hidden">
+    <div className="flex-1 flex flex-col h-full overflow-hidden animate-fadeIn">
 
-      {/* Top action bar */}
-      <div className="h-14 border-b border-border flex items-center justify-between px-6 shrink-0 bg-neutral-950/80 backdrop-blur">
-
-        {/* Reply Action */}
+      {/* Top action toolbar */}
+      <div
+        className="shrink-0 h-14 flex items-center justify-between px-4 md:px-6 gap-3"
+        style={{
+          background: 'rgba(255,255,255,0.018)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+        }}
+      >
         <div className="flex items-center gap-2">
+          {/* Mobile back button */}
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer mr-1"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: 'hsl(210 40% 75%)',
+              }}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Volver
+            </button>
+          )}
+
+          {/* Reply */}
           <button
+            id="btn-reply"
             onClick={() => onReplyClick(email)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            style={{
+              background: 'linear-gradient(135deg, hsl(174 72% 52%), hsl(192 85% 58%))',
+              color: 'hsl(222 47% 4%)',
+              boxShadow: '0 4px 16px rgba(45,212,191,0.2)',
+            }}
           >
             <CornerUpLeft className="h-3.5 w-3.5" />
-            Responder
+            <span className="hidden sm:inline">Responder</span>
           </button>
         </div>
 
-        {/* Folder / Status Actions */}
+        {/* Action buttons */}
         <div className="flex items-center gap-1.5">
           {email.folder !== 'inbox' && (
             <button
+              id="btn-restore"
               onClick={() => onUpdateEmailStatus([email._id], { folder: 'inbox' })}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/45 transition-all cursor-pointer"
-              title="Restaurar a Bandeja de entrada"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: 'hsl(215 20% 60%)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'hsl(210 40% 90%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'hsl(215 20% 60%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+              }}
             >
               <ArchiveRestore className="h-3.5 w-3.5" />
-              Recuperar
+              <span className="hidden sm:inline">Recuperar</span>
             </button>
           )}
 
           {email.folder !== 'spam' ? (
             <button
+              id="btn-spam"
               onClick={() => onUpdateEmailStatus([email._id], { folder: 'spam' })}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/45 transition-all cursor-pointer"
-              title="Marcar como correo no deseado"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: 'hsl(215 20% 60%)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'hsl(38 92% 65%)';
+                e.currentTarget.style.borderColor = 'rgba(245,158,11,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'hsl(215 20% 60%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+              }}
             >
               <AlertOctagon className="h-3.5 w-3.5" />
-              Es Spam
+              <span className="hidden sm:inline">Es Spam</span>
             </button>
           ) : (
             <button
               onClick={() => onUpdateEmailStatus([email._id], { folder: 'inbox' })}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/45 transition-all cursor-pointer"
-              title="Quitar marca de Spam"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer"
+              style={{
+                background: 'rgba(16,185,129,0.08)',
+                border: '1px solid rgba(16,185,129,0.2)',
+                color: 'hsl(152 69% 55%)',
+              }}
             >
               <CheckCircle className="h-3.5 w-3.5" />
-              No es Spam
+              <span className="hidden sm:inline">No es Spam</span>
             </button>
           )}
 
           {email.folder !== 'trash' ? (
             <button
+              id="btn-trash"
               onClick={() => onUpdateEmailStatus([email._id], { folder: 'trash' })}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/15 border border-border/45 hover:border-destructive/25 transition-all cursor-pointer"
-              title="Mover a Papelera"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: 'hsl(215 20% 60%)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'hsl(0 78% 65%)';
+                e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)';
+                e.currentTarget.style.background = 'rgba(239,68,68,0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'hsl(215 20% 60%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+              }}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Eliminar
+              <span className="hidden sm:inline">Eliminar</span>
             </button>
           ) : (
             <button
+              id="btn-delete-permanent"
               onClick={() => onDeletePermanent([email._id])}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-destructive-foreground bg-destructive/15 border border-destructive/20 hover:bg-destructive/25 transition-all cursor-pointer font-semibold"
-              title="Eliminar permanentemente de la base de datos"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+              style={{
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                color: 'hsl(0 78% 65%)',
+              }}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Eliminar Definitivo
+              <span className="hidden sm:inline">Eliminar definitivo</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Scrollable content */}
+      {/* Scrollable email content */}
       <div className="flex-1 overflow-y-auto">
 
-        {/* Email Header Metadata */}
-        <div className="px-8 pt-8 pb-6 space-y-4 border-b border-border/50">
-          <h1 className="text-xl font-bold tracking-tight text-foreground select-text">
+        {/* Email header */}
+        <div
+          className="px-5 md:px-8 pt-7 pb-6"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <h1
+            className="text-lg md:text-xl font-bold mb-4 leading-snug select-text"
+            style={{ color: 'hsl(210 40% 96%)' }}
+          >
             {email.subject}
           </h1>
 
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-bold text-primary border border-border select-none">
-                {email.from.name ? email.from.name[0].toUpperCase() : email.from.address[0].toUpperCase()}
-              </div>
-              <div className="text-xs">
-                <p className="font-semibold text-foreground select-text">
-                  {email.from.name || '(Sin Nombre)'}{' '}
-                  <span className="text-muted-foreground font-normal">&lt;{email.from.address}&gt;</span>
+              <SenderAvatar name={email.from.name} address={email.from.address} />
+              <div>
+                <p className="text-sm font-semibold select-text" style={{ color: 'hsl(210 40% 92%)' }}>
+                  {email.from.name || '(Sin nombre)'}
+                  {' '}
+                  <span className="font-normal text-xs" style={{ color: 'hsl(215 20% 50%)' }}>
+                    &lt;{email.from.address}&gt;
+                  </span>
                 </p>
-                <p className="text-muted-foreground mt-0.5 select-text">
-                  para: {email.to.join(', ')}
-                  {email.cc && email.cc.length > 0 && ` • cc: ${email.cc.join(', ')}`}
+                <p className="text-xs mt-0.5 select-text" style={{ color: 'hsl(215 20% 50%)' }}>
+                  Para: {email.to.join(', ')}
+                  {email.cc && email.cc.length > 0 && (
+                    <span> · CC: {email.cc.join(', ')}</span>
+                  )}
                 </p>
               </div>
             </div>
-            <div className="text-[10px] text-muted-foreground text-right select-none whitespace-nowrap">
+
+            <time
+              className="text-xs shrink-0 capitalize"
+              style={{ color: 'hsl(215 20% 45%)' }}
+            >
               {formattedDate}
-            </div>
+            </time>
           </div>
         </div>
 
-        {/* Email Body — isolated inside an iframe */}
-        <div className="px-8 py-6">
+        {/* Email body */}
+        <div className="px-5 md:px-8 py-6">
           {srcdoc ? (
             <EmailIframe key={email._id} srcdoc={srcdoc} />
           ) : (
@@ -348,32 +466,63 @@ export default function EmailReader({
           )}
         </div>
 
-        {/* Attachments — always at the bottom */}
+        {/* Attachments */}
         {realAttachments.length > 0 && (
-          <div className="px-8 pb-8">
-            <div className="bg-neutral-900/40 border border-border p-4 rounded-xl space-y-3">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <div className="px-5 md:px-8 pb-8">
+            <div
+              className="rounded-2xl p-4 space-y-3"
+              style={{
+                background: 'rgba(45,212,191,0.04)',
+                border: '1px solid rgba(45,212,191,0.12)',
+              }}
+            >
+              <h4
+                className="text-xs font-semibold uppercase tracking-wider flex items-center gap-2"
+                style={{ color: 'hsl(174 72% 55%)' }}
+              >
                 <FileArchive className="h-4 w-4" />
-                Archivos Adjuntos ({realAttachments.length})
+                Archivos adjuntos ({realAttachments.length})
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {realAttachments.map((att, index) => (
                   <a
                     key={index}
                     href={`/api/attachments?key=${att.r2Url}&filename=${encodeURIComponent(att.filename)}`}
-                    className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-neutral-900 hover:bg-secondary transition-all text-xs group"
+                    className="group flex items-center justify-between p-2.5 rounded-xl transition-all text-xs"
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(45,212,191,0.07)';
+                      e.currentTarget.style.borderColor = 'rgba(45,212,191,0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                    }}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <div
+                        className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.15)' }}
+                      >
+                        <FileText className="h-4 w-4" style={{ color: 'hsl(174 72% 55%)' }} />
+                      </div>
                       <div className="truncate">
-                        <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                        <p className="font-medium truncate transition-colors" style={{ color: 'hsl(210 40% 85%)' }}>
                           {att.filename}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">{formatBytes(att.size)}</p>
+                        <p className="text-[10px]" style={{ color: 'hsl(215 20% 45%)' }}>
+                          {formatBytes(att.size)}
+                        </p>
                       </div>
                     </div>
-                    <div className="h-7 w-7 rounded-md bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0">
-                      <Download className="h-4 w-4" />
+                    <div
+                      className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ml-2 transition-all"
+                      style={{ background: 'rgba(45,212,191,0.06)', color: 'hsl(174 72% 55%)' }}
+                    >
+                      <Download className="h-3.5 w-3.5" />
                     </div>
                   </a>
                 ))}
@@ -381,7 +530,6 @@ export default function EmailReader({
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
