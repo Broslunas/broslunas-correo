@@ -51,6 +51,7 @@ export default function Sidebar({
           body: JSON.stringify({ action: 'logout' })
         });
         if (res.ok) {
+          localStorage.clear();
           window.location.href = '/';
         }
       } catch (error) {

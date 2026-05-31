@@ -155,16 +155,29 @@ export default function Dashboard() {
     }
   };
 
-  // Load user profile status on mount
+  // Load user profile status on mount with local caching
   useEffect(() => {
+    // 1. Try loading user profile from cache
+    try {
+      const cachedUser = localStorage.getItem('user_profile_cache');
+      if (cachedUser) {
+        setUser(JSON.parse(cachedUser));
+      }
+    } catch (err) {
+      console.error('Error reading user profile cache:', err);
+    }
+
+    // 2. Fetch fresh user status
     async function fetchUserStatus() {
       try {
         const res = await fetch('/api/auth/status');
         if (res.ok) {
           const data = await res.json();
           setUser(data);
+          localStorage.setItem('user_profile_cache', JSON.stringify(data));
         } else {
           // Redirect to login if unauthorized or session expired
+          localStorage.removeItem('user_profile_cache');
           window.location.href = '/';
         }
       } catch (err) {
@@ -185,31 +198,87 @@ export default function Dashboard() {
     }
   };
 
-  // Fetch emails from API
+  // Fetch emails from API and write to cache
   const fetchEmails = useCallback(async () => {
-    setLoading(true);
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
     try {
       const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}`);
       if (res.ok) {
         const data = await res.json();
-        setEmails(data.emails || []);
+        const freshEmails = data.emails || [];
+        setEmails(freshEmails);
+        localStorage.setItem(cacheKey, JSON.stringify(freshEmails));
         
         // Clear selection if the current selected email is no longer in the list
-        if (selectedEmail && !data.emails.some((e: Email) => e._id === selectedEmail._id)) {
+        if (selectedEmail && !freshEmails.some((e: Email) => e._id === selectedEmail._id)) {
           setSelectedEmail(null);
         }
       }
     } catch (error) {
       console.error('Error fetching emails:', error);
-    } finally {
-      setLoading(false);
     }
   }, [currentFolder, searchQuery, selectedEmail]);
 
-  // Run fetch on mount, folder change, or search query change
+  // Run fetch on mount, folder change, or search query change, with local caching (stale-while-revalidate)
   useEffect(() => {
-    fetchEmails();
-  }, [currentFolder, searchQuery]);
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          setEmails(parsed);
+          setLoading(false); // Skip main spinner, render cached content instantly
+        } else {
+          setLoading(true);
+        }
+      } else {
+        setLoading(true);
+      }
+    } catch (err) {
+      console.error('Error reading emails cache:', err);
+      setLoading(true);
+    }
+
+    let isMounted = true;
+    async function fetchFreshEmails() {
+      try {
+        const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}`);
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const freshEmails = data.emails || [];
+          setEmails(freshEmails);
+          localStorage.setItem(cacheKey, JSON.stringify(freshEmails));
+          
+          if (selectedEmail && !freshEmails.some((e: Email) => e._id === selectedEmail._id)) {
+            setSelectedEmail(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching fresh emails in effect:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchFreshEmails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentFolder, searchQuery, selectedEmail]);
+
+  // Sync state changes (like optimistic reads, moves, deletions) back to local cache
+  useEffect(() => {
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(emails));
+    } catch (err) {
+      console.error('Error syncing emails state to cache:', err);
+    }
+  }, [emails, currentFolder, searchQuery]);
 
   // Handle email click / selection
   const handleSelectEmail = async (email: Email) => {
