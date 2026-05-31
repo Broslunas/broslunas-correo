@@ -48,8 +48,10 @@ function MailContent() {
     }
   }, []);
 
-  // Get and map folder from searchParams: inbox=main -> 'inbox', etc.
+  // Get and map folder from searchParams: inbox=main/[id] -> 'inbox' and '[id]', etc.
   const inboxParam = searchParams.get('inbox') || 'main';
+  const [folderPart, activeEmailId] = inboxParam.split('/');
+
   const getFolderFromParam = (param: string) => {
     switch (param) {
       case 'main': return 'inbox';
@@ -59,7 +61,7 @@ function MailContent() {
       default: return 'inbox';
     }
   };
-  const currentFolder = getFolderFromParam(inboxParam);
+  const currentFolder = getFolderFromParam(folderPart);
 
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
@@ -79,7 +81,7 @@ function MailContent() {
   useEffect(() => {
     setSelectedEmail(null);
     setMobileView('list');
-  }, [inboxParam]);
+  }, [folderPart]);
 
   // Helper to convert base64 VAPID key to Uint8Array
   const urlBase64ToUint8Array = (base64String: string) => {

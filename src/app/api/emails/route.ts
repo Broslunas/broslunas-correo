@@ -45,6 +45,28 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (id) {
+      const { db } = await connectToDatabase();
+      const query: any = { _id: new ObjectId(id) };
+
+      if (!assignedAddresses.includes('*')) {
+        query.$or = [
+          { to: { $in: assignedAddresses } },
+          { cc: { $in: assignedAddresses } },
+          { bcc: { $in: assignedAddresses } },
+          { 'from.address': { $in: assignedAddresses } }
+        ];
+      }
+
+      const email = await db.collection('emails').findOne(query);
+      if (!email) {
+        return NextResponse.json({ error: 'Correo no encontrado' }, { status: 404 });
+      }
+      return NextResponse.json({ email });
+    }
+
     const folder = searchParams.get('folder') || 'inbox';
     const searchQuery = searchParams.get('search') || '';
     const page = parseInt(searchParams.get('page') || '1', 10);
