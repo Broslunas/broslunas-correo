@@ -29,6 +29,9 @@ interface Email {
   isRead: boolean;
 }
 
+// Mobile view states: 'list' | 'reader'
+type MobileView = 'list' | 'reader';
+
 export default function Dashboard() {
   const [currentFolder, setCurrentFolder] = useState('inbox');
   const [emails, setEmails] = useState<Email[]>([]);
@@ -42,6 +45,8 @@ export default function Dashboard() {
   const [isPushSupported, setIsPushSupported] = useState(false);
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  // Responsive: track which "panel" is visible on mobile/tablet
+  const [mobileView, setMobileView] = useState<MobileView>('list');
 
   // Helper to convert base64 VAPID key to Uint8Array
   const urlBase64ToUint8Array = (base64String: string) => {
@@ -57,36 +62,28 @@ export default function Dashboard() {
     return outputArray;
   };
 
-  // Register SW and check status or auto-sync subscription
+  // Register SW and check status
   useEffect(() => {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       setIsPushSupported(true);
-      
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('Service Worker registrado correctamente');
-          
           return registration.pushManager.getSubscription().then(async (existingSub) => {
             setIsPushSubscribed(!!existingSub);
-            
-            // Auto-sync if notification permission is already granted
             if (Notification.permission === 'granted') {
               try {
                 const keyRes = await fetch('/api/push/subscribe');
                 if (keyRes.ok) {
                   const { publicKey } = await keyRes.json();
-                  
                   const subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(publicKey)
                   });
-                  
                   await fetch('/api/push/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ subscription, action: 'subscribe' })
                   });
-                  
                   setIsPushSubscribed(true);
                 }
               } catch (syncErr) {
@@ -95,60 +92,43 @@ export default function Dashboard() {
             }
           });
         })
-        .catch((error) => {
-          console.error('Error registering Service Worker:', error);
-        });
+        .catch((error) => console.error('Error registering Service Worker:', error));
     }
   }, []);
 
   const handleTogglePush = async () => {
     if (!isPushSupported) return;
-
     try {
       const registration = await navigator.serviceWorker.ready;
       const existingSub = await registration.pushManager.getSubscription();
-
       if (existingSub) {
-        // Unsubscribe
         await existingSub.unsubscribe();
-        
         await fetch('/api/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subscription: existingSub, action: 'unsubscribe' })
         });
-        
         setIsPushSubscribed(false);
       } else {
-        // Request permission
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
           alert('Permiso de notificaciones denegado. Habilita las notificaciones en tu navegador.');
           return;
         }
-
         const keyRes = await fetch('/api/push/subscribe');
-        if (!keyRes.ok) {
-          throw new Error('No se pudo recuperar la clave pública de notificaciones.');
-        }
+        if (!keyRes.ok) throw new Error('No se pudo recuperar la clave pública de notificaciones.');
         const { publicKey } = await keyRes.json();
-
         const newSub = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicKey)
         });
-
         const subRes = await fetch('/api/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subscription: newSub, action: 'subscribe' })
         });
-
-        if (subRes.ok) {
-          setIsPushSubscribed(true);
-        } else {
-          throw new Error('Error al registrar la suscripción en el servidor.');
-        }
+        if (subRes.ok) setIsPushSubscribed(true);
+        else throw new Error('Error al registrar la suscripción en el servidor.');
       }
     } catch (err: any) {
       console.error('Error toggling push notifications:', err);
@@ -156,19 +136,15 @@ export default function Dashboard() {
     }
   };
 
-  // Load user profile status on mount with local caching
+  // Load user profile
   useEffect(() => {
-    // 1. Try loading user profile from cache
     try {
       const cachedUser = localStorage.getItem('user_profile_cache');
-      if (cachedUser) {
-        setUser(JSON.parse(cachedUser));
-      }
+      if (cachedUser) setUser(JSON.parse(cachedUser));
     } catch (err) {
       console.error('Error reading user profile cache:', err);
     }
 
-    // 2. Fetch fresh user status
     async function fetchUserStatus() {
       try {
         const res = await fetch('/api/auth/status');
@@ -177,7 +153,6 @@ export default function Dashboard() {
           setUser(data);
           localStorage.setItem('user_profile_cache', JSON.stringify(data));
         } else {
-          // Redirect to login if unauthorized or session expired
           localStorage.removeItem('user_profile_cache');
           window.location.href = '/';
         }
@@ -188,18 +163,16 @@ export default function Dashboard() {
     fetchUserStatus();
   }, []);
 
-  // Folder labels lookup
   const getFolderLabel = (folderId: string) => {
     switch (folderId) {
       case 'inbox': return 'Bandeja de entrada';
-      case 'sent': return 'Enviados';
-      case 'spam': return 'Spam';
+      case 'sent':  return 'Enviados';
+      case 'spam':  return 'Spam';
       case 'trash': return 'Papelera';
       default: return 'Correos';
     }
   };
 
-  // Fetch emails from API and write to cache
   const fetchEmails = useCallback(async () => {
     const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
     setSyncing(true);
@@ -210,8 +183,6 @@ export default function Dashboard() {
         const freshEmails = data.emails || [];
         setEmails(freshEmails);
         localStorage.setItem(cacheKey, JSON.stringify(freshEmails));
-        
-        // Clear selection if the current selected email is no longer in the list
         if (selectedEmail && !freshEmails.some((e: Email) => e._id === selectedEmail._id)) {
           setSelectedEmail(null);
         }
@@ -223,7 +194,7 @@ export default function Dashboard() {
     }
   }, [currentFolder, searchQuery, selectedEmail]);
 
-  // Run fetch on mount, folder change, or search query change, with local caching (stale-while-revalidate)
+  // Fetch on folder/search change with stale-while-revalidate
   useEffect(() => {
     const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
     try {
@@ -232,7 +203,7 @@ export default function Dashboard() {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) {
           setEmails(parsed);
-          setLoading(false); // Skip main spinner, render cached content instantly
+          setLoading(false);
         } else {
           setLoading(true);
         }
@@ -240,7 +211,6 @@ export default function Dashboard() {
         setLoading(true);
       }
     } catch (err) {
-      console.error('Error reading emails cache:', err);
       setLoading(true);
     }
 
@@ -254,13 +224,12 @@ export default function Dashboard() {
           const freshEmails = data.emails || [];
           setEmails(freshEmails);
           localStorage.setItem(cacheKey, JSON.stringify(freshEmails));
-          
           if (selectedEmail && !freshEmails.some((e: Email) => e._id === selectedEmail._id)) {
             setSelectedEmail(null);
           }
         }
       } catch (error) {
-        console.error('Error fetching fresh emails in effect:', error);
+        console.error('Error fetching fresh emails:', error);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -268,15 +237,11 @@ export default function Dashboard() {
         }
       }
     }
-
     fetchFreshEmails();
+    return () => { isMounted = false; };
+  }, [currentFolder, searchQuery]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [currentFolder, searchQuery, selectedEmail]);
-
-  // Sync state changes (like optimistic reads, moves, deletions) back to local cache
+  // Sync state changes to local cache
   useEffect(() => {
     const cacheKey = `emails_cache_${currentFolder}_${searchQuery}`;
     try {
@@ -286,15 +251,12 @@ export default function Dashboard() {
     }
   }, [emails, currentFolder, searchQuery]);
 
-  // Handle email click / selection
   const handleSelectEmail = async (email: Email) => {
     setSelectedEmail(email);
+    setMobileView('reader'); // Switch to reader on mobile
 
-    // If it's unread, mark it as read immediately in the DB and locally
     if (!email.isRead) {
-      // Optimistic local update
       setEmails(prev => prev.map(e => e._id === email._id ? { ...e, isRead: true } : e));
-      
       try {
         await fetch('/api/emails', {
           method: 'PATCH',
@@ -307,7 +269,6 @@ export default function Dashboard() {
     }
   };
 
-  // Handle updating email folder or read status
   const handleUpdateEmailStatus = async (ids: string[], updates: { folder?: string; isRead?: boolean }) => {
     try {
       const res = await fetch('/api/emails', {
@@ -315,16 +276,14 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids, ...updates })
       });
-
       if (res.ok) {
-        // If we changed folders, remove from the current view list
         if (updates.folder !== undefined) {
           setEmails(prev => prev.filter(e => !ids.includes(e._id)));
           if (selectedEmail && ids.includes(selectedEmail._id)) {
             setSelectedEmail(null);
+            setMobileView('list');
           }
         } else if (updates.isRead !== undefined) {
-          // If we changed read status, update it in the list and selected view
           setEmails(prev => prev.map(e => ids.includes(e._id) ? { ...e, isRead: updates.isRead! } : e));
           if (selectedEmail && ids.includes(selectedEmail._id)) {
             setSelectedEmail(prev => prev ? { ...prev, isRead: updates.isRead! } : null);
@@ -336,23 +295,19 @@ export default function Dashboard() {
     }
   };
 
-  // Handle permanent delete (purge from db)
   const handleDeletePermanent = async (ids: string[]) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar permanentemente estos correos de la base de datos? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
+    if (!confirm('¿Estás seguro de que quieres eliminar permanentemente estos correos? Esta acción no se puede deshacer.')) return;
     try {
       const res = await fetch('/api/emails', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids })
       });
-
       if (res.ok) {
         setEmails(prev => prev.filter(e => !ids.includes(e._id)));
         if (selectedEmail && ids.includes(selectedEmail._id)) {
           setSelectedEmail(null);
+          setMobileView('list');
         }
       }
     } catch (error) {
@@ -360,37 +315,33 @@ export default function Dashboard() {
     }
   };
 
-  // Handle Reply trigger
   const handleReplyClick = (email: Email) => {
     const cleanSubject = email.subject.toLowerCase().startsWith('re:') ? email.subject : `Re: ${email.subject}`;
-    
-    // Create detailed email reply quote block
-    const quoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid #2d2d2d;margin:20px 0;"><div style="color:#a3a3a3;font-size:11px;line-height:1.5;">El ${new Date(email.date).toLocaleString('es-ES')} &lt;${email.from.address}&gt; escribió:<br></div><blockquote style="margin:10px 0 0 10px;border-left:2px solid #52525b;padding-left:15px;color:#d4d4d4;">${email.body.html || email.body.text}</blockquote>`;
-    
-    setReplyData({
-      to: email.from.address,
-      subject: cleanSubject,
-      bodyHtml: quoteHtml
-    });
+    const quoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid rgba(45,212,191,0.15);margin:20px 0;"><div style="color:#7d8ba3;font-size:11px;line-height:1.5;">El ${new Date(email.date).toLocaleString('es-ES')} &lt;${email.from.address}&gt; escribió:<br></div><blockquote style="margin:10px 0 0 10px;border-left:2px solid rgba(45,212,191,0.35);padding-left:15px;color:#8d99b3;">${email.body.html || email.body.text}</blockquote>`;
+    setReplyData({ to: email.from.address, subject: cleanSubject, bodyHtml: quoteHtml });
     setComposeOpen(true);
   };
 
-  // Handle Compose trigger
   const handleComposeClick = () => {
     setReplyData(null);
     setComposeOpen(true);
   };
 
+  const handleFolderChange = (folder: string) => {
+    setCurrentFolder(folder);
+    setSelectedEmail(null);
+    setMobileView('list'); // Always go back to list when changing folder
+  };
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-      
-      {/* Column 1: Navigation Sidebar */}
-      <Sidebar 
-        currentFolder={currentFolder} 
-        onFolderChange={(folder) => {
-          setCurrentFolder(folder);
-          setSelectedEmail(null); // Clear selected mail on category change
-        }}
+    <div
+      className="flex h-screen w-screen overflow-hidden"
+      style={{ background: 'hsl(222 47% 4%)' }}
+    >
+      {/* Sidebar (desktop: fixed icon column | mobile: bottom nav rendered inside Sidebar) */}
+      <Sidebar
+        currentFolder={currentFolder}
+        onFolderChange={handleFolderChange}
         onComposeClick={handleComposeClick}
         role={user?.role}
         twoFactorEnabled={user?.twoFactorEnabled}
@@ -400,70 +351,115 @@ export default function Dashboard() {
         onTogglePush={handleTogglePush}
       />
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+
+        {/* 2FA warning banner */}
         {user && !user.twoFactorEnabled && (
-          <div className="bg-amber-955/15 border-b border-amber-900/25 px-6 py-2.5 flex items-center justify-between text-amber-400 select-none animate-fadeIn shrink-0">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-              <span><strong>Recomendación de Seguridad:</strong> Tu cuenta no tiene activada la verificación de dos pasos (2FA). Protégela para evitar accesos no autorizados.</span>
+          <div
+            className="shrink-0 flex items-center justify-between px-4 md:px-6 py-2.5 animate-fadeIn"
+            style={{
+              background: 'rgba(245,158,11,0.06)',
+              borderBottom: '1px solid rgba(245,158,11,0.15)',
+            }}
+          >
+            <div className="flex items-center gap-2 text-xs" style={{ color: 'hsl(38 92% 65%)' }}>
+              <span
+                className="flex h-1.5 w-1.5 rounded-full animate-pulse shrink-0"
+                style={{ background: 'hsl(38 92% 60%)' }}
+              />
+              <span>
+                <strong>Seguridad:</strong> La verificación en dos pasos (2FA) no está activada. Protege tu cuenta.
+              </span>
             </div>
-            <button 
+            <button
               onClick={() => setTwoFactorModalOpen(true)}
-              className="text-[9px] bg-amber-500 hover:bg-amber-400 text-neutral-950 font-extrabold px-2.5 py-1 rounded-md transition-all cursor-pointer tracking-wider uppercase"
+              className="shrink-0 text-[9px] font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer ml-3"
+              style={{
+                background: 'hsl(38 92% 55%)',
+                color: 'hsl(222 47% 4%)',
+              }}
             >
-              Configurar 2FA
+              Activar 2FA
             </button>
           </div>
         )}
 
-        <div className="flex-1 flex overflow-hidden">
+        {/* Content: three-column on desktop, adaptive on mobile/tablet */}
+        <div className="flex-1 flex overflow-hidden min-h-0">
           {currentFolder === 'admin' ? (
             <UserManagement />
           ) : (
             <>
-              <EmailList
-                emails={emails}
-                selectedEmailId={selectedEmail?._id || null}
-                onSelectEmail={handleSelectEmail}
-                onUpdateEmailStatus={handleUpdateEmailStatus}
-                folderLabel={getFolderLabel(currentFolder)}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                loading={loading}
-                syncing={syncing}
-                onSyncClick={fetchEmails}
-              />
+              {/*
+                RESPONSIVE LAYOUT STRATEGY:
+                - Mobile (< lg): Show either email list OR email reader (never both).
+                - Desktop (lg+): Show both side by side.
+              */}
 
-              {/* Column 3: Detailed Email Content Reader */}
-              <main className="flex-1 min-w-0 h-full">
+              {/* Email List Panel */}
+              <div
+                className={`
+                  h-full flex-col overflow-hidden
+                  ${mobileView === 'list' ? 'flex' : 'hidden'}
+                  lg:flex lg:w-80 lg:shrink-0
+                `}
+                style={{ width: '100%' }}
+              >
+                <EmailList
+                  emails={emails}
+                  selectedEmailId={selectedEmail?._id || null}
+                  onSelectEmail={handleSelectEmail}
+                  onUpdateEmailStatus={handleUpdateEmailStatus}
+                  folderLabel={getFolderLabel(currentFolder)}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  loading={loading}
+                  syncing={syncing}
+                  onSyncClick={fetchEmails}
+                />
+              </div>
+
+              {/* Email Reader Panel */}
+              <main
+                className={`
+                  h-full flex-col overflow-hidden flex-1 min-w-0
+                  ${mobileView === 'reader' ? 'flex' : 'hidden'}
+                  lg:flex
+                `}
+              >
                 <EmailReader
                   email={selectedEmail}
                   onUpdateEmailStatus={handleUpdateEmailStatus}
                   onDeletePermanent={handleDeletePermanent}
                   onReplyClick={handleReplyClick}
+                  onBack={() => {
+                    setMobileView('list');
+                    setSelectedEmail(null);
+                  }}
                 />
               </main>
             </>
           )}
         </div>
+
+        {/* Bottom nav spacing on mobile (avoid content behind nav bar) */}
+        <div className="lg:hidden h-16 shrink-0" />
       </div>
 
-      {/* Compose floating editor overlay */}
+      {/* Compose Modal */}
       <ComposeModal
         isOpen={composeOpen}
         onClose={() => {
           setComposeOpen(false);
           setReplyData(null);
-          // Re-fetch email list if the compose modal closes (to show new items in Sent)
-          if (currentFolder === 'sent') {
-            fetchEmails();
-          }
+          if (currentFolder === 'sent') fetchEmails();
         }}
         initialData={replyData}
         assignedAddresses={user?.assignedAddresses || []}
       />
 
-      {/* 2FA Setup Modal */}
+      {/* 2FA Modal */}
       <TwoFactorModal
         isOpen={twoFactorModalOpen}
         onClose={() => setTwoFactorModalOpen(false)}
@@ -471,7 +467,6 @@ export default function Dashboard() {
           setUser(prev => prev ? { ...prev, twoFactorEnabled: enabled } : null);
         }}
       />
-
     </div>
   );
 }
