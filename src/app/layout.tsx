@@ -18,8 +18,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className="dark">
+    <html lang="es">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const theme = localStorage.getItem('webmail_theme') || 'theme-aurora-frost';
+                const isLight = theme === 'theme-sakura-light';
+                document.documentElement.className = isLight ? theme : 'dark ' + theme;
+              } catch (_) {}
+            `,
+          }}
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <meta name="theme-color" content="#060a14" />
         <meta name="mobile-web-app-capable" content="yes" />

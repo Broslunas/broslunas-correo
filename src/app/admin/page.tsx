@@ -158,6 +158,7 @@ export default function AdminPage() {
         role={user?.role}
         twoFactorEnabled={user?.twoFactorEnabled}
         onSecurityClick={() => setTwoFactorModalOpen(true)}
+        onSettingsClick={() => router.push('/settings')}
         isPushSupported={isPushSupported}
         isPushSubscribed={isPushSubscribed}
         onTogglePush={handleTogglePush}

@@ -277,8 +277,12 @@ export default function Sidebar({
             title={isCollapsed ? "Configuración" : undefined}
             className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer shrink-0`}
             style={{
-              background: 'rgba(45,212,191,0.05)',
-              border: '1px solid rgba(45,212,191,0.15)',
+              background: currentFolder === 'settings'
+                ? 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(34,211,238,0.08))'
+                : 'rgba(45,212,191,0.02)',
+              border: currentFolder === 'settings'
+                ? '1px solid rgba(45,212,191,0.3)'
+                : '1px solid rgba(45,212,191,0.1)',
             }}
           >
             <Settings
@@ -547,7 +551,12 @@ export default function Sidebar({
                   setMobileMenuOpen(false);
                   onSettingsClick?.();
                 }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 text-teal-400 py-2.5 text-xs font-bold transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-xl border text-xs font-bold py-2.5 transition-all cursor-pointer"
+                style={{
+                  background: currentFolder === 'settings' ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.02)',
+                  borderColor: currentFolder === 'settings' ? 'rgba(45,212,191,0.25)' : 'rgba(255,255,255,0.05)',
+                  color: 'hsl(174 72% 60%)'
+                }}
               >
                 <Settings className="h-4 w-4" />
                 Configuración
