@@ -10,12 +10,14 @@ const JWT_SECRET = new TextEncoder().encode(secret);
 export async function GET(request: NextRequest) {
   let appUrl = 'http://localhost:3000';
   try {
-    const { searchParams, origin } = new URL(request.url);
-    appUrl = origin;
+    const { searchParams } = new URL(request.url);
+    // Use explicit APP_URL env var so both login and callback use the same URI
+    appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const code = searchParams.get('code');
     const errorParam = searchParams.get('error');
 
     const redirectUri = `${appUrl}/api/auth/google/callback`;
+    console.log('[OAuth Callback] redirect_uri =>', redirectUri);
 
     if (errorParam) {
       console.error('Google OAuth redirect error:', errorParam);
