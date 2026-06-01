@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     // 1. Folder condition (handle virtual 'unread' folder)
     if (folder === 'unread') {
-      andClauses.push({ isRead: false, folder: { $nin: ['trash', 'spam', 'sent'] } });
+      andClauses.push({ isRead: false, folder: { $nin: ['trash', 'spam', 'sent', 'temp_mail'] } });
     } else {
       andClauses.push({ folder });
     }

@@ -33,11 +33,30 @@ export async function POST(request: Request) {
     // 3. Connect to DB
     const { db } = await connectToDatabase();
 
+    // Helper to parse recipients flexibly (string, array of strings, array of objects, etc.)
+    const parseRecipientField = (field: any): string[] => {
+      if (!field) return [];
+      if (Array.isArray(field)) {
+        return field.map(f => {
+          if (typeof f === 'string') return f;
+          if (f && typeof f === 'object' && f.address) return f.address;
+          return String(f);
+        });
+      }
+      if (typeof field === 'string') {
+        return field.split(',').map(s => s.trim());
+      }
+      if (typeof field === 'object' && field.address) {
+        return [field.address];
+      }
+      return [];
+    };
+
     // Verify that at least one recipient belongs to an allowed domain in the system
     const recipients = [
-      ...(Array.isArray(to) ? to : []),
-      ...(Array.isArray(cc) ? cc : []),
-      ...(Array.isArray(bcc) ? bcc : [])
+      ...parseRecipientField(to),
+      ...parseRecipientField(cc),
+      ...parseRecipientField(bcc)
     ].map((r: string) => r.trim().toLowerCase());
 
     const recipientDomains = Array.from(new Set(recipients.map(r => r.split('@')[1]).filter(Boolean)));
@@ -48,6 +67,9 @@ export async function POST(request: Request) {
     const allowedDomains = await db.collection('domains').find({}).toArray();
     const allowedDomainNames = new Set(allowedDomains.map(d => d.domain.toLowerCase()));
     
+    const tempMailDomainsStr = process.env.NEXT_PUBLIC_TEMPMAIL_DOMAINS || '';
+    tempMailDomainsStr.split(',').map(d => d.trim().toLowerCase()).filter(Boolean).forEach(d => allowedDomainNames.add(d));
+
     if (allowedDomainNames.size > 0) {
       const hasAllowedRecipient = recipientDomains.some(domain => allowedDomainNames.has(domain));
       if (!hasAllowedRecipient) {
@@ -68,55 +90,68 @@ export async function POST(request: Request) {
         }))
       : [];
 
-    // 5. Auto-classify folder based on content
+    // 5. Check if any recipient is a temp mail alias (temp_mail_sessions)
+    const tempMailSession = await db.collection('temp_mail_sessions').findOne({
+      address: { $in: recipients },
+    });
+
+    // 6. Auto-classify folder based on content
     let detectedFolder = 'inbox';
+
+    if (tempMailSession) {
+      // Force temp_mail folder for disposable alias emails
+      detectedFolder = 'temp_mail';
+    }
+
     const textToAnalyze = `${subject} ${bodyText} ${bodyHtml}`.toLowerCase();
     const senderToAnalyze = from.address.toLowerCase();
 
-    // 1. Social Media classification
-    const socialDomains = ['linkedin.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'github.com', 'gitlab.com', 'pinterest.com', 'reddit.com'];
-    const isSocialSender = socialDomains.some(domain => senderToAnalyze.endsWith(domain) || senderToAnalyze.includes('@' + domain));
-    const socialKeywords = ['nuevo seguidor', 'solicitud de amistad', 'mencionó', 'comentó', 'te sigue', 'retweet', 'notificación de github', 'pull request', 'issue', 'social'];
-    const isSocialKeyword = socialKeywords.some(kw => textToAnalyze.includes(kw));
+    if (!tempMailSession) {
+      // 1. Social Media classification
+      const socialDomains = ['linkedin.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'github.com', 'gitlab.com', 'pinterest.com', 'reddit.com'];
+      const isSocialSender = socialDomains.some(domain => senderToAnalyze.endsWith(domain) || senderToAnalyze.includes('@' + domain));
+      const socialKeywords = ['nuevo seguidor', 'solicitud de amistad', 'mencionó', 'comentó', 'te sigue', 'retweet', 'notificación de github', 'pull request', 'issue', 'social'];
+      const isSocialKeyword = socialKeywords.some(kw => textToAnalyze.includes(kw));
 
-    if (isSocialSender || isSocialKeyword) {
-      detectedFolder = 'social';
-    } 
-    // 2. Commercial / Promotional classification
-    else {
-      const commercialKeywords = [
-        'oferta', 'descuento', 'promoción', 'promo', 'compra', 'pedido', 'factura', 'pago', 'descuentos', 'tienda', 'shop', 
-        'sale', 'order', 'invoice', 'payment', 'receipt', 'boleta', 'voucher', 'cupón', 'coupon', 'adquiere', 'suscripción',
-        'suscribete', 'comprar', 'precio', 'tarifa', 'servicio', 'anuncio', 'publicidad'
-      ];
-      const isCommercialKeyword = commercialKeywords.some(kw => textToAnalyze.includes(kw));
-      const commercialDomains = ['paypal.com', 'stripe.com', 'amazon.', 'aliexpress', 'ebay', 'shopify', 'netflix', 'spotify', 'booking.com'];
-      const isCommercialSender = commercialDomains.some(domain => senderToAnalyze.includes(domain));
-
-      if (isCommercialKeyword || isCommercialSender) {
-        detectedFolder = 'commercial';
+      if (isSocialSender || isSocialKeyword) {
+        detectedFolder = 'social';
       }
-      // 3. Newsletter / Boletines classification
+      // 2. Commercial / Promotional classification
       else {
-        const newsletterKeywords = [
-          'newsletter', 'boletín', 'boletin', 'weekly digest', 'weekly', 'daily digest', 'digest', 'monthly', 
-          'novedades', 'resumen semanal', 'leído de la semana', 'suscrito', 'suscribirse', 'unsubscribe'
+        const commercialKeywords = [
+          'oferta', 'descuento', 'promoción', 'promo', 'compra', 'pedido', 'factura', 'pago', 'descuentos', 'tienda', 'shop',
+          'sale', 'order', 'invoice', 'payment', 'receipt', 'boleta', 'voucher', 'cupón', 'coupon', 'adquiere', 'suscripción',
+          'suscribete', 'comprar', 'precio', 'tarifa', 'servicio', 'anuncio', 'publicidad'
         ];
-        const isNewsletterKeyword = newsletterKeywords.some(kw => textToAnalyze.includes(kw));
-        
-        if (isNewsletterKeyword) {
-          detectedFolder = 'newsletter';
+        const isCommercialKeyword = commercialKeywords.some(kw => textToAnalyze.includes(kw));
+        const commercialDomains = ['paypal.com', 'stripe.com', 'amazon.', 'aliexpress', 'ebay', 'shopify', 'netflix', 'spotify', 'booking.com'];
+        const isCommercialSender = commercialDomains.some(domain => senderToAnalyze.includes(domain));
+
+        if (isCommercialKeyword || isCommercialSender) {
+          detectedFolder = 'commercial';
         }
-        // 4. Work classification
+        // 3. Newsletter / Boletines classification
         else {
-          const workKeywords = [
-            'reunión', 'proyecto', 'tarea', 'urgente', 'avance', 'minuta', 'trabajo', 'oficina', 'cliente', 
-            'presupuesto', 'propuesta', 'agenda', 'meeting', 'project', 'task', 'client', 'deadline'
+          const newsletterKeywords = [
+            'newsletter', 'boletín', 'boletin', 'weekly digest', 'weekly', 'daily digest', 'digest', 'monthly',
+            'novedades', 'resumen semanal', 'leído de la semana', 'suscrito', 'suscribirse', 'unsubscribe'
           ];
-          const isWorkKeyword = workKeywords.some(kw => textToAnalyze.includes(kw));
-          
-          if (isWorkKeyword) {
-            detectedFolder = 'work';
+          const isNewsletterKeyword = newsletterKeywords.some(kw => textToAnalyze.includes(kw));
+
+          if (isNewsletterKeyword) {
+            detectedFolder = 'newsletter';
+          }
+          // 4. Work classification
+          else {
+            const workKeywords = [
+              'reunión', 'proyecto', 'tarea', 'urgente', 'avance', 'minuta', 'trabajo', 'oficina', 'cliente',
+              'presupuesto', 'propuesta', 'agenda', 'meeting', 'project', 'task', 'client', 'deadline'
+            ];
+            const isWorkKeyword = workKeywords.some(kw => textToAnalyze.includes(kw));
+
+            if (isWorkKeyword) {
+              detectedFolder = 'work';
+            }
           }
         }
       }
@@ -128,9 +163,9 @@ export async function POST(request: Request) {
         name: from.name || '',
         address: from.address.trim().toLowerCase(),
       },
-      to: Array.isArray(to) ? to.map((t: string) => t.trim().toLowerCase()) : [],
-      cc: Array.isArray(cc) ? cc.map((c: string) => c.trim().toLowerCase()) : [],
-      bcc: Array.isArray(bcc) ? bcc.map((b: string) => b.trim().toLowerCase()) : [],
+      to: parseRecipientField(to).map((t: string) => t.trim().toLowerCase()),
+      cc: parseRecipientField(cc).map((c: string) => c.trim().toLowerCase()),
+      bcc: parseRecipientField(bcc).map((b: string) => b.trim().toLowerCase()),
       subject: subject || '(Sin Asunto)',
       date: date ? new Date(date) : new Date(),
       body: {

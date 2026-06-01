@@ -390,3 +390,105 @@ body::before {
     overflow: auto;
   }
 }
+
+/* ============================================================
+   TEMP MAIL MODULE — Luxury Gold Design System (.tempmail-scope)
+   Scoped so it never affects the main webmail UI.
+   ============================================================ */
+
+.tempmail-scope {
+  --tm-bg:           #050505;
+  --tm-fg:           #e4e4e7;
+  --tm-card-bg:      #0c0c0e;
+  --tm-border:       rgba(212,175,55,0.14);
+  --tm-accent:       #d4af37;
+  --tm-accent-s:     #f3e5ab;
+  --tm-glow:         rgba(212,175,55,0.05);
+  --tm-font-sans:    'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --tm-font-mono:    'Geist Mono', 'JetBrains Mono', monospace;
+}
+
+.tempmail-scope [data-tm-theme="cyberpunk"] {
+  --tm-accent:   #f59e0b;
+  --tm-accent-s: #fef08a;
+  --tm-border:   rgba(212,175,55,0.22);
+}
+.tempmail-scope [data-tm-theme="nordic"] {
+  --tm-accent:   #c5a880;
+  --tm-accent-s: #e2d4c0;
+  --tm-border:   rgba(197,168,128,0.15);
+}
+.tempmail-scope [data-tm-theme="ocean"] {
+  --tm-accent:   #d4af37;
+  --tm-accent-s: #38bdf8;
+}
+
+.tempmail-scope {
+  color: var(--tm-fg);
+  background: var(--tm-bg);
+  font-family: var(--tm-font-sans);
+}
+
+/* Panels */
+.tm-panel {
+  background: var(--tm-card-bg);
+  border: 1px solid var(--tm-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+/* Buttons */
+.tm-btn {
+  background: rgba(212,175,55,0.02);
+  color: var(--tm-fg);
+  border: 1px solid var(--tm-border);
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+  cursor: pointer;
+}
+.tm-btn:hover {
+  background: var(--tm-accent);
+  color: #000 !important;
+  border-color: var(--tm-accent);
+  box-shadow: 0 0 15px rgba(212,175,55,0.25);
+}
+.tm-btn:active { transform: scale(0.98); }
+
+/* Inputs */
+.tm-input {
+  background: rgba(0,0,0,0.35);
+  color: var(--tm-fg);
+  border: 1px solid var(--tm-border);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.tm-input:focus {
+  border-color: var(--tm-accent);
+  box-shadow: 0 0 0 1px var(--tm-accent);
+}
+
+/* Scrollbar */
+.tempmail-scope ::-webkit-scrollbar { width: 4px; height: 4px; }
+.tempmail-scope ::-webkit-scrollbar-track { background: transparent; }
+.tempmail-scope ::-webkit-scrollbar-thumb {
+  background: rgba(212,175,55,0.2);
+  border-radius: 9999px;
+}
+.tempmail-scope ::-webkit-scrollbar-thumb:hover { background: var(--tm-accent); }
+
+/* Selection */
+.tempmail-scope ::selection {
+  background: rgba(212,175,55,0.2);
+  color: #fff;
+}
+
+/* Reverse spin animation */
+@keyframes tm-reverse-spin {
+  from { transform: rotate(360deg); }
+  to   { transform: rotate(0deg); }
+}
+.tm-animate-reverse-spin {
+  animation: tm-reverse-spin 20s linear infinite;
+}

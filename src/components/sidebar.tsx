@@ -24,6 +24,7 @@ import {
   ChevronRight,
   FileText,
   Settings,
+  Clock,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -83,6 +84,7 @@ export default function Sidebar({
     
     { id: 'spam',  label: 'Spam',               icon: AlertOctagon, group: 'system' },
     { id: 'trash', label: 'Papelera',           icon: Trash2, group: 'system' },
+    { id: 'tempmail', label: 'Buzón Temporal',  icon: Clock,  group: 'system' },
   ];
 
   const handleLogout = async () => {
@@ -181,7 +183,13 @@ export default function Sidebar({
                 )}
                 <div className="relative group shrink-0">
                   <button
-                    onClick={() => onFolderChange(folder.id)}
+                    onClick={() => {
+                      if (folder.id === 'tempmail') {
+                        window.location.href = '/tempmail';
+                      } else {
+                        onFolderChange(folder.id);
+                      }
+                    }}
                     className={`flex h-10 ${isCollapsed ? 'w-10 justify-center' : 'w-full px-3.5 justify-start'} items-center gap-3 rounded-xl transition-all duration-150 cursor-pointer`}
                     style={{
                       background: isActive
@@ -487,7 +495,11 @@ export default function Sidebar({
                       key={folder.id}
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        onFolderChange(folder.id);
+                        if (folder.id === 'tempmail') {
+                          window.location.href = '/tempmail';
+                        } else {
+                          onFolderChange(folder.id);
+                        }
                       }}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold"
                       style={{
