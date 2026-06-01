@@ -112,7 +112,7 @@ export default function EmailList({
         <div className="flex items-center justify-between">
           <h2
             className="text-xs font-bold uppercase tracking-widest animate-fadeIn"
-            style={{ color: 'hsl(174 72% 60%)' }}
+            style={{ color: 'hsl(var(--primary))' }}
           >
             {folderLabel}
           </h2>
@@ -121,9 +121,9 @@ export default function EmailList({
               <span
                 className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full"
                 style={{
-                  background: 'rgba(45,212,191,0.1)',
-                  border: '1px solid rgba(45,212,191,0.2)',
-                  color: 'hsl(174 72% 60%)',
+                  background: 'hsl(var(--primary) / 0.1)',
+                  border: '1px solid hsl(var(--primary) / 0.2)',
+                  color: 'hsl(var(--primary))',
                 }}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-current animate-ping" />
@@ -136,15 +136,15 @@ export default function EmailList({
                 title={isPushSubscribed ? 'Desactivar notificaciones' : 'Activar notificaciones'}
                 className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer lg:hidden"
                 style={{
-                  background: isPushSubscribed ? 'rgba(45,212,191,0.1)' : 'rgba(255,255,255,0.04)',
-                  border: isPushSubscribed ? '1px solid rgba(45,212,191,0.2)' : '1px solid rgba(255,255,255,0.07)',
-                  color: isPushSubscribed ? 'hsl(174 72% 60%)' : 'hsl(215 20% 55%)',
+                  background: isPushSubscribed ? 'hsl(var(--primary) / 0.1)' : 'rgba(255,255,255,0.04)',
+                  border: isPushSubscribed ? '1px solid hsl(var(--primary) / 0.2)' : '1px solid rgba(255,255,255,0.07)',
+                  color: isPushSubscribed ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
                 }}
               >
                 {isPushSubscribed ? (
-                  <Bell className="h-3.5 w-3.5" style={{ color: 'hsl(174 72% 55%)' }} />
+                  <Bell className="h-3.5 w-3.5" style={{ color: 'hsl(var(--primary))' }} />
                 ) : (
-                  <BellOff className="h-3.5 w-3.5" style={{ color: 'hsl(215 20% 45%)' }} />
+                  <BellOff className="h-3.5 w-3.5" style={{ color: 'hsl(var(--muted-foreground))' }} />
                 )}
               </button>
             )}
@@ -173,12 +173,12 @@ export default function EmailList({
               className="flex items-center justify-between w-full px-3 py-1.5 rounded-lg border text-left text-[11px] transition-all cursor-pointer select-none"
               style={{
                 background: 'rgba(255,255,255,0.02)',
-                borderColor: dropdownOpen ? 'rgba(45,212,191,0.25)' : 'rgba(255,255,255,0.07)',
+                borderColor: dropdownOpen ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.07)',
                 color: 'hsl(210 40% 90%)',
               }}
             >
               <div className="flex items-center gap-2 truncate">
-                <Globe className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+                <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
                 <span className="truncate">
                   {selectedAccount ? availableAccounts.find(a => a.email === selectedAccount)?.name || selectedAccount : 'Todas las cuentas'}
                 </span>
@@ -206,8 +206,8 @@ export default function EmailList({
                     }}
                     className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold transition-all cursor-pointer"
                     style={{
-                      background: !selectedAccount ? 'rgba(45,212,191,0.1)' : 'transparent',
-                      color: !selectedAccount ? 'hsl(174 72% 60%)' : 'hsl(210 40% 80%)',
+                      background: !selectedAccount ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+                      color: !selectedAccount ? 'hsl(var(--primary))' : 'hsl(210 40% 80%)',
                     }}
                   >
                     <Globe className="h-3.5 w-3.5 shrink-0" />
@@ -226,8 +226,8 @@ export default function EmailList({
                         }}
                         className="flex flex-col w-full px-2.5 py-1.5 rounded-lg text-left transition-all cursor-pointer mt-0.5"
                         style={{
-                          background: isSelected ? 'rgba(45,212,191,0.1)' : 'transparent',
-                          color: isSelected ? 'hsl(174 72% 60%)' : 'hsl(210 40% 80%)',
+                          background: isSelected ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+                          color: isSelected ? 'hsl(var(--primary))' : 'hsl(210 40% 80%)',
                         }}
                       >
                         <span className="text-xs font-semibold truncate">{acc.name || acc.email}</span>
@@ -260,8 +260,8 @@ export default function EmailList({
               color: 'hsl(210 40% 90%)',
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(45,212,191,0.35)';
-              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45,212,191,0.08)';
+              e.currentTarget.style.borderColor = 'hsl(var(--primary) / 0.35)';
+              e.currentTarget.style.boxShadow = '0 0 0 3px hsl(var(--primary) / 0.08)';
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
@@ -277,7 +277,7 @@ export default function EmailList({
           <div className="flex flex-col items-center justify-center h-48 gap-3">
             <div
               className="h-6 w-6 rounded-full border-2 animate-spin"
-              style={{ borderColor: 'hsl(174 72% 52%)', borderTopColor: 'transparent' }}
+              style={{ borderColor: 'hsl(var(--primary))', borderTopColor: 'transparent' }}
             />
             <span className="text-xs" style={{ color: 'hsl(215 20% 50%)' }}>
               Cargando correspondencia...
@@ -288,11 +288,11 @@ export default function EmailList({
             <div
               className="h-14 w-14 rounded-2xl flex items-center justify-center mb-1"
               style={{
-                background: 'rgba(45,212,191,0.06)',
-                border: '1px solid rgba(45,212,191,0.12)',
+                background: 'hsl(var(--primary) / 0.06)',
+                border: '1px solid hsl(var(--primary) / 0.12)',
               }}
             >
-              <Mail className="h-6 w-6" style={{ color: 'hsl(174 72% 45%)' }} />
+              <Mail className="h-6 w-6" style={{ color: 'hsl(var(--primary))' }} />
             </div>
             <p className="text-sm font-semibold" style={{ color: 'hsl(210 40% 75%)' }}>
               Bandeja vacía
@@ -313,10 +313,10 @@ export default function EmailList({
                   style={{
                     animationDelay: `${Math.min(i * 30, 300)}ms`,
                     background: isSelected
-                      ? 'linear-gradient(135deg, rgba(45,212,191,0.08), rgba(34,211,238,0.04))'
+                      ? 'linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--accent) / 0.04))'
                       : 'transparent',
                     borderLeft: isSelected
-                      ? '2px solid hsl(174 72% 52%)'
+                      ? '2px solid hsl(var(--primary))'
                       : '2px solid transparent',
                   }}
                   onMouseEnter={(e) => {
@@ -377,8 +377,8 @@ export default function EmailList({
                     <div
                       className="absolute top-4 right-3 h-1.5 w-1.5 rounded-full shrink-0"
                       style={{
-                        background: 'hsl(174 72% 52%)',
-                        boxShadow: '0 0 6px rgba(45,212,191,0.6)',
+                        background: 'hsl(var(--primary))',
+                        boxShadow: '0 0 6px hsl(var(--primary) / 0.6)',
                       }}
                     />
                   )}
@@ -399,7 +399,7 @@ export default function EmailList({
                       }}
                       className="p-1.5 rounded-md transition-colors cursor-pointer"
                       style={{ color: 'hsl(215 20% 55%)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = 'hsl(174 72% 60%)'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'hsl(var(--primary))'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = 'hsl(215 20% 55%)'; }}
                     >
                       {email.isRead ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}

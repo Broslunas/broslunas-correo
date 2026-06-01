@@ -348,7 +348,7 @@ export default function TwoFactorPage() {
                   : '¿No recibiste el código? Reenviar por correo'}
               </button>
               {resendSuccess && (
-                <p className="text-[10px] text-teal-400 mt-1 font-medium animate-fadeIn">{resendSuccess}</p>
+                <p className="text-[10px] mt-1 font-medium animate-fadeIn" style={{ color: 'hsl(var(--primary))' }}>{resendSuccess}</p>
               )}
             </div>
           )}

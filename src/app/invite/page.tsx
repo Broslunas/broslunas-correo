@@ -114,7 +114,7 @@ function InviteContent() {
           WebkitBackdropFilter: 'blur(24px)',
         }}
       >
-        <Loader2 className="h-8 w-8 text-teal-400 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'hsl(var(--primary))' }} />
         <p className="text-slate-400 text-sm">Validando invitación...</p>
       </div>
     );
@@ -149,7 +149,7 @@ function InviteContent() {
 
   return (
     <div className="w-[92vw] max-w-[480px] aspect-[3/4.1] max-h-[85vh] animate-fadeInUp relative flex flex-col">
-      <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full bg-teal-400/10 blur-[60px] pointer-events-none" />
+      <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full blur-[60px] pointer-events-none" style={{ background: 'hsl(var(--primary)/0.1)' }} />
 
       <div
         className="relative rounded-2xl p-6 sm:p-8 overflow-hidden flex flex-col justify-between flex-1 h-full"
@@ -158,13 +158,13 @@ function InviteContent() {
           border: '1px solid rgba(255,255,255,0.08)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(45,212,191,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px hsl(var(--primary)/0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
         }}
       >
         {/* Top shimmer line */}
         <div
           className="absolute top-0 inset-x-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(45,212,191,0.5), transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--primary)/0.5), transparent)' }}
         />
 
         {/* Step Progress Dots Header */}
@@ -173,13 +173,12 @@ function InviteContent() {
             {[1, 2, 3, 4].map((s) => (
               <span
                 key={s}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  s === step 
-                    ? 'w-6 bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.6)]' 
-                    : s < step 
-                    ? 'w-2 bg-teal-500/60' 
-                    : 'w-2 bg-white/10'
-                }`}
+                className="h-1.5 rounded-full transition-all duration-300"
+                style={{
+                  width: s === step ? '24px' : '8px',
+                  background: s === step ? 'hsl(var(--primary))' : s < step ? 'hsl(var(--primary)/0.6)' : 'rgba(255,255,255,0.1)',
+                  boxShadow: s === step ? '0 0 8px hsl(var(--primary)/0.6)' : 'none',
+                }}
               />
             ))}
           </div>
@@ -201,7 +200,7 @@ function InviteContent() {
                     boxShadow: '0 0 20px rgba(45,212,191,0.15)',
                   }}
                 >
-                  <ShieldCheck className="h-6 w-6 text-teal-400 animate-pulse" />
+                  <ShieldCheck className="h-6 w-6 animate-pulse" style={{ color: 'hsl(var(--primary))' }} />
                 </div>
               </div>
 
@@ -209,7 +208,7 @@ function InviteContent() {
                 Invitación de Acceso
               </h1>
               <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-                Has recibido una invitación para unirte al cliente privado de correo electrónico de <strong className="text-teal-400">Broslunas Correo</strong>.
+                Has recibido una invitación para unirte al cliente privado de correo electrónico de <strong style={{ color: 'hsl(var(--primary))' }}>Broslunas Correo</strong>.
               </p>
 
               <div className="rounded-xl border border-white/5 bg-white/[0.01] p-3.5 text-left space-y-2 text-xs text-slate-300 leading-relaxed">
@@ -241,11 +240,11 @@ function InviteContent() {
                 <div
                   className="relative flex h-12 w-12 items-center justify-center rounded-2xl mx-auto"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(34,211,238,0.08))',
-                    border: '1px solid rgba(45,212,191,0.25)',
+                    background: 'linear-gradient(135deg, hsl(var(--primary)/0.15), hsl(var(--accent)/0.08))',
+                    border: '1px solid hsl(var(--primary)/0.25)',
                   }}
                 >
-                  <Mail className="h-6 w-6 text-teal-400" />
+                  <Mail className="h-6 w-6" style={{ color: 'hsl(var(--primary))' }} />
                 </div>
               </div>
 
@@ -259,12 +258,12 @@ function InviteContent() {
               {/* Permissions Box - Premium Design */}
               <div className="space-y-3 mb-4">
                 {/* System Role Card */}
-                <div className="flex items-center gap-3.5 p-3 rounded-xl border border-teal-500/15 bg-gradient-to-r from-teal-500/10 to-transparent backdrop-blur-md">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                <div className="flex items-center gap-3.5 p-3 rounded-xl backdrop-blur-md" style={{ border: '1px solid hsl(var(--primary)/0.15)', background: 'linear-gradient(to right, hsl(var(--primary)/0.1), transparent)' }}>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
                     <UserCheck className="h-4 w-4" />
                   </div>
                   <div>
-                    <span className="text-[9px] uppercase font-bold text-teal-400/80 tracking-wider block leading-none">Rol Asignado</span>
+                    <span className="text-[9px] uppercase font-bold tracking-wider block leading-none" style={{ color: 'hsl(var(--primary)/0.8)' }}>Rol Asignado</span>
                     <span className="text-xs font-bold text-slate-100 mt-1 block capitalize">
                       {invitation?.role === 'admin' ? 'Administrador del Sistema' : 'Usuario Estándar'}
                     </span>
@@ -274,13 +273,13 @@ function InviteContent() {
                 {/* Authorized Accounts Card */}
                 <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.02] backdrop-blur-md">
                   <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5 mb-2 block">
-                    <Mail className="h-3 w-3 text-teal-400" />
+                    <Mail className="h-3 w-3" style={{ color: 'hsl(var(--primary))' }} />
                     Cuentas a Vincular
                   </span>
                   <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
                     {invitation?.assignedAddresses.includes('*') ? (
-                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-300">
-                        <Server className="h-3.5 w-3.5 text-teal-400" />
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary)/0.9)' }}>
+                        <Server className="h-3.5 w-3.5" style={{ color: 'hsl(var(--primary))' }} />
                         <span className="text-[11px] font-semibold">Acceso Completo (Todas las cuentas)</span>
                       </div>
                     ) : (
@@ -292,7 +291,7 @@ function InviteContent() {
                           <span className="text-[11px] font-medium text-slate-300 group-hover:text-slate-100 transition-colors">
                             {addr}
                           </span>
-                          <span className="text-[8.5px] uppercase font-bold px-1.5 py-0.5 rounded bg-teal-400/10 text-teal-400 border border-teal-400/20">
+                          <span className="text-[8.5px] uppercase font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary)/0.2)' }}>
                             Bandeja
                           </span>
                         </div>
@@ -304,11 +303,11 @@ function InviteContent() {
                 {/* Permitted Actions */}
                 <div className="space-y-2 px-3 py-2.5 text-[10px] text-slate-400 leading-relaxed bg-white/[0.01] border border-white/5 rounded-xl">
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-teal-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: 'hsl(var(--primary))' }} />
                     <span>Lectura y sincronización en tiempo real de correos.</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-teal-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: 'hsl(var(--primary))' }} />
                     <span>Capacidad para redactar, responder y programar envíos.</span>
                   </div>
                 </div>
@@ -343,11 +342,11 @@ function InviteContent() {
                 <div
                   className="relative flex h-12 w-12 items-center justify-center rounded-2xl mx-auto"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(34,211,238,0.08))',
-                    border: '1px solid rgba(45,212,191,0.25)',
+                    background: 'linear-gradient(135deg, hsl(var(--primary)/0.15), hsl(var(--accent)/0.08))',
+                    border: '1px solid hsl(var(--primary)/0.25)',
                   }}
                 >
-                  <Lock className="h-6 w-6 text-teal-400" />
+                  <Lock className="h-6 w-6" style={{ color: 'hsl(var(--primary))' }} />
                 </div>
               </div>
 
@@ -361,8 +360,8 @@ function InviteContent() {
               {/* Security items - Premium Modular Cards */}
               <div className="space-y-3.5 mb-4">
                 {/* Card 1: Google Auth */}
-                <div className="p-3.5 rounded-xl border border-teal-500/10 bg-gradient-to-b from-teal-500/[0.03] to-transparent backdrop-blur-md flex gap-3 hover:border-teal-500/20 hover:bg-teal-500/[0.01] transition-all duration-300">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                <div className="p-3.5 rounded-xl backdrop-blur-md flex gap-3 transition-all duration-300" style={{ border: '1px solid hsl(var(--primary)/0.1)', background: 'linear-gradient(to bottom, hsl(var(--primary)/0.03), transparent)' }}>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
                     <UserCheck className="h-4.5 w-4.5" />
                   </div>
                   <div className="space-y-0.5">
@@ -387,8 +386,8 @@ function InviteContent() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3.5 rounded-xl border border-teal-500/10 bg-gradient-to-b from-teal-500/[0.03] to-transparent backdrop-blur-md flex gap-3 hover:border-teal-500/20 hover:bg-teal-500/[0.01] transition-all duration-300">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                  <div className="p-3.5 rounded-xl backdrop-blur-md flex gap-3 transition-all duration-300" style={{ border: '1px solid hsl(var(--primary)/0.1)', background: 'linear-gradient(to bottom, hsl(var(--primary)/0.03), transparent)' }}>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
                       <Server className="h-4.5 w-4.5" />
                     </div>
                     <div className="space-y-0.5">
@@ -430,12 +429,12 @@ function InviteContent() {
                 <div
                   className="relative flex h-12 w-12 items-center justify-center rounded-2xl mx-auto"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(34,211,238,0.08))',
-                    border: '1px solid rgba(45,212,191,0.25)',
-                    boxShadow: '0 0 20px rgba(45,212,191,0.15)',
+                    background: 'linear-gradient(135deg, hsl(var(--primary)/0.15), hsl(var(--accent)/0.08))',
+                    border: '1px solid hsl(var(--primary)/0.25)',
+                    boxShadow: '0 0 20px hsl(var(--primary)/0.15)',
                   }}
                 >
-                  <CheckCircle2 className="h-6 w-6 text-teal-400 animate-pulse" />
+                  <CheckCircle2 className="h-6 w-6 animate-pulse" style={{ color: 'hsl(var(--primary))' }} />
                 </div>
               </div>
 
@@ -465,11 +464,11 @@ function InviteContent() {
               <button
                 onClick={handleClaimInvitation}
                 disabled={loggingIn}
-                className="group w-full flex items-center justify-center gap-3 rounded-xl py-3 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-teal-400/40 text-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.3)] disabled:opacity-50"
+                className="group w-full flex items-center justify-center gap-3 rounded-xl py-3 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.3)] disabled:opacity-50"
               >
                 {loggingIn ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin text-teal-400" />
+                    <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'hsl(var(--primary))' }} />
                     <span>Iniciando sesión...</span>
                   </>
                 ) : (
@@ -484,7 +483,7 @@ function InviteContent() {
                     </svg>
                     <span className="relative z-10">Vincular con Google</span>
                     <ArrowRight
-                      className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10 text-teal-400"
+                      className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10" style={{ color: 'hsl(var(--primary))' }}
                     />
                   </>
                 )}
@@ -522,14 +521,14 @@ export default function InvitePage() {
       <div
         className="absolute top-[-10%] left-[-5%] h-[400px] w-[400px] rounded-full pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(45,212,191,0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--primary)/0.06) 0%, transparent 70%)',
           animation: 'aurora-pulse 8s ease-in-out infinite',
         }}
       />
       <div
         className="absolute bottom-[-10%] right-[-5%] h-[350px] w-[350px] rounded-full pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(34,211,238,0.05) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--accent)/0.05) 0%, transparent 70%)',
           animation: 'aurora-pulse 10s ease-in-out infinite 2s',
         }}
       />
@@ -538,7 +537,7 @@ export default function InvitePage() {
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          backgroundImage: 'radial-gradient(rgba(45,212,191,0.2) 1px, transparent 0)',
+          backgroundImage: 'radial-gradient(hsl(var(--primary)/0.2) 1px, transparent 0)',
           backgroundSize: '32px 32px',
         }}
       />
@@ -551,7 +550,7 @@ export default function InvitePage() {
             border: '1px solid rgba(255,255,255,0.08)',
           }}
         >
-          <Loader2 className="h-8 w-8 text-teal-400 animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'hsl(var(--primary))' }} />
           <p className="text-sm" style={{ color: 'hsl(215 20% 55%)' }}>Cargando...</p>
         </div>
       }>

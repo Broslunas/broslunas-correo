@@ -66,7 +66,7 @@ function SecurityCarousel() {
             >
               {isActive && (
                 <div className="flex gap-3 text-left">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                   <div>
@@ -93,8 +93,9 @@ function SecurityCarousel() {
             >
               {isActive && (
                 <div 
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full"
+                  className="absolute inset-y-0 left-0 rounded-full"
                   style={{
+                    background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)))',
                     width: '100%',
                     animation: 'progress-bar 4.5s linear forwards'
                   }}
@@ -142,20 +143,20 @@ function InboxSimulation() {
   return (
     <div className="relative w-full max-w-lg select-none">
       {/* Background radial glow */}
-      <div className="absolute -inset-10 bg-teal-500/5 blur-[80px] rounded-full pointer-events-none" />
+      <div className="absolute -inset-10 blur-[80px] rounded-full pointer-events-none" style={{ background: 'hsl(var(--primary)/0.05)' }} />
       
       {/* Floating security card 1 */}
       <div 
         className="absolute -top-10 -left-8 z-20 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md animate-bounce"
         style={{
-          background: 'rgba(45,212,191,0.06)',
-          border: '1px solid rgba(45,212,191,0.2)',
+          background: 'hsl(var(--primary)/0.06)',
+          border: '1px solid hsl(var(--primary)/0.2)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
           animationDuration: '6s'
         }}
       >
-        <div className="h-2 w-2 rounded-full bg-teal-400 animate-pulse" />
-        <span className="text-[9px] font-bold text-teal-300 uppercase tracking-widest">Conexión Encriptada SSL</span>
+        <div className="h-2 w-2 rounded-full animate-pulse" style={{ background: 'hsl(var(--primary))' }} />
+        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'hsl(var(--primary)/0.9)' }}>Conexión Encriptada SSL</span>
       </div>
 
       {/* Floating security card 2 */}
@@ -203,7 +204,7 @@ function InboxSimulation() {
               Buscar correos...
             </div>
           </div>
-          <div className="h-6 px-2.5 rounded bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 text-[10px] font-bold">
+          <div className="h-6 px-2.5 rounded flex items-center justify-center text-[10px] font-bold" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
             Redactar
           </div>
         </div>
@@ -242,7 +243,7 @@ function InboxSimulation() {
               {/* Unread indicator */}
               {email.unread && (
                 <div className="flex items-center justify-center shrink-0">
-                  <span className="h-1.5 w-1.5 rounded-full bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.8)]" />
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'hsl(var(--primary))', boxShadow: '0 0 8px hsl(var(--primary)/0.8)' }} />
                 </div>
               )}
             </div>
@@ -302,7 +303,7 @@ function LoginContent() {
   return (
     <div className="w-full max-w-sm animate-fadeInUp relative">
       {/* Glow orb behind the card */}
-      <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full bg-teal-400/10 blur-[60px] pointer-events-none" />
+      <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full blur-[60px] pointer-events-none" style={{ background: 'hsl(var(--primary)/0.1)' }} />
 
       <div
         className="relative rounded-2xl p-8 overflow-hidden"
@@ -311,13 +312,13 @@ function LoginContent() {
           border: '1px solid rgba(255,255,255,0.08)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(45,212,191,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px hsl(var(--primary)/0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
         }}
       >
         {/* Top shimmer line */}
         <div
           className="absolute top-0 inset-x-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(45,212,191,0.5), transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--primary)/0.5), transparent)' }}
         />
 
         {/* Brand Header */}
@@ -325,26 +326,26 @@ function LoginContent() {
           <div
             className="relative flex h-16 w-16 items-center justify-center rounded-2xl mb-5"
             style={{
-              background: 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(34,211,238,0.08))',
-              border: '1px solid rgba(45,212,191,0.25)',
-              boxShadow: '0 0 24px rgba(45,212,191,0.15)',
+              background: 'linear-gradient(135deg, hsl(var(--primary)/0.15), hsl(var(--accent)/0.08))',
+              border: '1px solid hsl(var(--primary)/0.25)',
+              boxShadow: '0 0 24px hsl(var(--primary)/0.15)',
             }}
           >
             <img
               src="/favicon.png"
               alt="Broslunas Correo"
               className="h-9 w-9 object-contain"
-              style={{ filter: 'drop-shadow(0 0 8px rgba(45,212,191,0.4))' }}
+              style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary)/0.4))' }}
             />
             {/* Pulse ring */}
             <div
               className="absolute inset-0 rounded-2xl animate-ping opacity-20"
-              style={{ border: '1px solid rgba(45,212,191,0.6)', animationDuration: '2.5s' }}
+              style={{ border: '1px solid hsl(var(--primary)/0.6)', animationDuration: '2.5s' }}
             />
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight mb-1" style={{
-            background: 'linear-gradient(135deg, #e2f8f5 0%, #99f6e4 50%, #67e8f9 100%)',
+            background: 'linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--primary)) 50%, hsl(var(--accent)) 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -377,7 +378,7 @@ function LoginContent() {
         <button
           onClick={handleGoogleLogin}
           id="btn-google-login"
-          className="group w-full flex items-center justify-center gap-3 rounded-xl py-3.5 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-teal-400/40 text-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_0_32px_rgba(45,212,191,0.2)]"
+          className="group w-full flex items-center justify-center gap-3 rounded-xl py-3.5 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.3)]" style={{ '--tw-border-opacity': 1 } as React.CSSProperties}
         >
           {/* Shimmer Effect */}
           <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
@@ -391,7 +392,7 @@ function LoginContent() {
           </svg>
           <span className="relative z-10">Iniciar sesión con Google</span>
           <ArrowRight
-            className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10 text-teal-400"
+            className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10" style={{ color: 'hsl(var(--primary))' }}
           />
         </button>
 
@@ -402,12 +403,12 @@ function LoginContent() {
         <div
           className="mt-5 flex items-start gap-2.5 rounded-xl p-3 text-[10px] leading-relaxed text-left"
           style={{
-            background: 'rgba(45,212,191,0.04)',
-            border: '1px solid rgba(45,212,191,0.1)',
+            background: 'hsl(var(--primary)/0.04)',
+            border: '1px solid hsl(var(--primary)/0.1)',
             color: 'hsl(215 20% 50%)',
           }}
         >
-          <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'hsl(174 72% 52%)' }} />
+          <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'hsl(var(--primary))' }} />
           <p>
             Acceso restringido únicamente a usuarios autorizados. Los accesos son auditados.
           </p>
@@ -415,11 +416,11 @@ function LoginContent() {
 
         {/* Legal links footer */}
         <div className="mt-5 pt-4 border-t border-white/5 flex justify-center gap-4 text-[10px] text-slate-500 font-semibold select-none">
-          <Link href="/privacy" className="hover:text-teal-400 transition-colors">
+          <Link href="/privacy" className="transition-colors" style={{}} onMouseEnter={e => (e.currentTarget.style.color='hsl(var(--primary))')} onMouseLeave={e => (e.currentTarget.style.color='')}>
             Política de Privacidad
           </Link>
           <span>•</span>
-          <Link href="/terms" className="hover:text-teal-400 transition-colors">
+          <Link href="/terms" className="transition-colors" onMouseEnter={e => (e.currentTarget.style.color='hsl(var(--primary))')} onMouseLeave={e => (e.currentTarget.style.color='')}>
             Términos y Condiciones
           </Link>
         </div>
@@ -438,14 +439,14 @@ export default function LoginPage() {
       <div
         className="absolute top-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(45,212,191,0.08) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--primary)/0.08) 0%, transparent 70%)',
           animation: 'aurora-pulse 6s ease-in-out infinite',
         }}
       />
       <div
         className="absolute bottom-[-10%] right-[-5%] h-[400px] w-[400px] rounded-full pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(34,211,238,0.07) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--accent)/0.07) 0%, transparent 70%)',
           animation: 'aurora-pulse 8s ease-in-out infinite 2s',
         }}
       />
@@ -461,7 +462,7 @@ export default function LoginPage() {
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          backgroundImage: 'radial-gradient(rgba(45,212,191,0.2) 1px, transparent 0)',
+          backgroundImage: 'radial-gradient(hsl(var(--primary)/0.2) 1px, transparent 0)',
           backgroundSize: '32px 32px',
         }}
       />
@@ -480,7 +481,7 @@ export default function LoginPage() {
             >
               <div
                 className="h-8 w-8 rounded-full border-2 animate-spin"
-                style={{ borderColor: 'hsl(174 72% 52%)', borderTopColor: 'transparent' }}
+                style={{ borderColor: 'hsl(var(--primary))', borderTopColor: 'transparent' }}
               />
               <p className="text-sm" style={{ color: 'hsl(215 20% 55%)' }}>Iniciando interfaz...</p>
             </div>
@@ -492,7 +493,7 @@ export default function LoginPage() {
         {/* Right Column: Visual Showcase (Hidden on Mobile) */}
         <div className="hidden lg:flex lg:col-span-7 flex-col items-center justify-center relative text-center">
           <div className="mb-8 max-w-md">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 bg-teal-500/10 border border-teal-500/20 text-teal-400">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
               <Sparkles className="h-3.5 w-3.5 animate-pulse" /> Plataforma Segura de Webmail
             </div>
             <h2 className="text-3xl font-extrabold tracking-tight text-white mb-3 leading-tight">

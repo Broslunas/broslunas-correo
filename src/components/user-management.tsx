@@ -1369,8 +1369,8 @@ export default function UserManagement() {
 
               {/* Quick Copy Link Box */}
               {generatedInvite && (
-                <div className="rounded-xl border border-teal-500/30 bg-teal-950/10 p-4 space-y-2.5 text-left animate-fadeIn">
-                  <p className="text-[10px] font-bold text-teal-400 uppercase tracking-widest">¡Enlace Generado!</p>
+                <div className="rounded-xl p-4 space-y-2.5 text-left animate-fadeIn" style={{ border: '1px solid hsl(var(--primary)/0.3)', background: 'hsl(var(--primary)/0.04)' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'hsl(var(--primary))' }}>¡Enlace Generado!</p>
                   <p className="text-[10px] text-slate-300 font-mono break-all bg-neutral-950 p-2 rounded border border-white/5 select-text">
                     {generatedInvite}
                   </p>
@@ -1442,7 +1442,7 @@ export default function UserManagement() {
                                 Expirado
                               </span>
                             ) : (
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
                                 Activo (Expira {new Date(invite.expiresAt).toLocaleDateString()})
                               </span>
                             )}

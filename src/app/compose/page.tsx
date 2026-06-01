@@ -38,7 +38,7 @@ export default function ComposePage() {
   return (
     <Suspense fallback={
       <div className="flex h-screen w-screen items-center justify-center bg-[#060b18]">
-        <div className="h-8 w-8 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--primary)) transparent transparent transparent' }} />
       </div>
     }>
       <StandaloneCompose />

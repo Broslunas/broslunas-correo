@@ -126,16 +126,16 @@ export default function Sidebar({
           <div
             className="flex h-9 w-9 items-center justify-center rounded-xl transition-all shrink-0"
             style={{
-              background: 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(34,211,238,0.08))',
-              border: '1px solid rgba(45,212,191,0.25)',
-              boxShadow: '0 0 16px rgba(45,212,191,0.12)',
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.08))',
+              border: '1px solid hsl(var(--primary) / 0.25)',
+              boxShadow: '0 0 16px hsl(var(--primary) / 0.12)',
             }}
           >
             <img
               src="/favicon.png"
               alt="Broslunas Correo"
               className="h-5 w-5 object-contain"
-              style={{ filter: 'drop-shadow(0 0 4px rgba(45,212,191,0.4))' }}
+              style={{ filter: 'drop-shadow(0 0 4px hsl(var(--primary) / 0.4))' }}
             />
           </div>
           {!isCollapsed && (
@@ -153,13 +153,13 @@ export default function Sidebar({
             title={isCollapsed ? "Redactar correo" : undefined}
             className={`group flex h-10 ${isCollapsed ? 'w-10 justify-center' : 'w-full px-4 justify-start'} items-center gap-3 rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer shrink-0`}
             style={{
-              background: 'linear-gradient(135deg, hsl(174 72% 52%), hsl(192 85% 58%))',
-              boxShadow: '0 4px 16px rgba(45,212,191,0.25)',
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
+              boxShadow: '0 4px 16px hsl(var(--primary) / 0.25)',
             }}
           >
-            <PenSquare className="h-4.5 w-4.5 shrink-0" style={{ color: 'hsl(222 47% 4%)' }} />
+            <PenSquare className="h-4.5 w-4.5 shrink-0" style={{ color: 'hsl(var(--primary-foreground))' }} />
             {!isCollapsed && (
-              <span className="text-xs font-bold text-[hsl(222_47%_4%)] tracking-wide animate-fadeIn">
+              <span className="text-xs font-bold text-[hsl(var(--primary-foreground))] tracking-wide animate-fadeIn">
                 Redactar
               </span>
             )}
@@ -185,18 +185,18 @@ export default function Sidebar({
                     className={`flex h-10 ${isCollapsed ? 'w-10 justify-center' : 'w-full px-3.5 justify-start'} items-center gap-3 rounded-xl transition-all duration-150 cursor-pointer`}
                     style={{
                       background: isActive
-                        ? 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(34,211,238,0.08))'
+                        ? 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.08))'
                         : 'transparent',
-                      border: isActive ? '1px solid rgba(45,212,191,0.25)' : '1px solid transparent',
-                      boxShadow: isActive ? '0 0 12px rgba(45,212,191,0.1)' : 'none',
+                      border: isActive ? '1px solid hsl(var(--primary) / 0.25)' : '1px solid transparent',
+                      boxShadow: isActive ? '0 0 12px hsl(var(--primary) / 0.1)' : 'none',
                     }}
                   >
                     <Icon
                       className="h-4.5 w-4.5 transition-colors shrink-0"
-                      style={{ color: isActive ? 'hsl(174 72% 60%)' : 'hsl(215 20% 50%)' }}
+                      style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
                     />
                     {!isCollapsed && (
-                      <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: isActive ? 'hsl(174 72% 60%)' : 'hsl(210 40% 75%)' }}>
+                      <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--foreground) / 0.75)' }}>
                         {folder.label}
                       </span>
                     )}
@@ -231,15 +231,14 @@ export default function Sidebar({
             className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer hover:bg-neutral-800/40 border border-transparent shrink-0`}
             style={{
               background: 'rgba(255,255,255,0.01)',
-              borderColor: 'rgba(255,255,255,0.04)',
             }}
           >
             {isCollapsed ? (
-              <ChevronRight className="h-4.5 w-4.5 text-teal-400 shrink-0" />
+              <ChevronRight className="h-4.5 w-4.5 text-primary shrink-0" />
             ) : (
               <>
-                <ChevronLeft className="h-4.5 w-4.5 text-teal-400 shrink-0" />
-                <span className="text-xs font-semibold text-teal-400 animate-fadeIn whitespace-nowrap">
+                <ChevronLeft className="h-4.5 w-4.5 text-primary shrink-0" />
+                <span className="text-xs font-semibold text-primary animate-fadeIn whitespace-nowrap">
                   Colapsar menú
                 </span>
               </>
@@ -278,18 +277,18 @@ export default function Sidebar({
             className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer shrink-0`}
             style={{
               background: currentFolder === 'settings'
-                ? 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(34,211,238,0.08))'
-                : 'rgba(45,212,191,0.02)',
+                ? 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.08))'
+                : 'hsl(var(--primary) / 0.02)',
               border: currentFolder === 'settings'
-                ? '1px solid rgba(45,212,191,0.3)'
-                : '1px solid rgba(45,212,191,0.1)',
+                ? '1px solid hsl(var(--primary) / 0.3)'
+                : '1px solid hsl(var(--primary) / 0.1)',
             }}
           >
             <Settings
-              className="h-4 w-4 text-teal-400 shrink-0"
+              className="h-4 w-4 text-primary shrink-0"
             />
             {!isCollapsed && (
-              <span className="text-xs font-semibold text-teal-400 truncate animate-fadeIn">
+              <span className="text-xs font-semibold text-primary truncate animate-fadeIn">
                 Configuración
               </span>
             )}
@@ -302,16 +301,16 @@ export default function Sidebar({
               title={isCollapsed ? (isPushSubscribed ? 'Notificaciones activas' : 'Activar notificaciones') : undefined}
               className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer shrink-0`}
               style={{
-                background: isPushSubscribed ? 'rgba(45,212,191,0.1)' : 'rgba(255,255,255,0.03)',
-                border: isPushSubscribed ? '1px solid rgba(45,212,191,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                background: isPushSubscribed ? 'hsl(var(--primary) / 0.1)' : 'rgba(255,255,255,0.03)',
+                border: isPushSubscribed ? '1px solid hsl(var(--primary) / 0.2)' : '1px solid rgba(255,255,255,0.06)',
               }}
             >
               {isPushSubscribed
-                ? <Bell className="h-4 w-4 shrink-0" style={{ color: 'hsl(174 72% 55%)' }} />
-                : <BellOff className="h-4 w-4 shrink-0" style={{ color: 'hsl(215 20% 45%)' }} />
+                ? <Bell className="h-4 w-4 shrink-0" style={{ color: 'hsl(var(--primary))' }} />
+                : <BellOff className="h-4 w-4 shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }} />
               }
               {!isCollapsed && (
-                <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: isPushSubscribed ? 'hsl(174 72% 55%)' : 'hsl(215 20% 45%)' }}>
+                <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: isPushSubscribed ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}>
                   {isPushSubscribed ? 'Alertas: Activas' : 'Activar Alertas'}
                 </span>
               )}
@@ -358,17 +357,17 @@ export default function Sidebar({
               }}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 cursor-pointer min-w-[48px]"
               style={{
-                background: isActive ? 'rgba(45,212,191,0.1)' : 'transparent',
-                border: isActive ? '1px solid rgba(45,212,191,0.2)' : '1px solid transparent',
+                background: isActive ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+                border: isActive ? '1px solid hsl(var(--primary) / 0.2)' : '1px solid transparent',
               }}
             >
               <Icon
                 className="h-5 w-5 transition-colors"
-                style={{ color: isActive ? 'hsl(174 72% 60%)' : 'hsl(215 20% 50%)' }}
+                style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
               />
               <span
                 className="text-[9px] font-semibold leading-none"
-                style={{ color: isActive ? 'hsl(174 72% 60%)' : 'hsl(215 20% 45%)' }}
+                style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
               >
                 {folder.label.split(' ')[0]}
               </span>
@@ -388,13 +387,13 @@ export default function Sidebar({
           <div
             className="h-8 w-8 flex items-center justify-center rounded-xl"
             style={{
-              background: 'linear-gradient(135deg, hsl(174 72% 52%), hsl(192 85% 58%))',
-              boxShadow: '0 0 12px rgba(45,212,191,0.3)',
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
+              boxShadow: '0 0 12px hsl(var(--primary) / 0.3)',
             }}
           >
-            <PenSquare className="h-4 w-4" style={{ color: 'hsl(222 47% 4%)' }} />
+            <PenSquare className="h-4 w-4" style={{ color: 'hsl(var(--primary-foreground))' }} />
           </div>
-          <span className="text-[9px] font-semibold animate-pulse" style={{ color: 'hsl(174 72% 60%)' }}>
+          <span className="text-[9px] font-semibold animate-pulse" style={{ color: 'hsl(var(--primary))' }}>
             Redactar
           </span>
         </button>
@@ -404,17 +403,17 @@ export default function Sidebar({
           onClick={() => setMobileMenuOpen(prev => !prev)}
           className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all cursor-pointer min-w-[48px]"
           style={{
-            background: mobileMenuOpen ? 'rgba(45,212,191,0.1)' : 'transparent',
-            border: mobileMenuOpen ? '1px solid rgba(45,212,191,0.2)' : '1px solid transparent',
+            background: mobileMenuOpen ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+            border: mobileMenuOpen ? '1px solid hsl(var(--primary) / 0.2)' : '1px solid transparent',
           }}
         >
           <MoreHorizontal
             className="h-5 w-5 transition-colors"
-            style={{ color: mobileMenuOpen ? 'hsl(174 72% 60%)' : 'hsl(215 20% 50%)' }}
+            style={{ color: mobileMenuOpen ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
           />
           <span
             className="text-[9px] font-semibold leading-none"
-            style={{ color: mobileMenuOpen ? 'hsl(174 72% 60%)' : 'hsl(215 20% 45%)' }}
+            style={{ color: mobileMenuOpen ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
           >
             Categorías
           </span>
@@ -449,7 +448,7 @@ export default function Sidebar({
 
             {/* Categorías Section */}
             <div className="space-y-2.5">
-              <p className="text-[10px] font-bold text-teal-400/70 uppercase tracking-widest">Categorías</p>
+              <p className="text-[10px] font-bold text-primary/75 uppercase tracking-widest">Categorías</p>
               <div className="grid grid-cols-2 gap-2">
                 {folders.filter(f => f.group === 'categories').map(folder => {
                   const Icon = folder.icon;
@@ -463,9 +462,9 @@ export default function Sidebar({
                       }}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold"
                       style={{
-                        background: isActive ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.02)',
-                        borderColor: isActive ? 'rgba(45,212,191,0.25)' : 'rgba(255,255,255,0.05)',
-                        color: isActive ? 'hsl(174 72% 60%)' : 'hsl(210 40% 80%)'
+                        background: isActive ? 'hsl(var(--primary) / 0.08)' : 'rgba(255,255,255,0.02)',
+                        borderColor: isActive ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.05)',
+                        color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
                       }}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
@@ -478,7 +477,7 @@ export default function Sidebar({
 
             {/* Sistema Section */}
             <div className="space-y-2.5">
-              <p className="text-[10px] font-bold text-teal-400/70 uppercase tracking-widest">Sistema</p>
+              <p className="text-[10px] font-bold text-primary/75 uppercase tracking-widest">Sistema</p>
               <div className="grid grid-cols-2 gap-2">
                 {folders.filter(f => f.group === 'system').map(folder => {
                   const Icon = folder.icon;
@@ -492,9 +491,9 @@ export default function Sidebar({
                       }}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold"
                       style={{
-                        background: isActive ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.02)',
-                        borderColor: isActive ? 'rgba(45,212,191,0.25)' : 'rgba(255,255,255,0.05)',
-                        color: isActive ? 'hsl(174 72% 60%)' : 'hsl(210 40% 80%)'
+                        background: isActive ? 'hsl(var(--primary) / 0.08)' : 'rgba(255,255,255,0.02)',
+                        borderColor: isActive ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.05)',
+                        color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
                       }}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
@@ -510,9 +509,9 @@ export default function Sidebar({
                     }}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold"
                     style={{
-                      background: currentFolder === 'admin' ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.02)',
-                      borderColor: currentFolder === 'admin' ? 'rgba(45,212,191,0.25)' : 'rgba(255,255,255,0.05)',
-                      color: currentFolder === 'admin' ? 'hsl(174 72% 60%)' : 'hsl(210 40% 80%)'
+                      background: currentFolder === 'admin' ? 'hsl(var(--primary) / 0.08)' : 'rgba(255,255,255,0.02)',
+                      borderColor: currentFolder === 'admin' ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.05)',
+                      color: currentFolder === 'admin' ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
                     }}
                   >
                     <ShieldCheck className="h-4 w-4 shrink-0" />
@@ -539,7 +538,7 @@ export default function Sidebar({
                   <button
                     onClick={onTogglePush}
                     className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 text-xs font-bold py-2.5 transition-all cursor-pointer"
-                    style={{ color: isPushSubscribed ? 'hsl(174 72% 55%)' : 'hsl(215 20% 50%)' }}
+                    style={{ color: isPushSubscribed ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
                   >
                     {isPushSubscribed ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
                     Notificaciones
@@ -553,9 +552,9 @@ export default function Sidebar({
                 }}
                 className="w-full flex items-center justify-center gap-2 rounded-xl border text-xs font-bold py-2.5 transition-all cursor-pointer"
                 style={{
-                  background: currentFolder === 'settings' ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.02)',
-                  borderColor: currentFolder === 'settings' ? 'rgba(45,212,191,0.25)' : 'rgba(255,255,255,0.05)',
-                  color: 'hsl(174 72% 60%)'
+                  background: currentFolder === 'settings' ? 'hsl(var(--primary) / 0.08)' : 'rgba(255,255,255,0.02)',
+                  borderColor: currentFolder === 'settings' ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.05)',
+                  color: 'hsl(var(--primary))'
                 }}
               >
                 <Settings className="h-4 w-4" />

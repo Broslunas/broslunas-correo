@@ -222,7 +222,7 @@ function StandaloneViewContent() {
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-[hsl(222_47%_4%)]">
-        <div className="h-8 w-8 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--primary)) transparent transparent transparent' }} />
       </div>
     );
   }
@@ -231,7 +231,7 @@ function StandaloneViewContent() {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-[hsl(222_47%_4%)] text-slate-200">
         <p className="text-sm font-semibold">Correo no encontrado o no tienes permiso para verlo.</p>
-        <button onClick={() => window.close()} className="mt-4 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-slate-900 rounded-lg text-xs font-bold">
+        <button onClick={() => window.close()} className="mt-4 px-4 py-2 text-xs font-bold rounded-lg" style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}>
           Cerrar ventana
         </button>
       </div>
@@ -257,7 +257,7 @@ export default function StandaloneViewPage() {
   return (
     <Suspense fallback={
       <div className="flex h-screen w-screen items-center justify-center bg-[hsl(222_47%_4%)]">
-        <div className="h-8 w-8 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--primary)) transparent transparent transparent' }} />
       </div>
     }>
       <StandaloneViewContent />

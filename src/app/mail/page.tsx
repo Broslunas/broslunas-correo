@@ -7,7 +7,6 @@ import EmailList from '@/components/email-list';
 import EmailReader from '@/components/email-reader';
 import ComposeModal from '@/components/compose-modal';
 import TwoFactorModal from '@/components/two-factor-modal';
-import SettingsModal from '@/components/settings-modal';
 
 interface Attachment {
   filename: string;
@@ -86,7 +85,6 @@ function MailContent() {
   const [composeData, setComposeData] = useState<{ id?: string; to: string; subject: string; bodyHtml: string; cc?: string; bcc?: string; attachments?: any[]; inReplyTo?: string; references?: string; forwardMode?: boolean } | null>(null);
   const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; twoFactorEnabled: boolean; assignedAddresses: string[] } | null>(null);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [isPushSupported, setIsPushSupported] = useState(false);
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -669,22 +667,6 @@ function MailContent() {
           setUser(prev => prev ? { ...prev, twoFactorEnabled: enabled } : null);
         }}
       />
-
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        assignedMailboxes={availableAccounts}
-        onSettingsSaved={() => {
-          // Refetch available mailboxes to get updated signatures!
-          fetch('/api/mailboxes')
-            .then(res => res.json())
-            .then(data => {
-              setAvailableAccounts(data.mailboxes || []);
-            })
-            .catch(err => console.error('Error reloading mailboxes:', err));
-        }}
-      />
     </div>
   );
 }
@@ -693,7 +675,7 @@ export default function MailPage() {
   return (
     <Suspense fallback={
       <div className="flex h-screen w-screen items-center justify-center bg-[hsl(222_47%_4%)]">
-        <div className="h-8 w-8 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     }>
       <MailContent />

@@ -488,7 +488,7 @@ export default function EmailReader({
                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
               }}
             >
-              <ExternalLink className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} />
               <span className="hidden sm:inline">Nueva ventana</span>
             </button>
           )}
@@ -515,7 +515,7 @@ export default function EmailReader({
                 }
               }}
             >
-              <Folder className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+              <Folder className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} />
               <span className="hidden sm:inline">Mover a</span>
               <ChevronDown className={`h-3 w-3 opacity-60 transition-transform ${moveDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -713,7 +713,8 @@ export default function EmailReader({
                 type="button"
                 onClick={handleSummarize}
                 disabled={loadingSummary}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-bold tracking-wide uppercase transition-all cursor-pointer bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 border border-teal-500/20 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-bold tracking-wide uppercase transition-all cursor-pointer disabled:opacity-50"
+                style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}
               >
                 <Sparkles className="h-3 w-3 animate-pulse" />
                 Resumir IA
@@ -733,7 +734,7 @@ export default function EmailReader({
               }}
             >
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold text-teal-400 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                <h4 className="font-semibold flex items-center gap-1.5 uppercase tracking-wider text-[10px]" style={{ color: 'hsl(var(--primary))' }}>
                   <Sparkles className="h-3.5 w-3.5 animate-pulse" />
                   Resumen por Gemini IA
                 </h4>
@@ -748,7 +749,7 @@ export default function EmailReader({
               </div>
               {loadingSummary && (
                 <div className="flex items-center gap-2 text-slate-400">
-                  <div className="h-3.5 w-3.5 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--primary)) transparent transparent transparent' }} />
                   Generando resumen inteligente con gemini-3-live-flash...
                 </div>
               )}

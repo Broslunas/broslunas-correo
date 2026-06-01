@@ -964,8 +964,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
         }}
       >
         {isDragging && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md border-2 border-dashed border-teal-500/50 rounded-t-2xl sm:rounded-2xl pointer-events-none animate-fadeIn">
-            <Upload className="h-10 w-10 text-teal-400 animate-bounce mb-3" />
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md border-2 border-dashed rounded-t-2xl sm:rounded-2xl pointer-events-none animate-fadeIn" style={{ borderColor: 'hsl(var(--primary)/0.5)' }}>
+            <Upload className="h-10 w-10 animate-bounce mb-3" style={{ color: 'hsl(var(--primary))' }} />
             <p className="text-sm font-semibold text-white">Suelte los archivos aquí para adjuntar</p>
             <p className="text-xs text-white/50 mt-1">Límite de 10 MB por archivo</p>
           </div>
@@ -1202,7 +1202,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                         key={f.value}
                         type="button"
                         onClick={() => handleFontFamily(f.value)}
-                        className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-white/80 hover:bg-teal-500/10 hover:text-teal-400 transition-colors"
+                        className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-white/80 transition-colors" onMouseEnter={e => { e.currentTarget.style.background='hsl(var(--primary)/0.1)'; e.currentTarget.style.color='hsl(var(--primary))'; }} onMouseLeave={e => { e.currentTarget.style.background=''; e.currentTarget.style.color=''; }}
                         style={{ fontFamily: f.value }}
                       >
                         {f.name}
@@ -1235,7 +1235,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                         key={s.value}
                         type="button"
                         onClick={() => handleFontSize(s.value)}
-                        className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-white/80 hover:bg-teal-500/10 hover:text-teal-400 transition-colors"
+                        className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-white/80 transition-colors" onMouseEnter={e => { e.currentTarget.style.background='hsl(var(--primary)/0.1)'; e.currentTarget.style.color='hsl(var(--primary))'; }} onMouseLeave={e => { e.currentTarget.style.background=''; e.currentTarget.style.color=''; }}
                       >
                         {s.name}
                       </button>
@@ -1278,7 +1278,9 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     setShowFontDropdown(false);
                     setShowSizeDropdown(false);
                   }}
-                  className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-teal-400"
+                  className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5"
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'hsl(var(--primary))'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = ''; }}
                 >
                   <Palette className="h-3.5 w-3.5" />
                 </button>
@@ -1288,14 +1290,16 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                       <button
                         type="button"
                         onClick={() => setSelectedColorTab('text')}
-                        className={`flex-1 py-1 rounded-md text-[10px] font-semibold text-center transition-all ${selectedColorTab === 'text' ? 'bg-teal-500/20 text-teal-400' : 'text-white/60 hover:text-white'}`}
+                        className={`flex-1 py-1 rounded-md text-[10px] font-semibold text-center transition-all ${selectedColorTab === 'text' ? 'text-white/60' : 'text-white/60 hover:text-white'}`}
+                        style={selectedColorTab === 'text' ? { background: 'hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' } : {}}
                       >
                         Texto
                       </button>
                       <button
                         type="button"
                         onClick={() => setSelectedColorTab('bg')}
-                        className={`flex-1 py-1 rounded-md text-[10px] font-semibold text-center transition-all ${selectedColorTab === 'bg' ? 'bg-teal-500/20 text-teal-400' : 'text-white/60 hover:text-white'}`}
+                        className={`flex-1 py-1 rounded-md text-[10px] font-semibold text-center transition-all ${selectedColorTab === 'bg' ? 'text-white/60' : 'text-white/60 hover:text-white'}`}
+                        style={selectedColorTab === 'bg' ? { background: 'hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' } : {}}
                       >
                         Fondo
                       </button>
@@ -1431,7 +1435,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Importar HTML"
                 onClick={() => setShowHtmlModal(true)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-teal-400 hover:bg-teal-500/10"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer" style={{ color: 'hsl(var(--primary))' }}
               >
                 <Code className="h-3.5 w-3.5" />
               </button>
@@ -1439,7 +1443,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Adjuntar archivo"
                 onClick={() => fileInputRef.current?.click()}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-teal-400"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5" onMouseEnter={e => e.currentTarget.style.color='hsl(var(--primary))'} onMouseLeave={e => e.currentTarget.style.color=''}
               >
                 <Paperclip className="h-3.5 w-3.5" />
               </button>
@@ -1447,7 +1451,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Adjuntar desde Google Drive"
                 onClick={handleGoogleDriveAttach}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-teal-400"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5" onMouseEnter={e => e.currentTarget.style.color='hsl(var(--primary))'} onMouseLeave={e => e.currentTarget.style.color=''}
               >
                 <GoogleDriveIcon className="h-3.5 w-3.5" />
               </button>
@@ -1481,7 +1485,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               style={{ background: 'rgba(45,212,191,0.02)' }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'hsl(var(--primary))' }}>
                   <Sparkles className="h-3.5 w-3.5 animate-pulse" />
                   Asistente de Redacción Gemini IA
                 </span>
@@ -1504,7 +1508,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                       ? "Ej: Aceptar invitación cortésmente, pedir agendar para el miércoles..." 
                       : "Ej: Escribe un correo formal para solicitar el estado del proyecto..."
                   }
-                  className="flex-1 px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-teal-500/50"
+                  className="flex-1 px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -1516,7 +1520,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   type="button"
                   disabled={aiLoading || !aiPrompt.trim()}
                   onClick={handleGenerateAiText}
-                  className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 disabled:bg-teal-500/20 disabled:text-teal-400/50 text-slate-900 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 disabled:opacity-50 text-xs font-bold shrink-0 cursor-pointer transition-all flex items-center gap-1.5 rounded-xl"
+                  style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
                 >
                   {aiLoading ? (
                     <>
@@ -1539,7 +1544,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     value="html"
                     checked={aiFormat === 'html'}
                     onChange={() => setAiFormat('html')}
-                    className="accent-teal-400 cursor-pointer"
+                    style={{ accentColor: 'hsl(var(--primary))' }} className="cursor-pointer"
                   />
                   Formato enriquecido (HTML)
                 </label>
@@ -1550,7 +1555,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     value="text"
                     checked={aiFormat === 'text'}
                     onChange={() => setAiFormat('text')}
-                    className="accent-teal-400 cursor-pointer"
+                    style={{ accentColor: 'hsl(var(--primary))' }} className="cursor-pointer"
                   />
                   Texto plano
                 </label>
@@ -1582,7 +1587,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           {attachments.length > 0 && (
             <div className="shrink-0 px-5 py-2.5 space-y-2 max-h-[140px] overflow-y-auto border-t border-white/5 bg-white/[0.01]">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400">Archivos Adjuntos ({attachments.length})</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--primary))' }}>Archivos Adjuntos ({attachments.length})</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {attachments.map((att, idx) => {
@@ -1599,7 +1604,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                         {/* Thumbnail / Icon */}
                         <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 shrink-0 overflow-hidden">
                           {att.isUploading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-teal-400" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: 'hsl(var(--primary))' }} />
                           ) : hasError ? (
                             <X className="h-3.5 w-3.5 text-red-400" />
                           ) : isImage && att.key ? (
@@ -1611,7 +1616,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                           ) : isPdf ? (
                             <FileText className="h-4 w-4 text-red-400" />
                           ) : (
-                            <FileText className="h-4 w-4 text-teal-400" />
+                            <FileText className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
                           )}
                         </div>
 
@@ -1654,11 +1659,11 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Redactar con IA"
                 onClick={() => setShowAiAssistant(!showAiAssistant)}
-                className={`h-8 px-3.5 flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
-                  showAiAssistant 
-                    ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' 
-                    : 'text-teal-400 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 shadow-[0_0_12px_rgba(45,212,191,0.05)]'
-                }`}
+                className={`h-8 px-3.5 flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0`}
+                style={showAiAssistant
+                  ? { background: 'hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary)/0.3)' }
+                  : { background: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary)/0.2)' }
+                }
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 <span>Redactor IA</span>
@@ -1668,7 +1673,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
               <div className="flex items-center gap-2 text-[11px] text-white/50 truncate">
                 {autoSaveStatus === 'saving' && (
-                  <span className="flex items-center gap-1.5 animate-pulse text-teal-400 font-medium shrink-0">
+                  <span className="flex items-center gap-1.5 animate-pulse font-medium shrink-0" style={{ color: 'hsl(var(--primary))' }}>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Sincronizando...
                   </span>
@@ -1772,7 +1777,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     value={linkText}
                     onChange={(e) => setLinkText(e.target.value)}
                     placeholder="Texto del enlace"
-                    className="w-full px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-teal-500/50"
+                    className="w-full px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -1783,7 +1788,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     value={linkUrl}
                     onChange={(e) => setLinkUrl(e.target.value)}
                     placeholder="https://ejemplo.com"
-                    className="w-full px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-teal-500/50"
+                    className="w-full px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none" style={{ '--tw-ring-color': 'hsl(var(--primary))' } as React.CSSProperties}
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
@@ -1796,7 +1801,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 shadow-md hover:opacity-90 active:scale-95 transition-transform cursor-pointer"
+                    className="px-4 py-1.5 rounded-xl text-xs font-semibold shadow-md hover:opacity-90 active:scale-95 transition-transform cursor-pointer" style={{ background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)))', color: 'hsl(var(--primary-foreground))' }}
                   >
                     Insertar
                   </button>
@@ -1811,7 +1816,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           <div className="absolute inset-0 z-50 flex flex-col p-5 bg-slate-950/90 backdrop-blur-md">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <Code className="h-4 w-4 text-teal-400" />
+                <Code className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
                 <h4 className="text-sm font-semibold text-white">Importar Código HTML</h4>
               </div>
               <button
@@ -1831,7 +1836,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   <span className="block text-[10px] text-white/55">Selecciona un archivo HTML local (.html)</span>
                 </div>
                 <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors">
-                  <Upload className="h-3.5 w-3.5 text-teal-400" />
+                  <Upload className="h-3.5 w-3.5" style={{ color: 'hsl(var(--primary))' }} />
                   <span>Examinar</span>
                   <input
                     type="file"
@@ -1851,7 +1856,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   value={htmlCode}
                   onChange={(e) => setHtmlCode(e.target.value)}
                   placeholder={`<div style="font-family: Arial, sans-serif; padding: 20px; color: #e2e8f0;">\n  <h1 style="color: #2dd4bf;">¡Hola!</h1>\n  <p>Este es un correo diseñado...</p>\n</div>`}
-                  className="flex-1 w-full p-4 rounded-xl text-xs font-mono bg-slate-950 border border-white/10 text-emerald-400 placeholder-white/20 focus:outline-none focus:border-teal-500/50 resize-none overflow-y-auto"
+                  className="flex-1 w-full p-4 rounded-xl text-xs font-mono bg-slate-950 border border-white/10 text-emerald-400 placeholder-white/20 focus:outline-none resize-none overflow-y-auto"
                 />
               </div>
 
@@ -1863,7 +1868,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     name="importMode"
                     checked={importMode === 'replace'}
                     onChange={() => setImportMode('replace')}
-                    className="accent-teal-500"
+                    style={{ accentColor: 'hsl(var(--primary))' }}
                   />
                   <span>Reemplazar todo el contenido</span>
                 </label>
@@ -1873,7 +1878,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     name="importMode"
                     checked={importMode === 'insert'}
                     onChange={() => setImportMode('insert')}
-                    className="accent-teal-500"
+                    style={{ accentColor: 'hsl(var(--primary))' }}
                   />
                   <span>Insertar en la posición del cursor</span>
                 </label>
@@ -1891,7 +1896,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 <button
                   type="button"
                   onClick={handleImportHtml}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 shadow-md hover:opacity-90 active:scale-95 transition-transform cursor-pointer"
+                  className="px-5 py-2 rounded-xl text-xs font-semibold shadow-md hover:opacity-90 active:scale-95 transition-transform cursor-pointer" style={{ background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)))', color: 'hsl(var(--primary-foreground))' }}
                 >
                   Importar HTML
                 </button>
