@@ -145,6 +145,160 @@ export async function POST(request: Request) {
 
     const result = await db.collection('emails').insertOne(incomingEmailDocument);
 
+    // 5.1. Handle Automatic Replies
+    try {
+      // Find all target mailboxes in the system that match the recipients of this email
+      const activeMailboxes = await db.collection('mailboxes').find({
+        email: { $in: recipients },
+        autoReplyEnabled: true
+      }).toArray();
+
+      for (const mailbox of activeMailboxes) {
+        const senderAddress = incomingEmailDocument.from.address.trim().toLowerCase();
+        
+        // Loop prevention rule 1: Do not auto-reply to ourselves
+        if (senderAddress === mailbox.email.trim().toLowerCase()) {
+          console.log(`Auto-reply skipped for ${mailbox.email}: Sender is the same as the recipient.`);
+          continue;
+        }
+
+        // Loop prevention rule 2: Check if email is an automated mail
+        const lowercaseSubject = (subject || '').toLowerCase();
+        const lowercaseBody = (bodyText || '').toLowerCase();
+        
+        const isAutomated = 
+          lowercaseSubject.includes('respuesta automática') ||
+          lowercaseSubject.includes('respuesta automatica') ||
+          lowercaseSubject.includes('auto-reply') ||
+          lowercaseSubject.includes('autoreply') ||
+          lowercaseSubject.includes('out of office') ||
+          lowercaseSubject.includes('vacation') ||
+          lowercaseBody.includes('auto-reply') ||
+          request.headers.get('precedence') === 'bulk' ||
+          request.headers.get('precedence') === 'junk' ||
+          request.headers.get('x-autoreply') === 'yes';
+
+        if (isAutomated) {
+          console.log(`Auto-reply skipped for ${mailbox.email} to ${senderAddress}: Incoming email is classified as automated.`);
+          continue;
+        }
+
+        // Loop prevention rule 3: Cooldown of 24 hours per sender
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const existingLog = await db.collection('auto_reply_logs').findOne({
+          mailboxEmail: mailbox.email,
+          senderEmail: senderAddress,
+          lastSentAt: { $gt: oneDayAgo }
+        });
+
+        if (existingLog) {
+          console.log(`Auto-reply skipped for ${mailbox.email} to ${senderAddress}: Cooldown active (last auto-reply sent within 24 hours).`);
+          continue;
+        }
+
+        // Setup subject and body templates with placeholders replaced
+        const originalSubject = subject || '(Sin Asunto)';
+        const originalSenderName = incomingEmailDocument.from.name || senderAddress;
+
+        let replySubject = mailbox.autoReplySubject || 'Respuesta automática: {{subject}}';
+        replySubject = replySubject
+          .replace(/\{\{subject\}\}/g, originalSubject)
+          .replace(/\{\{sender\}\}/g, originalSenderName);
+
+        let replyBodyText = mailbox.autoReplyBody || 'Hola,\n\nGracias por su mensaje. Hemos recibido su correo y le responderemos lo antes posible.\n\nSaludos cordiales.';
+        replyBodyText = replyBodyText
+          .replace(/\{\{subject\}\}/g, originalSubject)
+          .replace(/\{\{sender\}\}/g, originalSenderName);
+
+        // Convert plain text to simple HTML (replacing newlines with <br>)
+        const replyBodyHtml = `<div style="font-family: sans-serif; font-size: 14px; line-height: 1.6; color: #1e293b;">
+          ${replyBodyText.replace(/\n/g, '<br>')}
+        </div>`;
+
+        // Send via Mailjet
+        const apiKey = process.env.MAILJET_API_KEY;
+        const apiSecret = process.env.MAILJET_API_SECRET;
+
+        if (apiKey && apiSecret) {
+          console.log(`Sending auto-reply from ${mailbox.email} to ${senderAddress} with subject: "${replySubject}"`);
+
+          const mailjetPayload = {
+            Messages: [
+              {
+                From: {
+                  Email: mailbox.email,
+                  Name: mailbox.name
+                },
+                To: [
+                  {
+                    Email: senderAddress,
+                    Name: incomingEmailDocument.from.name || ''
+                  }
+                ],
+                Subject: replySubject,
+                TextPart: replyBodyText,
+                HTMLPart: replyBodyHtml
+              }
+            ]
+          };
+
+          const authString = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+          const sendResponse = await fetch('https://api.mailjet.com/v3.1/send', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${authString}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(mailjetPayload)
+          });
+
+          if (sendResponse.ok) {
+            const responseData = await sendResponse.json();
+            const mailjetMessageId = responseData.Messages?.[0]?.To?.[0]?.MessageID || `sent-${crypto.randomUUID()}`;
+
+            // Save copy to sent folder
+            const sentEmailDocument = {
+              from: {
+                name: mailbox.name,
+                address: mailbox.email
+              },
+              to: [senderAddress],
+              cc: [],
+              bcc: [],
+              subject: replySubject,
+              date: new Date(),
+              body: {
+                text: replyBodyText,
+                html: replyBodyHtml
+              },
+              attachments: [],
+              folder: 'sent',
+              isRead: true,
+              messageId: String(mailjetMessageId)
+            };
+
+            await db.collection('emails').insertOne(sentEmailDocument);
+
+            // Update log
+            await db.collection('auto_reply_logs').updateOne(
+              { mailboxEmail: mailbox.email, senderEmail: senderAddress },
+              { $set: { lastSentAt: new Date() } },
+              { upsert: true }
+            );
+
+            console.log(`Auto-reply successfully sent and logged for ${mailbox.email} to ${senderAddress}`);
+          } else {
+            const errorResponse = await sendResponse.text();
+            console.error(`Mailjet API error sending auto-reply:`, errorResponse);
+          }
+        } else {
+          console.warn('Mailjet API keys are not configured. Cannot send auto-reply.');
+        }
+      }
+    } catch (autoReplyErr) {
+      console.error('Error handling automatic replies:', autoReplyErr);
+    }
+
     // 6. Trigger push notifications for recipients
     const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;

@@ -98,7 +98,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [senderMailboxes, setSenderMailboxes] = useState<{ email: string; name: string }[]>([]);
+  const [senderMailboxes, setSenderMailboxes] = useState<{ email: string; name: string; signature?: string }[]>([]);
   const [senderLoading, setSenderLoading] = useState(true);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -612,6 +612,39 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     }
   };
 
+  const updateSignature = (senderEmail: string, mailboxesList = senderMailboxes) => {
+    if (!editorRef.current) return;
+    const mailbox = mailboxesList.find(m => m.email === senderEmail);
+    const signature = mailbox?.signature || '';
+
+    let currentHtml = editorRef.current.innerHTML;
+
+    const signatureRegex = /<div class=["']mail-signature["'] id=["']signature-block["']>([\s\S]*?)<\/div>/i;
+    
+    const newSignatureHtml = signature 
+      ? `<div class="mail-signature" id="signature-block"><br><br>--<br>${signature.replace(/\n/g, '<br>')}</div>`
+      : '<div class="mail-signature" id="signature-block"></div>';
+
+    if (signatureRegex.test(currentHtml)) {
+      currentHtml = currentHtml.replace(signatureRegex, newSignatureHtml);
+    } else {
+      const quoteIndex = currentHtml.indexOf('<hr ');
+      if (quoteIndex !== -1) {
+        currentHtml = currentHtml.slice(0, quoteIndex) + newSignatureHtml + currentHtml.slice(quoteIndex);
+      } else {
+        currentHtml = currentHtml + newSignatureHtml;
+      }
+    }
+
+    editorRef.current.innerHTML = currentHtml;
+    setEditorContent(currentHtml);
+  };
+
+  const handleFromChange = (newFrom: string) => {
+    setFrom(newFrom);
+    updateSignature(newFrom);
+  };
+
   useEffect(() => {
     if (isOpen) {
       setSenderLoading(true);
@@ -620,8 +653,19 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
         .then(data => {
           const list = data.mailboxes || [];
           setSenderMailboxes(list);
-          if (list.length > 0) setFrom(list[0].email);
-          else setFrom('');
+          if (list.length > 0) {
+            const initialFrom = list[0].email;
+            setFrom(initialFrom);
+            
+            // Wait brief moment for editor content to mount from initialData
+            setTimeout(() => {
+              if (!initialData?.id) {
+                updateSignature(initialFrom, list);
+              }
+            }, 150);
+          } else {
+            setFrom('');
+          }
         })
         .catch(err => console.error('Error loading sender mailboxes:', err))
         .finally(() => setSenderLoading(false));
@@ -1029,7 +1073,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               ) : (
                 <select
                   value={from}
-                  onChange={(e) => setFrom(e.target.value)}
+                  onChange={(e) => handleFromChange(e.target.value)}
                   style={{ ...inputStyle, cursor: 'pointer', fontWeight: 600 }}
                 >
                   {senderMailboxes.map((box, idx) => (
@@ -1103,7 +1147,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
           {/* Formatting toolbar */}
           <div
-            className="shrink-0 flex items-center gap-1.5 px-4 py-2 overflow-x-auto select-none border-b border-white/5 bg-white/[0.01]"
+            className="shrink-0 flex flex-wrap items-center gap-1.5 px-4 py-2 select-none border-b border-white/5 bg-white/[0.01]"
             onClick={() => {
               // Close dropdowns when clicking toolbar background
               setShowFontDropdown(false);

@@ -162,6 +162,38 @@ Contenido generado:`;
       return NextResponse.json({ text: generated });
     }
 
+    if (action === 'generate_autoreply') {
+      if (!promptText) {
+        return NextResponse.json({ error: 'Instrucciones requeridas para generar la respuesta automática' }, { status: 400 });
+      }
+
+      const systemInstruction = 'Eres un redactor de correos profesional. Genera una respuesta automática de correo (asunto y cuerpo) en español basada en las instrucciones del usuario. Responde en formato JSON puro con las claves "subject" y "body". No uses markdown alrededor del JSON.';
+      const prompt = `Genera un asunto y un cuerpo de mensaje de respuesta automática en español basándote en estas instrucciones del usuario:
+"${promptText}"
+
+Devuelve un objeto JSON con las siguientes claves:
+- "subject": una línea corta para el asunto (puedes incluir {{subject}} si tiene sentido, ej: "Respuesta automática: {{subject}}").
+- "body": el cuerpo de la respuesta con saltos de línea \\n (puedes incluir {{sender}} o {{subject}} si tiene sentido).
+
+JSON esperado:`;
+
+      const generated = await callGeminiAPI(prompt, systemInstruction);
+      let cleanJsonText = generated.replace(/```json/gi, '').replace(/```/gi, '').trim();
+      try {
+        const resultObj = JSON.parse(cleanJsonText);
+        return NextResponse.json({ 
+          subject: resultObj.subject || 'Respuesta automática',
+          body: resultObj.body || ''
+        });
+      } catch (parseErr) {
+        console.error('Failed to parse Gemini response as JSON:', cleanJsonText);
+        return NextResponse.json({ 
+          subject: 'Respuesta automática: {{subject}}',
+          body: cleanJsonText
+        });
+      }
+    }
+
     return NextResponse.json({ error: 'Acción no soportada' }, { status: 400 });
   } catch (error: any) {
     console.error('Error in AI endpoint:', error);

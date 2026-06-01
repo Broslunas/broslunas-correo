@@ -33,10 +33,10 @@ interface SidebarProps {
   role?: string;
   twoFactorEnabled?: boolean;
   onSecurityClick?: () => void;
+  onSettingsClick?: () => void;
   isPushSupported: boolean;
   isPushSubscribed: boolean;
   onTogglePush: () => void;
-
 }
 
 export default function Sidebar({
@@ -46,10 +46,10 @@ export default function Sidebar({
   role,
   twoFactorEnabled,
   onSecurityClick,
+  onSettingsClick,
   isPushSupported,
   isPushSubscribed,
   onTogglePush,
-
 }: SidebarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed to match SSR
@@ -271,7 +271,25 @@ export default function Sidebar({
             )}
           </button>
 
-
+          {/* Settings Button */}
+          <button
+            onClick={onSettingsClick}
+            title={isCollapsed ? "Configuración" : undefined}
+            className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer shrink-0`}
+            style={{
+              background: 'rgba(45,212,191,0.05)',
+              border: '1px solid rgba(45,212,191,0.15)',
+            }}
+          >
+            <Settings
+              className="h-4 w-4 text-teal-400 shrink-0"
+            />
+            {!isCollapsed && (
+              <span className="text-xs font-semibold text-teal-400 truncate animate-fadeIn">
+                Configuración
+              </span>
+            )}
+          </button>
 
           {/* Push notifications */}
           {isPushSupported && (
@@ -524,6 +542,16 @@ export default function Sidebar({
                   </button>
                 )}
               </div>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onSettingsClick?.();
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 text-teal-400 py-2.5 text-xs font-bold transition-all cursor-pointer"
+              >
+                <Settings className="h-4 w-4" />
+                Configuración
+              </button>
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);

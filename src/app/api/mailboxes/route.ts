@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
 
     const result = authorizedMailboxes.map(m => ({
       email: m.email,
-      name: m.name
+      name: m.name,
+      signature: m.signature || ''
     }));
 
     return NextResponse.json({ mailboxes: result });
