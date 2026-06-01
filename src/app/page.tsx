@@ -12,6 +12,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 function SecurityCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -410,6 +411,17 @@ function LoginContent() {
           <p>
             Acceso restringido únicamente a usuarios autorizados. Los accesos son auditados.
           </p>
+        </div>
+
+        {/* Legal links footer */}
+        <div className="mt-5 pt-4 border-t border-white/5 flex justify-center gap-4 text-[10px] text-slate-500 font-semibold select-none">
+          <Link href="/privacy" className="hover:text-teal-400 transition-colors">
+            Política de Privacidad
+          </Link>
+          <span>•</span>
+          <Link href="/terms" className="hover:text-teal-400 transition-colors">
+            Términos y Condiciones
+          </Link>
         </div>
       </div>
     </div>
