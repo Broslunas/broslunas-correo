@@ -17,6 +17,8 @@ import {
   ArrowLeft,
   Folder,
   ChevronDown,
+  ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
 
@@ -54,6 +56,7 @@ interface EmailReaderProps {
   onReplyAllClick?: (email: Email) => void;
   onForwardClick?: (email: Email) => void;
   onBack?: () => void; // Mobile back button
+  isStandalone?: boolean;
 }
 
 function buildEmailSrcdoc(email: Email): string {
@@ -256,13 +259,68 @@ export default function EmailReader({
   onReplyAllClick,
   onForwardClick,
   onBack,
+  isStandalone = false,
 }: EmailReaderProps) {
 
   const [moveDropdownOpen, setMoveDropdownOpen] = useState(false);
 
+  // AI summary states
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
   useEffect(() => {
     setMoveDropdownOpen(false);
+    setAiSummary(null);
+    setLoadingSummary(false);
+    setSummaryError(null);
   }, [email]);
+
+  const handleSummarize = async () => {
+    if (!email) return;
+    setLoadingSummary(true);
+    setSummaryError(null);
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'summarize',
+          emailContext: {
+            from: email.from.name ? `${email.from.name} <${email.from.address}>` : email.from.address,
+            subject: email.subject,
+            body: email.body.text || email.body.html || '',
+          }
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiSummary(data.text);
+      } else {
+        const errData = await res.json();
+        setSummaryError(errData.error || 'No se pudo obtener el resumen.');
+      }
+    } catch (err) {
+      console.error('Error fetching summary:', err);
+      setSummaryError('Error de red al obtener el resumen.');
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  const handlePopOut = () => {
+    if (typeof window !== 'undefined' && email) {
+      const width = 900;
+      const height = 800;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+      window.open(
+        `/mail/view?id=${email._id}`,
+        `ViewEmail_${email._id}`,
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+    }
+  };
 
   if (!email) {
     return (
@@ -408,6 +466,33 @@ export default function EmailReader({
 
         {/* Action buttons */}
         <div className="flex items-center gap-1.5">
+          {/* Popout email button */}
+          {!isStandalone && (
+            <button
+              id="btn-popout"
+              type="button"
+              onClick={handlePopOut}
+              title="Ver en nueva ventana"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: 'hsl(215 20% 60%)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'hsl(210 40% 90%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'hsl(215 20% 60%)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+              }}
+            >
+              <ExternalLink className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+              <span className="hidden sm:inline">Nueva ventana</span>
+            </button>
+          )}
+
           {/* Categorize / Move dropdown */}
           <div className="relative">
             <button
@@ -616,14 +701,70 @@ export default function EmailReader({
               </div>
             </div>
 
-            <time
-              className="text-xs shrink-0 capitalize"
-              style={{ color: 'hsl(215 20% 45%)' }}
-            >
-              {formattedDate}
-            </time>
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <time
+                className="text-xs shrink-0 capitalize"
+                style={{ color: 'hsl(215 20% 45%)' }}
+              >
+                {formattedDate}
+              </time>
+              
+              <button
+                type="button"
+                onClick={handleSummarize}
+                disabled={loadingSummary}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-bold tracking-wide uppercase transition-all cursor-pointer bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 border border-teal-500/20 disabled:opacity-50"
+              >
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                Resumir IA
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* AI Summary Section */}
+        {(loadingSummary || aiSummary || summaryError) && (
+          <div className="px-5 md:px-8 pt-6">
+            <div
+              className="rounded-2xl p-4 border text-xs"
+              style={{
+                background: 'rgba(45,212,191,0.03)',
+                borderColor: 'rgba(45,212,191,0.12)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-teal-400 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                  Resumen por Gemini IA
+                </h4>
+                {aiSummary && (
+                  <button
+                    onClick={() => setAiSummary(null)}
+                    className="text-slate-500 hover:text-slate-300 text-[10px] cursor-pointer"
+                  >
+                    Ocultar
+                  </button>
+                )}
+              </div>
+              {loadingSummary && (
+                <div className="flex items-center gap-2 text-slate-400">
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+                  Generando resumen inteligente con gemini-3-live-flash...
+                </div>
+              )}
+              {summaryError && (
+                <div className="text-red-400 font-medium">
+                  {summaryError}
+                </div>
+              )}
+              {aiSummary && (
+                <div className="text-slate-300 leading-relaxed whitespace-pre-line prose prose-invert select-text">
+                  {aiSummary}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Email body */}
         <div className="px-5 md:px-8 py-6">

@@ -30,6 +30,7 @@ import {
   Paperclip,
   FileText,
   Check,
+  Sparkles,
 } from 'lucide-react';
 
 interface ComposeModalProps {
@@ -135,6 +136,90 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // AI assistant states
+  const [showAiAssistant, setShowAiAssistant] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiFormat, setAiFormat] = useState<'html' | 'text'>('html');
+
+  const handleGenerateAiText = async () => {
+    if (!aiPrompt.trim()) return;
+    setAiLoading(true);
+    setAiError('');
+
+    try {
+      const isReply = !!initialData?.subject;
+      const payload: any = {
+        action: isReply ? 'reply' : 'compose',
+        promptText: aiPrompt,
+        format: aiFormat,
+      };
+
+      if (isReply) {
+        payload.emailContext = {
+          from: initialData?.to || 'Desconocido',
+          subject: initialData?.subject || 'Sin asunto',
+          body: initialData?.bodyHtml || '',
+        };
+      }
+
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        let generatedText = data.text || '';
+        
+        if (aiFormat === 'text') {
+          // Escape HTML content, then replace newlines with HTML linebreaks
+          generatedText = generatedText
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;')
+            .replace(/\n/g, '<br>');
+        } else {
+          // Clean up markdown block quotes if returned
+          generatedText = generatedText.replace(/^```html\s*/i, '').replace(/```\s*$/, '').trim();
+        }
+
+        if (!isReply) {
+          const subjectMatch = generatedText.match(/^Asunto:\s*(.+)$/m);
+          if (subjectMatch) {
+            setSubject(subjectMatch[1].trim());
+            generatedText = generatedText.replace(/^Asunto:\s*.+$/m, '').trim();
+          }
+        }
+
+        if (editorRef.current) {
+          if (isReply) {
+            const quoteContent = initialData?.bodyHtml || '';
+            editorRef.current.innerHTML = `${generatedText}<br><br>${quoteContent}`;
+          } else {
+            editorRef.current.innerHTML = generatedText;
+          }
+          setEditorContent(editorRef.current.innerHTML);
+        }
+        
+        setAiPrompt('');
+        setShowAiAssistant(false);
+      } else {
+        const errData = await res.json();
+        setAiError(errData.error || 'Error al generar texto.');
+      }
+    } catch (err) {
+      console.error('Error generating AI text:', err);
+      setAiError('Error de red al comunicarse con el asistente de IA.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -791,8 +876,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   onChange={(e) => setFrom(e.target.value)}
                   style={{ ...inputStyle, cursor: 'pointer', fontWeight: 600 }}
                 >
-                  {senderMailboxes.map((box) => (
-                    <option key={box.email} value={box.email} style={{ background: '#0a0f1e' }}>
+                  {senderMailboxes.map((box, idx) => (
+                    <option key={`${box.email || ''}-${idx}`} value={box.email} style={{ background: '#0a0f1e' }}>
                       {box.name} &lt;{box.email}&gt;
                     </option>
                   ))}
@@ -1181,6 +1266,94 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             </div>
           </div>
 
+          {/* AI Assistant Panel */}
+          {showAiAssistant && (
+            <div
+              className="shrink-0 px-5 py-3.5 border-b border-white/5 space-y-3"
+              style={{ background: 'rgba(45,212,191,0.02)' }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                  Asistente de Redacción Gemini IA
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAiAssistant(false)}
+                  className="text-slate-500 hover:text-slate-300 text-[10px] cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder={
+                    initialData?.subject 
+                      ? "Ej: Aceptar invitación cortésmente, pedir agendar para el miércoles..." 
+                      : "Ej: Escribe un correo formal para solicitar el estado del proyecto..."
+                  }
+                  className="flex-1 px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-teal-500/50"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleGenerateAiText();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={aiLoading || !aiPrompt.trim()}
+                  onClick={handleGenerateAiText}
+                  className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 disabled:bg-teal-500/20 disabled:text-teal-400/50 text-slate-900 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-all flex items-center gap-1.5"
+                >
+                  {aiLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    'Redactar'
+                  )}
+                </button>
+              </div>
+
+              {/* Format selection */}
+              <div className="flex items-center gap-4 text-xs pt-1 select-none">
+                <span className="font-semibold text-white/40">Formato:</span>
+                <label className="flex items-center gap-1.5 text-white/80 cursor-pointer text-[11px] hover:text-white">
+                  <input
+                    type="radio"
+                    name="aiFormat"
+                    value="html"
+                    checked={aiFormat === 'html'}
+                    onChange={() => setAiFormat('html')}
+                    className="accent-teal-400 cursor-pointer"
+                  />
+                  Formato enriquecido (HTML)
+                </label>
+                <label className="flex items-center gap-1.5 text-white/80 cursor-pointer text-[11px] hover:text-white">
+                  <input
+                    type="radio"
+                    name="aiFormat"
+                    value="text"
+                    checked={aiFormat === 'text'}
+                    onChange={() => setAiFormat('text')}
+                    className="accent-teal-400 cursor-pointer"
+                  />
+                  Texto plano
+                </label>
+              </div>
+
+              {aiError && (
+                <p className="text-[11px] text-red-400 font-medium">{aiError}</p>
+              )}
+            </div>
+          )}
+
           {/* Editor body */}
           <div
             className="flex-1 overflow-y-auto px-5 py-4 min-h-0"
@@ -1267,37 +1440,56 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             className="shrink-0 flex items-center justify-between px-5 py-3"
             style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <div className="flex items-center gap-3 text-[11px] text-white/50 min-w-0 flex-1 mr-4">
-              {autoSaveStatus === 'saving' && (
-                <span className="flex items-center gap-1.5 animate-pulse text-teal-400 font-medium shrink-0">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Sincronizando...
-                </span>
-              )}
-              {autoSaveStatus === 'saved' && (
-                <span className="flex items-center gap-1.5 text-emerald-400/90 font-medium shrink-0">
-                  <Check className="h-3.5 w-3.5" />
-                  Sincronizado {lastSavedTime && `a las ${lastSavedTime}`}
-                </span>
-              )}
-              {autoSaveStatus === 'error' && (
-                <span className="text-red-400 font-medium shrink-0">
-                  Error al sincronizar borrador
-                </span>
-              )}
-              {error && (
-                <span
-                  className="px-2.5 py-1 rounded-lg truncate"
-                  style={{
-                    background: 'rgba(239,68,68,0.1)',
-                    border: '1px solid rgba(239,68,68,0.2)',
-                    color: 'hsl(0 78% 65%)',
-                  }}
-                  title={error}
-                >
-                  {error}
-                </span>
-              )}
+            <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
+              {/* AI Assistant Button */}
+              <button
+                type="button"
+                title="Redactar con IA"
+                onClick={() => setShowAiAssistant(!showAiAssistant)}
+                className={`h-8 px-3.5 flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                  showAiAssistant 
+                    ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' 
+                    : 'text-teal-400 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 shadow-[0_0_12px_rgba(45,212,191,0.05)]'
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Redactor IA</span>
+              </button>
+
+              <div className="h-4 w-px bg-white/10 mx-1 shrink-0" />
+
+              <div className="flex items-center gap-2 text-[11px] text-white/50 truncate">
+                {autoSaveStatus === 'saving' && (
+                  <span className="flex items-center gap-1.5 animate-pulse text-teal-400 font-medium shrink-0">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Sincronizando...
+                  </span>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <span className="flex items-center gap-1.5 text-emerald-400/90 font-medium shrink-0">
+                    <Check className="h-3.5 w-3.5" />
+                    Sincronizado {lastSavedTime && `a las ${lastSavedTime}`}
+                  </span>
+                )}
+                {autoSaveStatus === 'error' && (
+                  <span className="text-red-400 font-medium shrink-0">
+                    Error al sincronizar borrador
+                  </span>
+                )}
+                {error && (
+                  <span
+                    className="px-2.5 py-1 rounded-lg truncate"
+                    style={{
+                      background: 'rgba(239,68,68,0.1)',
+                      border: '1px solid rgba(239,68,68,0.2)',
+                      color: 'hsl(0 78% 65%)',
+                    }}
+                    title={error}
+                  >
+                    {error}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
