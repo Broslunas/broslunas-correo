@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import webPush from 'web-push';
-import { pushInboundToWildDuck, ensureWildDuckUser } from '@/lib/wildduck';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -145,33 +145,6 @@ export async function POST(request: Request) {
 
     const result = await db.collection('emails').insertOne(incomingEmailDocument);
 
-    console.log(`Successfully ingested incoming email from ${from.address} with ID: ${result.insertedId}`);
-
-    // 5b. Mirror the message to WildDuck so it appears via IMAP for external clients.
-    // WildDuck stores the canonical MIME; we pass the raw base64 body reconstructed
-    // from the parsed fields. This is best-effort: a WildDuck outage must not block
-    // the webmail pipeline.
-    if (process.env.WILDDUCK_API_URL) {
-      try {
-        const rawMime = reconstructRawMime(incomingEmailDocument);
-        for (const recipient of recipients) {
-          const wdUser = await ensureWildDuckUser(recipient, recipient, '');
-          if (wdUser?._id || wdUser?.id) {
-            const userId = String(wdUser._id || wdUser.id);
-            const mirrorSuccess = await pushInboundToWildDuck({
-              userId,
-              mailboxPath: 'INBOX',
-              rawMime,
-              flags: [], // Empty flags means the email will be marked as UNREAD
-            });
-            console.log(`[wildduck] Mirrored inbound message for ${recipient} (userId: ${userId}) -> Success: ${mirrorSuccess}`);
-          }
-        }
-      } catch (wdErr) {
-        console.warn('[wildduck] Failed to mirror inbound message (non-fatal):', wdErr);
-      }
-    }
-
     // 6. Trigger push notifications for recipients
     const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
@@ -243,51 +216,4 @@ export async function POST(request: Request) {
   }
 }
 
-/**
- * Reconstruct a minimal RFC 5322 MIME message from the parsed fields
- * stored in MongoDB. WildDuck stores the canonical raw MIME per user,
- * so any external IMAP client (Thunderbird, Outlook) sees the same
- * message that the webmail UI displays.
- */
-function reconstructRawMime(doc: {
-  from: { name: string; address: string };
-  to: string[];
-  cc: string[];
-  bcc: string[];
-  subject: string;
-  date: Date;
-  body: { text: string; html: string };
-}): Buffer {
-  const formatAddress = (a: { name?: string; address: string }) =>
-    a.name ? `"${a.name}" <${a.address}>` : a.address;
 
-  const headers: string[] = [
-    `From: ${formatAddress(doc.from)}`,
-    `To: ${doc.to.join(', ')}`,
-  ];
-  if (doc.cc.length > 0) headers.push(`Cc: ${doc.cc.join(', ')}`);
-  headers.push(`Subject: ${doc.subject}`);
-  headers.push(`Date: ${new Date(doc.date).toUTCString()}`);
-  headers.push(`MIME-Version: 1.0`);
-
-  if (doc.body.html && doc.body.html !== doc.body.text) {
-    const boundary = `mixed-${Date.now()}`;
-    headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
-    const body = [
-      `--${boundary}`,
-      `Content-Type: text/plain; charset=utf-8`,
-      ``,
-      doc.body.text || '',
-      `--${boundary}`,
-      `Content-Type: text/html; charset=utf-8`,
-      ``,
-      doc.body.html || '',
-      `--${boundary}--`,
-      ``,
-    ].join('\r\n');
-    return Buffer.from(headers.join('\r\n') + '\r\n\r\n' + body, 'utf-8');
-  }
-
-  headers.push(`Content-Type: text/plain; charset=utf-8`);
-  return Buffer.from(headers.join('\r\n') + '\r\n\r\n' + (doc.body.text || ''), 'utf-8');
-}

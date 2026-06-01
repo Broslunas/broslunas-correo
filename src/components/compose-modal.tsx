@@ -81,6 +81,14 @@ const colorPalette = [
   { hex: '#9ca3af', label: 'Gris' },
 ];
 
+const GoogleDriveIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" width="24" height="24" {...props}>
+    <path fill="#0066da" d="M19.43 12.98L12 20h7.43L24 12.98z" />
+    <path fill="#00a85d" d="M16.57 3.5H7.43L0 16.5h9.14z" />
+    <path fill="#ffd04b" d="M12 20l4.57-7.98H2.86L0 16.5z" />
+  </svg>
+);
+
 export default function ComposeModal({ isOpen, onClose, initialData, assignedAddresses }: ComposeModalProps) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -136,6 +144,154 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Google Drive states & scripts loader
+  const [gapiLoaded, setGapiLoaded] = useState(false);
+  const [gisLoaded, setGisLoaded] = useState(false);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const initializeGapi = () => {
+      (window as any).gapi.load('picker', () => {
+        setGapiLoaded(true);
+      });
+    };
+
+    // Load Google API (gapi)
+    if (!(window as any).gapi) {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGapi;
+      document.body.appendChild(script);
+    } else {
+      initializeGapi();
+    }
+
+    // Load Google Identity Services (gis)
+    if (!(window as any).google?.accounts?.oauth2) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setGisLoaded(true);
+      document.body.appendChild(script);
+    } else {
+      setGisLoaded(true);
+    }
+  }, []);
+
+  const handleGoogleDriveAttach = () => {
+    if (!gapiLoaded || !gisLoaded) {
+      alert('Las APIs de Google se están cargando. Por favor, intenta de nuevo en un momento.');
+      return;
+    }
+
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const developerKey = process.env.NEXT_PUBLIC_GOOGLE_DEVELOPER_KEY;
+
+    if (!clientId || !developerKey) {
+      alert('La integración con Google Drive no está completamente configurada en el cliente. Asegúrate de configurar NEXT_PUBLIC_GOOGLE_CLIENT_ID y NEXT_PUBLIC_GOOGLE_DEVELOPER_KEY en tus variables de entorno.');
+      return;
+    }
+
+    if (googleAccessToken) {
+      createPicker(googleAccessToken, developerKey);
+    } else {
+      const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        callback: async (response: any) => {
+          if (response.error !== undefined) {
+            console.error('Error authenticating with Google:', response);
+            return;
+          }
+          setGoogleAccessToken(response.access_token);
+          createPicker(response.access_token, developerKey);
+        },
+      });
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    }
+  };
+
+  const createPicker = (accessToken: string, developerKey: string) => {
+    const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
+    view.setIncludeFolders(true);
+
+    const picker = new (window as any).google.picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(accessToken)
+      .setDeveloperKey(developerKey)
+      .setCallback((data: any) => pickerCallback(data, accessToken))
+      .build();
+    picker.setVisible(true);
+  };
+
+  const pickerCallback = async (data: any, accessToken: string) => {
+    if (data.action === (window as any).google.picker.Action.PICKED) {
+      const doc = data.docs[0];
+      const fileId = doc.id;
+      const filename = doc.name;
+      const mimeType = doc.mimeType;
+      const size = doc.sizeBytes || 0;
+
+      // Add temporary uploading item
+      const tempId = crypto.randomUUID();
+      setAttachments(prev => [
+        ...prev,
+        {
+          tempId,
+          filename,
+          contentType: mimeType,
+          size,
+          key: '',
+          isUploading: true,
+        }
+      ]);
+
+      try {
+        const res = await fetch('/api/attachments/google-drive', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fileId,
+            accessToken,
+            filename,
+            mimeType,
+            size,
+          }),
+        });
+
+        const resData = await res.json();
+        if (res.ok && resData.success) {
+          setAttachments(prev => prev.map(item => 
+            item.tempId === tempId 
+              ? { ...item, key: resData.key, isUploading: false }
+              : item
+          ));
+        } else {
+          setAttachments(prev => prev.map(item => 
+            item.tempId === tempId 
+              ? { ...item, isUploading: false, error: resData.error || 'Error al descargar desde Drive.' }
+              : item
+          ));
+        }
+      } catch (err) {
+        console.error('Error downloading from Drive:', err);
+        setAttachments(prev => prev.map(item => 
+          item.tempId === tempId 
+            ? { ...item, isUploading: false, error: 'Error de red.' }
+            : item
+        ));
+      }
+    }
+  };
+
 
   // AI assistant states
   const [showAiAssistant, setShowAiAssistant] = useState(false);
@@ -1242,6 +1398,14 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-teal-400"
               >
                 <Paperclip className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Adjuntar desde Google Drive"
+                onClick={handleGoogleDriveAttach}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-teal-400"
+              >
+                <GoogleDriveIcon className="h-3.5 w-3.5" />
               </button>
               <input
                 type="file"

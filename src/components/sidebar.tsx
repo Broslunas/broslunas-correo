@@ -33,10 +33,10 @@ interface SidebarProps {
   role?: string;
   twoFactorEnabled?: boolean;
   onSecurityClick?: () => void;
-  onSettingsClick?: () => void;
   isPushSupported: boolean;
   isPushSubscribed: boolean;
   onTogglePush: () => void;
+
 }
 
 export default function Sidebar({
@@ -46,10 +46,10 @@ export default function Sidebar({
   role,
   twoFactorEnabled,
   onSecurityClick,
-  onSettingsClick,
   isPushSupported,
   isPushSubscribed,
   onTogglePush,
+
 }: SidebarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed to match SSR
@@ -271,22 +271,7 @@ export default function Sidebar({
             )}
           </button>
 
-          {/* Settings (IMAP / SMTP credentials) */}
-          {onSettingsClick && (
-            <button
-              onClick={onSettingsClick}
-              title={isCollapsed ? "Configuración IMAP/SMTP" : undefined}
-              className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer hover:bg-white/5 shrink-0`}
-              style={{ border: '1px solid transparent' }}
-            >
-              <Settings className="h-4 w-4 shrink-0" style={{ color: 'hsl(215 20% 50%)' }} />
-              {!isCollapsed && (
-                <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: 'hsl(210 40% 75%)' }}>
-                  Configuración
-                </span>
-              )}
-            </button>
-          )}
+
 
           {/* Push notifications */}
           {isPushSupported && (

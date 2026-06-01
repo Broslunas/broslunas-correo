@@ -551,7 +551,6 @@ function MailContent() {
         role={user?.role}
         twoFactorEnabled={user?.twoFactorEnabled}
         onSecurityClick={() => setTwoFactorModalOpen(true)}
-        onSettingsClick={() => router.push('/settings')}
         isPushSupported={isPushSupported}
         isPushSubscribed={isPushSubscribed}
         onTogglePush={handleTogglePush}

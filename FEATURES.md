@@ -60,12 +60,10 @@
 
 ## ⚙️ 6. Rendimiento, Integración e Infraestructura
 41. **Arquitectura Cloudflare Workers**: Procesamiento ultrarrápido en el Edge para la recepción, enrutamiento y envío ágil de correos.
-42. **Sincronización IMAP/POP3/SMTP**: Soporte para conectar clientes de correo externos (como Thunderbird, Outlook o Apple Mail).
-43. **Soporte Offline**: Uso de Service Workers para permitir la lectura de correos ya descargados y redacción de borradores sin conexión a internet.
-44. **Búsqueda predictiva y auto-completado de contactos**: Sugerencias inmediatas de correos al empezar a escribir en los campos "Para", "CC" y "CCO".
-45. **API REST / Webhooks**: Integraciones externas para que desarrolladores puedan enviar correos o reaccionar a correos entrantes mediante código.
-46. **Compresión y optimización de adjuntos**: Reducción automática de tamaño en imágenes adjuntas y optimización del almacenamiento en base de datos.
-47. **Copias de seguridad automáticas (Backups)**: Sistema programado para respaldar bandejas de entrada y permitir restauraciones selectivas.
-48. **Métricas y analíticas de envío**: Gráficos de volumen de correos enviados/recibidos, tasas de rebote (bounce rate) y spam.
-49. **Migración fácil**: Herramienta para importar correos existentes desde otros proveedores a través de IMAP.
-50. **Monitoreo de reputación de IP**: Alertas y herramientas para asegurar que la IP/dominio del servidor de salida no entre en listas negras de spam.
+42. **Soporte Offline**: Uso de Service Workers para permitir la lectura de correos ya descargados y redacción de borradores sin conexión a internet.
+43. **Búsqueda predictiva y auto-completado de contactos**: Sugerencias inmediatas de correos al empezar a escribir en los campos "Para", "CC" y "CCO".
+44. **API REST / Webhooks**: Integraciones externas para que desarrolladores puedan enviar correos o reaccionar a correos entrantes mediante código.
+45. **Compresión y optimización de adjuntos**: Reducción automática de tamaño en imágenes adjuntas y optimización del almacenamiento en base de datos.
+46. **Copias de seguridad automáticas (Backups)**: Sistema programado para respaldar bandejas de entrada y permitir restauraciones selectivas.
+47. **Métricas y analíticas de envío**: Gráficos de volumen de correos enviados/recibidos, tasas de rebote (bounce rate) y spam.
+48. **Monitoreo de reputación de IP**: Alertas y herramientas para asegurar que la IP/dominio del servidor de salida no entre en listas negras de spam.
