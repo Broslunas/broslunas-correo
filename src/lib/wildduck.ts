@@ -113,9 +113,13 @@ export async function wildduckRequest<T = any>(
  */
 export async function ensureWildDuckUser(email: string, name: string, passwordHash: string) {
   // First, check if the user already exists to make it truly idempotent
-  const getRes = await wildduckRequest('/users', { query: { username: email } });
-  if (getRes.ok && getRes.data && Array.isArray(getRes.data.results) && getRes.data.results.length > 0) {
-    return getRes.data.results[0];
+  const targetEmail = email.toLowerCase().trim();
+  const getRes = await wildduckRequest('/users', { query: { query: targetEmail } });
+  if (getRes.ok && getRes.data && Array.isArray(getRes.data.results)) {
+    const existing = getRes.data.results.find(
+      (u: any) => u.username?.toLowerCase() === targetEmail || u.address?.toLowerCase() === targetEmail
+    );
+    if (existing) return existing;
   }
 
   // Generate a random secure password for the user in WildDuck if not provided
@@ -135,9 +139,12 @@ export async function ensureWildDuckUser(email: string, name: string, passwordHa
   if (res.ok) return res.data;
 
   // Secondary fallback: if creation fails, try fetching once more in case of a race condition
-  const getResRetry = await wildduckRequest('/users', { query: { username: email } });
-  if (getResRetry.ok && getResRetry.data && Array.isArray(getResRetry.data.results) && getResRetry.data.results.length > 0) {
-    return getResRetry.data.results[0];
+  const getResRetry = await wildduckRequest('/users', { query: { query: targetEmail } });
+  if (getResRetry.ok && getResRetry.data && Array.isArray(getResRetry.data.results)) {
+    const existing = getResRetry.data.results.find(
+      (u: any) => u.username?.toLowerCase() === targetEmail || u.address?.toLowerCase() === targetEmail
+    );
+    if (existing) return existing;
   }
 
   console.error('[wildduck] ensureWildDuckUser failed:', res.status, res.error);
