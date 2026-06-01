@@ -158,11 +158,13 @@ export async function POST(request: Request) {
           const wdUser = await ensureWildDuckUser(recipient, recipient, '');
           if (wdUser?._id || wdUser?.id) {
             const userId = String(wdUser._id || wdUser.id);
-            await pushInboundToWildDuck({
+            const mirrorSuccess = await pushInboundToWildDuck({
               userId,
               mailboxPath: 'INBOX',
               rawMime,
+              flags: [], // Empty flags means the email will be marked as UNREAD
             });
+            console.log(`[wildduck] Mirrored inbound message for ${recipient} (userId: ${userId}) -> Success: ${mirrorSuccess}`);
           }
         }
       } catch (wdErr) {
