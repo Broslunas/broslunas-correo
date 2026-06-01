@@ -18,6 +18,8 @@ import {
   Mail,
   Inbox,
   Send,
+  Smartphone,
+  Laptop,
 } from 'lucide-react';
 import Sidebar from '@/components/sidebar';
 import TwoFactorModal from '@/components/two-factor-modal';
@@ -63,6 +65,7 @@ export default function SettingsPage() {
   const [generating, setGenerating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'gmail' | 'apple' | 'thunderbird' | 'outlook'>('gmail');
 
   // Re-auth state
   const [user, setUser] = useState<{ email: string; name: string; role: string } | null>(null);
@@ -387,42 +390,162 @@ export default function SettingsPage() {
 
                     {/* Generated password reveal */}
                     {generatedPassword && (
-                      <div
-                        className="mt-4 p-4 rounded-xl"
-                        style={{ background: 'rgba(45,212,191,0.08)', border: '1px solid rgba(45,212,191,0.25)' }}
-                      >
-                        <div className="flex items-start gap-2 mb-3">
-                          <AlertCircle className="h-4 w-4 text-teal-400 shrink-0 mt-0.5" />
-                          <p className="text-xs text-teal-200 font-medium">
-                            Esta contraseña solo se mostrará una vez. Cópiala ahora.
-                          </p>
+                      <div className="space-y-4">
+                        <div
+                          className="mt-4 p-4 rounded-xl"
+                          style={{ background: 'rgba(45,212,191,0.08)', border: '1px solid rgba(45,212,191,0.25)' }}
+                        >
+                          <div className="flex items-start gap-2 mb-3">
+                            <AlertCircle className="h-4 w-4 text-teal-400 shrink-0 mt-0.5" />
+                            <p className="text-xs text-teal-200 font-medium">
+                              Esta contraseña solo se mostrará una vez. Cópiala ahora.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 px-3 py-2.5 rounded-lg bg-black/40 text-sm font-mono text-foreground break-all tracking-wider">
+                              {showPassword ? generatedPassword : '••••••••••••••••••••••••••••'}
+                            </code>
+                            <button
+                              onClick={() => setShowPassword(s => !s)}
+                              className="p-2 rounded-lg hover:bg-white/5 cursor-pointer"
+                              title={showPassword ? 'Ocultar' : 'Mostrar'}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => copyToClipboard(generatedPassword, 'gen')}
+                              className="p-2 rounded-lg hover:bg-white/5 cursor-pointer"
+                              title="Copiar"
+                            >
+                              {copied === 'gen' ? (
+                                <Check className="h-4 w-4 text-teal-400" />
+                              ) : (
+                                <Copy className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 px-3 py-2.5 rounded-lg bg-black/40 text-sm font-mono text-foreground break-all">
-                            {showPassword ? generatedPassword : '••••••••••••••••••••••••••••'}
-                          </code>
-                          <button
-                            onClick={() => setShowPassword(s => !s)}
-                            className="p-2 rounded-lg hover:bg-white/5"
-                            title={showPassword ? 'Ocultar' : 'Mostrar'}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-muted-foreground" />
+
+                        {/* Interactive Tutorial for Mail Clients */}
+                        <div className="p-5 rounded-xl border border-white/5 bg-white/[0.01]">
+                          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                            <Smartphone className="h-4 w-4 text-teal-400" /> Guía de configuración para tus aplicaciones
+                          </h3>
+                          
+                          {/* Tabs */}
+                          <div className="flex border-b border-white/10 mb-4 overflow-x-auto">
+                            <button
+                              onClick={() => setActiveTab('gmail')}
+                              className={`px-3 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                                activeTab === 'gmail' ? 'border-teal-400 text-teal-400' : 'border-transparent text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              Gmail App (Móvil)
+                            </button>
+                            <button
+                              onClick={() => setActiveTab('apple')}
+                              className={`px-3 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                                activeTab === 'apple' ? 'border-teal-400 text-teal-400' : 'border-transparent text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              Apple Mail (iPhone/Mac)
+                            </button>
+                            <button
+                              onClick={() => setActiveTab('thunderbird')}
+                              className={`px-3 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                                activeTab === 'thunderbird' ? 'border-teal-400 text-teal-400' : 'border-transparent text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              Thunderbird
+                            </button>
+                            <button
+                              onClick={() => setActiveTab('outlook')}
+                              className={`px-3 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                                activeTab === 'outlook' ? 'border-teal-400 text-teal-400' : 'border-transparent text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              Outlook / Otros
+                            </button>
+                          </div>
+
+                          {/* Tab Contents */}
+                          <div className="text-xs text-muted-foreground space-y-3">
+                            {activeTab === 'gmail' && (
+                              <div className="space-y-2">
+                                <p className="text-teal-300 font-semibold mb-1">Configuración en Android o iOS:</p>
+                                <ol className="list-decimal pl-4 space-y-1.5">
+                                  <li>Abre Gmail, ve a Ajustes y selecciona <strong className="text-foreground">Añadir cuenta</strong>.</li>
+                                  <li>Elige la opción <strong className="text-foreground">Otro (IMAP/POP)</strong>.</li>
+                                  <li>Escribe tu correo: <code className="text-teal-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">{selectedAccount}</code>.</li>
+                                  <li>En <strong className="text-foreground">Servidor Entrante (IMAP)</strong> usa:
+                                    <ul className="list-disc pl-4 mt-0.5 text-muted-foreground space-y-0.5">
+                                      <li>Servidor: <code className="text-foreground font-mono">{data.imapHost}</code></li>
+                                      <li>Puerto: <code className="text-foreground font-mono">{data.imapPort}</code></li>
+                                      <li>Seguridad: <code className="text-foreground">{data.imapSecurity}</code> (SSL/TLS)</li>
+                                      <li>Contraseña: <code className="text-teal-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">{generatedPassword}</code></li>
+                                    </ul>
+                                  </li>
+                                  <li>En <strong className="text-foreground">Servidor Saliente (SMTP)</strong> usa:
+                                    <ul className="list-disc pl-4 mt-0.5 text-muted-foreground space-y-0.5">
+                                      <li>Servidor: <code className="text-foreground font-mono">{data.smtpHost}</code></li>
+                                      <li>Puerto: <strong className="text-amber-400 font-bold font-mono">587</strong></li>
+                                      <li>Seguridad: <strong className="text-amber-400 font-bold">STARTTLS</strong> (¡importante!)</li>
+                                      <li>Contraseña: <code className="text-teal-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">{generatedPassword}</code></li>
+                                    </ul>
+                                  </li>
+                                </ol>
+                              </div>
                             )}
-                          </button>
-                          <button
-                            onClick={() => copyToClipboard(generatedPassword, 'gen')}
-                            className="p-2 rounded-lg hover:bg-white/5"
-                            title="Copiar"
-                          >
-                            {copied === 'gen' ? (
-                              <Check className="h-4 w-4 text-teal-400" />
-                            ) : (
-                              <Copy className="h-4 w-4 text-muted-foreground" />
+
+                            {activeTab === 'apple' && (
+                              <div className="space-y-2">
+                                <p className="text-teal-300 font-semibold mb-1">Configuración en iPhone, iPad o Mac:</p>
+                                <ol className="list-decimal pl-4 space-y-1.5">
+                                  <li>Ve a <strong className="text-foreground">Ajustes &gt; Mail &gt; Cuentas &gt; Añadir cuenta</strong>.</li>
+                                  <li>Selecciona <strong className="text-foreground">Otra cuenta de correo</strong>.</li>
+                                  <li>Escribe tu nombre, tu correo (<code className="text-teal-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">{selectedAccount}</code>) y la contraseña: <code className="text-teal-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">{generatedPassword}</code>.</li>
+                                  <li>Elige el tipo de cuenta <strong className="text-foreground">IMAP</strong>.</li>
+                                  <li>Introduce los servidores de correo entrante (<code className="text-foreground font-mono">{data.imapHost}</code>) y saliente (<code className="text-foreground font-mono">{data.smtpHost}</code>).</li>
+                                  <li>Si falla al inicio, revisa los ajustes del servidor de salida (SMTP) y asegúrate de cambiar el puerto a <strong className="text-foreground font-mono">587</strong> con conexión segura <strong className="text-foreground">STARTTLS</strong> / <strong className="text-foreground">TLS</strong>.</li>
+                                </ol>
+                              </div>
                             )}
-                          </button>
+
+                            {activeTab === 'thunderbird' && (
+                              <div className="space-y-2">
+                                <p className="text-teal-300 font-semibold mb-1">Configuración en Mozilla Thunderbird:</p>
+                                <ol className="list-decimal pl-4 space-y-1.5">
+                                  <li>Abre Thunderbird y selecciona <strong className="text-foreground">Configurar cuenta de correo</strong>.</li>
+                                  <li>Ingresa tu nombre, correo y esta contraseña de aplicación: <code className="text-teal-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">{generatedPassword}</code>.</li>
+                                  <li>Presiona <strong className="text-foreground">Configurar manualmente</strong>.</li>
+                                  <li>Ajusta los siguientes campos:
+                                    <ul className="list-disc pl-4 mt-1 space-y-1 text-muted-foreground">
+                                      <li><strong className="text-foreground">Entrante:</strong> IMAP | <code className="text-foreground font-mono">{data.imapHost}</code> | Puerto <code className="text-foreground font-mono">{data.imapPort}</code> | SSL/TLS | Contraseña normal</li>
+                                      <li><strong className="text-foreground">Saliente:</strong> SMTP | <code className="text-foreground font-mono">{data.smtpHost}</code> | Puerto <strong className="text-amber-400 font-bold font-mono">587</strong> | STARTTLS | Contraseña normal</li>
+                                    </ul>
+                                  </li>
+                                  <li>Haz clic en <strong className="text-foreground">Hecho</strong> para validar.</li>
+                                </ol>
+                              </div>
+                            )}
+
+                            {activeTab === 'outlook' && (
+                              <div className="space-y-2">
+                                <p className="text-teal-300 font-semibold mb-1">Configuración en Outlook u otros clientes:</p>
+                                <ul className="list-disc pl-4 space-y-1.5">
+                                  <li><strong className="text-foreground">Usuario / Username:</strong> Usa tu correo completo: <code className="text-teal-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">{selectedAccount}</code>.</li>
+                                  <li><strong className="text-foreground">Contraseña / Password:</strong> Usa únicamente esta clave generada: <code className="text-teal-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">{generatedPassword}</code>.</li>
+                                  <li><strong className="text-foreground">Servidor IMAP:</strong> <code className="text-foreground font-mono">{data.imapHost}</code> (Puerto <code className="text-foreground font-mono">{data.imapPort}</code>, tipo de seguridad <code className="text-foreground">SSL/TLS</code>).</li>
+                                  <li><strong className="text-foreground">Servidor SMTP:</strong> <code className="text-foreground font-mono">{data.smtpHost}</code> (Puerto <strong className="text-amber-400 font-bold font-mono">587</strong>, tipo de seguridad <strong className="text-amber-400 font-bold">STARTTLS</strong>).</li>
+                                  <li><strong className="text-foreground">Autenticación:</strong> Elige siempre <strong className="text-foreground">Contraseña normal / Plaintext Password</strong> (no OAuth2 ni inicio de sesión seguro cifrado tipo SPA/MD5).</li>
+                                </ul>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
