@@ -131,6 +131,15 @@ export async function POST(request: NextRequest) {
 
     const result = await db.collection('users').insertOne(newUser);
 
+    // Send welcome email notification (non-blocking)
+    try {
+      const { sendWelcomeUserEmail } = await import('@/lib/mailjet');
+      sendWelcomeUserEmail(cleanEmail, cleanRole, cleanAddresses)
+        .catch(err => console.error('Failed to send welcome user email:', err));
+    } catch (err) {
+      console.error('Error triggering welcome user email:', err);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Usuario agregado correctamente',
@@ -248,6 +257,15 @@ export async function DELETE(request: NextRequest) {
     }
 
     console.log(`Administrator ${auth.email} successfully revoked access for email: ${cleanEmail}`);
+
+    // Send revoked email notification (non-blocking)
+    try {
+      const { sendRevokeUserEmail } = await import('@/lib/mailjet');
+      sendRevokeUserEmail(cleanEmail)
+        .catch(err => console.error('Failed to send revoke access email:', err));
+    } catch (err) {
+      console.error('Error triggering revoke access email:', err);
+    }
 
     return NextResponse.json({
       success: true,

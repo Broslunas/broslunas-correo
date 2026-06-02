@@ -125,6 +125,22 @@ export async function PATCH(request: NextRequest) {
       { $set: updateFields }
     );
 
+    // Send email notification of modified settings
+    const modifiedFields: string[] = [];
+    if (autoReplyEnabled !== undefined) modifiedFields.push('Estado de respuesta automática');
+    if (autoReplySubject !== undefined || autoReplyBody !== undefined) modifiedFields.push('Plantilla de respuesta automática');
+    if (signature !== undefined) modifiedFields.push('Firma de correo');
+
+    if (modifiedFields.length > 0 && verification.userEmail) {
+      try {
+        const { sendSettingsChangedEmail } = await import('@/lib/mailjet');
+        sendSettingsChangedEmail(verification.userEmail, verification.userEmail.split('@')[0], modifiedFields)
+          .catch(err => console.error('Failed to send settings change notification:', err));
+      } catch (err) {
+        console.error('Error triggering settings change notification:', err);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Configuración actualizada correctamente'

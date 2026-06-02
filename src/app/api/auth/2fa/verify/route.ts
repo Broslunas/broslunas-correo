@@ -189,11 +189,40 @@ export async function POST(request: Request) {
             { email: session.email },
             { $set: { twoFactorEnabled: true, updatedAt: new Date() } }
           );
+          try {
+            const { send2FAStatusEmail } = await import('@/lib/mailjet');
+            send2FAStatusEmail(session.email, session.name || 'Usuario', true)
+              .catch(err => console.error('Failed to send 2FA enabled email:', err));
+          } catch (err) {
+            console.error('Error triggering 2FA enabled email:', err);
+          }
         }
       }
     }
 
     if (!isTokenValid) {
+      try {
+        await db.collection('users').updateOne(
+          { email: session.email },
+          { $inc: { failedLoginAttempts: 1 } }
+        );
+        const updatedUser = await db.collection('users').findOne({ email: session.email });
+        const failedAttempts = updatedUser?.failedLoginAttempts || 0;
+        if (failedAttempts === 5 || failedAttempts === 10) {
+          const ip = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     request.headers.get('cf-connecting-ip') || 
+                     'IP desconocida';
+          const cleanIp = ip.split(',')[0].trim();
+          
+          const { sendBruteForceAlertEmail } = await import('@/lib/mailjet');
+          sendBruteForceAlertEmail(session.email, user.name || session.name || 'Usuario', cleanIp, failedAttempts)
+            .catch(err => console.error('Failed to send brute force email alert:', err));
+        }
+      } catch (err) {
+        console.error('Error tracking failed login attempts:', err);
+      }
+
       return NextResponse.json({ error: 'Código de verificación incorrecto. Inténtalo de nuevo.' }, { status: 400 });
     }
 
@@ -226,6 +255,47 @@ export async function POST(request: Request) {
 
       // Clear temporary session cookie
       response.cookies.delete('webmail_temp_session');
+
+      // Reset failed attempts upon successful login
+      try {
+        await db.collection('users').updateOne(
+          { email: session.email },
+          { $unset: { failedLoginAttempts: "" } }
+        ).catch(err => console.error('Failed to reset login attempts:', err));
+      } catch (err) {
+        console.error('Error resetting login attempts:', err);
+      }
+
+      // Send login security email notification (non-blocking)
+      try {
+        const ip = request.headers.get('x-forwarded-for') || 
+                   request.headers.get('x-real-ip') || 
+                   request.headers.get('cf-connecting-ip') || 
+                   'IP desconocida';
+        const cleanIp = ip.split(',')[0].trim();
+        const userAgent = request.headers.get('user-agent') || 'Dispositivo desconocido';
+        
+        // Format date and time in Spanish standard timezone
+        const now = new Date();
+        const formattedTime = now.toLocaleString('es-ES', {
+          timeZone: 'Europe/Madrid',
+          dateStyle: 'long',
+          timeStyle: 'medium'
+        });
+
+        const { sendLoginNotificationEmail } = await import('@/lib/mailjet');
+        sendLoginNotificationEmail(
+          session.email,
+          session.name || 'Usuario',
+          cleanIp,
+          userAgent,
+          formattedTime
+        ).catch(err => {
+          console.error('Failed to send login notification email:', err);
+        });
+      } catch (err) {
+        console.error('Error triggered during sending login security email:', err);
+      }
     }
 
     return response;
@@ -266,6 +336,13 @@ export async function DELETE(request: Request) {
         } 
       }
     );
+    try {
+      const { send2FAStatusEmail } = await import('@/lib/mailjet');
+      send2FAStatusEmail(session.email, session.name || 'Usuario', false)
+        .catch(err => console.error('Failed to send 2FA disabled email:', err));
+    } catch (err) {
+      console.error('Error triggering 2FA disabled email:', err);
+    }
 
     return NextResponse.json({
       success: true,
