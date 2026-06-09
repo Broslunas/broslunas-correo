@@ -125,6 +125,17 @@ function SettingsContent() {
     { id: '3', device: 'iPad Pro en iOS 17', ip: '80.34.12.189', date: 'Ayer, 18:42', current: false }
   ]);
 
+  // Passkeys states
+  interface PasskeyInfo {
+    _id: string;
+    name: string;
+    createdAt: string;
+    lastUsedAt?: string;
+  }
+  const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
+  const [loadingPasskeys, setLoadingPasskeys] = useState(false);
+  const [registeringPasskey, setRegisteringPasskey] = useState(false);
+
   // Blocked Senders Blacklist
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [newBlockedEmail, setNewBlockedEmail] = useState('');
@@ -283,9 +294,25 @@ function SettingsContent() {
     }
   };
 
+  const fetchPasskeys = async () => {
+    setLoadingPasskeys(true);
+    try {
+      const res = await fetch('/api/auth/passkey');
+      if (res.ok) {
+        const data = await res.json();
+        setPasskeys(data.passkeys || []);
+      }
+    } catch (err) {
+      console.error('Error fetching passkeys:', err);
+    } finally {
+      setLoadingPasskeys(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'security') {
       fetch2FAStatus();
+      fetchPasskeys();
     }
   }, [activeTab]);
 
@@ -491,6 +518,78 @@ function SettingsContent() {
       setError('Error de red al desactivar 2FA.');
     } finally {
       setActionLoading2FA(false);
+    }
+  };
+
+  const handleRegisterPasskey = async () => {
+    const keyName = prompt('Introduce un nombre descriptivo para esta llave de paso (ej. "Mi MacBook TouchID", "Llave USB Yubikey"):');
+    if (keyName === null) return; // Cancelled
+    const name = keyName.trim() || `Llave de paso (${new Date().toLocaleDateString('es-ES')})`;
+
+    setRegisteringPasskey(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const optionsRes = await fetch('/api/auth/passkey/register/options');
+      if (!optionsRes.ok) {
+        const errData = await optionsRes.json();
+        throw new Error(errData.error || 'No se pudieron obtener las opciones de registro.');
+      }
+      const options = await optionsRes.json();
+
+      const { startRegistration } = await import('@simplewebauthn/browser');
+
+      const credential = await startRegistration({ optionsJSON: options });
+
+      const verifyRes = await fetch('/api/auth/passkey/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential, name }),
+      });
+
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) {
+        throw new Error(verifyData.error || 'La verificación de la llave de paso falló.');
+      }
+
+      setSuccess('¡Llave de paso registrada con éxito!');
+      fetchPasskeys();
+    } catch (err: any) {
+      console.error(err);
+      if (err.name !== 'NotAllowedError') {
+        setError(err.message || 'Error al registrar la llave de paso.');
+      }
+    } finally {
+      setRegisteringPasskey(false);
+    }
+  };
+
+  const handleDeletePasskey = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta llave de paso? Ya no podrás usarla para iniciar sesión.')) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await fetch('/api/auth/passkey', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess('Llave de paso eliminada correctamente.');
+        fetchPasskeys();
+      } else {
+        throw new Error(data.error || 'No se pudo eliminar la llave de paso.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Error al eliminar la llave de paso.');
     }
   };
 
@@ -1180,6 +1279,80 @@ function SettingsContent() {
                       )}
                     </div>
                   ) : null}
+                </div>
+
+                {/* Passkeys Management Section */}
+                <div className="space-y-4 border border-neutral-900 rounded-2xl bg-neutral-950/20 p-5">
+                  <div className="flex items-center justify-between select-none">
+                    <div className="flex items-center gap-2">
+                      <KeyRound className="h-4.5 w-4.5 text-primary" />
+                      <h3 className="text-xs font-bold text-primary uppercase tracking-widest">
+                        Llaves de paso (Passkeys)
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={registeringPasskey}
+                      onClick={handleRegisterPasskey}
+                      className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-primary hover:bg-primary/85 text-neutral-950 disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
+                    >
+                      {registeringPasskey ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Registrando...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-3 w-3" />
+                          Añadir llave
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Las llaves de paso te permiten iniciar sesión de forma segura usando biometría (huella dactilar, FaceID) o el PIN de tu dispositivo, sin necesidad de contraseñas ni códigos 2FA.
+                  </p>
+
+                  <div className="pt-2">
+                    {loadingPasskeys ? (
+                      <div className="py-4 flex flex-col items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <p className="text-[10px] text-muted-foreground">Cargando llaves de paso...</p>
+                      </div>
+                    ) : passkeys.length === 0 ? (
+                      <div className="p-4 rounded-xl border border-dashed border-neutral-800 bg-neutral-950/30 text-center select-none">
+                        <p className="text-xs text-muted-foreground italic opacity-60">No tienes ninguna llave de paso registrada.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {passkeys.map((pk) => (
+                          <div 
+                            key={pk._id}
+                            className="flex items-center justify-between p-3.5 rounded-xl border border-neutral-900/50 bg-neutral-950/40"
+                          >
+                            <div className="min-w-0 space-y-0.5">
+                              <p className="text-xs font-semibold text-foreground truncate">
+                                {pk.name}
+                              </p>
+                              <p className="text-[9px] text-muted-foreground">
+                                Creada el {new Date(pk.createdAt).toLocaleDateString('es-ES')} a las {new Date(pk.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                {pk.lastUsedAt && ` • Usada por última vez: ${new Date(pk.lastUsedAt).toLocaleDateString('es-ES')}`}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePasskey(pk._id)}
+                              className="text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-colors p-1.5 rounded-lg border border-transparent hover:border-red-900/20 shrink-0 cursor-pointer"
+                              title="Eliminar llave de paso"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Sender Blacklist Section */}

@@ -9,7 +9,9 @@ import {
   Shield, 
   Lock, 
   Search,
-  Sparkles
+  Sparkles,
+  KeyRound,
+  Loader2
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -257,6 +259,48 @@ function InboxSimulation() {
 function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  const displayError = loginError || (error ? decodeURIComponent(error) : '');
+
+  const handlePasskeyLogin = async () => {
+    setPasskeyLoading(true);
+    setLoginError('');
+
+    try {
+      const optionsRes = await fetch('/api/auth/passkey/login/options');
+      if (!optionsRes.ok) {
+        const errData = await optionsRes.json().catch(() => ({}));
+        throw new Error(errData.error || 'No se pudieron obtener las opciones de inicio de sesión.');
+      }
+      const options = await optionsRes.json();
+
+      const { startAuthentication } = await import('@simplewebauthn/browser');
+
+      const credential = await startAuthentication({ optionsJSON: options });
+
+      const verifyRes = await fetch('/api/auth/passkey/login/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      });
+
+      const verifyData = await verifyRes.json().catch(() => ({}));
+      if (!verifyRes.ok) {
+        throw new Error(verifyData.error || 'El inicio de sesión con llave de paso falló.');
+      }
+
+      window.location.href = '/mail?inbox=main';
+    } catch (err: any) {
+      console.error(err);
+      if (err.name !== 'NotAllowedError') {
+        setLoginError(err.message || 'Error al iniciar sesión con llave de paso.');
+      }
+    } finally {
+      passkeyLoading && setPasskeyLoading(false);
+    }
+  };
 
   // Detect if this page is loading inside the popup as an error redirect
   useEffect(() => {
@@ -358,7 +402,7 @@ function LoginContent() {
         </div>
 
         {/* Error */}
-        {error && (
+        {displayError && (
           <div
             className="rounded-xl p-3.5 text-xs flex items-start gap-2.5 mb-5"
             style={{
@@ -369,10 +413,44 @@ function LoginContent() {
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: '#f87171' }} />
             <div className="text-left">
               <p className="font-semibold" style={{ color: '#fca5a5' }}>Error de acceso</p>
-              <p className="mt-0.5 opacity-85" style={{ color: '#fca5a5' }}>{decodeURIComponent(error)}</p>
+              <p className="mt-0.5 opacity-85" style={{ color: '#fca5a5' }}>{displayError}</p>
             </div>
           </div>
         )}
+
+        {/* Passkey Login Button */}
+        <button
+          onClick={handlePasskeyLogin}
+          disabled={passkeyLoading}
+          id="btn-passkey-login"
+          className="group w-full flex items-center justify-center gap-3 rounded-xl py-3.5 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden text-neutral-950 shadow-[0_4px_24px_hsl(var(--primary)/0.2)] disabled:opacity-50 mb-3"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
+            border: '1px solid hsl(var(--primary)/0.3)',
+          }}
+        >
+          {/* Shimmer Effect */}
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+
+          {passkeyLoading ? (
+            <Loader2 className="h-5 w-5 shrink-0 relative z-10 animate-spin text-neutral-950" />
+          ) : (
+            <KeyRound className="h-5 w-5 shrink-0 relative z-10 text-neutral-950" />
+          )}
+          <span className="relative z-10 font-bold">
+            {passkeyLoading ? 'Iniciando sesión...' : 'Iniciar sesión con Passkey'}
+          </span>
+          <ArrowRight
+            className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10 text-neutral-950"
+          />
+        </button>
+
+        {/* Divider */}
+        <div className="flex items-center my-4 select-none">
+          <div className="flex-1 h-px bg-white/5" />
+          <span className="px-3 text-[10px] uppercase tracking-widest text-slate-500 font-bold">o también</span>
+          <div className="flex-1 h-px bg-white/5" />
+        </div>
 
         {/* Google Login Button */}
         <button

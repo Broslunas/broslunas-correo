@@ -18,6 +18,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/auth/google') ||
     pathname.startsWith('/api/auth/2fa') ||
     pathname.startsWith('/api/auth/invite') ||
+    pathname.startsWith('/api/auth/passkey/login') ||
     pathname === '/api/auth' // Logout endpoint
   ) {
     return NextResponse.next();
