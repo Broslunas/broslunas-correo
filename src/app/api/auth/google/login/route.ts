@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
+import { getAppUrl } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  // Use explicit APP_URL env var if set, otherwise fall back to request origin
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  const appUrl = getAppUrl(request);
   const redirectUri = `${appUrl}/api/auth/google/callback`;
 
   // Log so you can see what's being sent (visible in terminal)

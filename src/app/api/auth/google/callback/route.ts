@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { sendEmail2FACode } from '@/lib/mailjet';
+import { getAppUrl } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,8 +12,7 @@ export async function GET(request: NextRequest) {
   let appUrl = 'http://localhost:3000';
   try {
     const { searchParams } = new URL(request.url);
-    // Use explicit APP_URL env var so both login and callback use the same URI
-    appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    appUrl = getAppUrl(request);
     const code = searchParams.get('code');
     const errorParam = searchParams.get('error');
 

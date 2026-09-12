@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { connectToDatabase } from '@/lib/db';
 import { jwtVerify } from 'jose';
+import { getAppUrl } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. WebAuthn Config
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    const appUrl = getAppUrl(request);
     const url = new URL(appUrl);
     const rpID = url.hostname;
     const origin = url.origin;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { connectToDatabase } from '@/lib/db';
 import { SignJWT } from 'jose';
+import { getAppUrl } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Desafío expirado o no encontrado. Por favor, reintenta.' }, { status: 400 });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    const appUrl = getAppUrl(request);
     const url = new URL(appUrl);
     const rpID = url.hostname;
     const origin = url.origin;

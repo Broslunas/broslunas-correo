@@ -15,3 +15,12 @@ export function formatBytes(bytes: number, decimals = 2) {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+// Dynamically resolves current app origin from request headers (multi-domain support)
+export function getAppUrl(request: Request): string {
+  const forwardedProto = request.headers.get('x-forwarded-proto');
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const host = forwardedHost || request.headers.get('host') || new URL(request.url).host;
+  const proto = forwardedProto || (request.url.startsWith('https') ? 'https' : 'http');
+  return `${proto}://${host}`;
+}
