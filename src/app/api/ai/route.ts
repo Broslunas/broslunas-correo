@@ -56,6 +56,7 @@ async function callAIAPI(prompt: string, customSystemInstruction?: string): Prom
       model,
       messages,
       temperature: 0.3,
+      stream: false,
     }),
   });
 
@@ -65,8 +66,39 @@ async function callAIAPI(prompt: string, customSystemInstruction?: string): Prom
     throw new Error(`Error en API de IA (${response.status}): ${errorText}`);
   }
 
-  const data = await response.json();
-  const text = data.choices?.[0]?.message?.content;
+  const rawText = await response.text();
+  let text = '';
+
+  const trimmed = rawText.trim();
+  if (trimmed.startsWith('data:') || trimmed.includes('\ndata:')) {
+    // Handle SSE stream fallback if router sends data chunks
+    const lines = trimmed.split('\n');
+    for (const line of lines) {
+      const cleanLine = line.trim();
+      if (!cleanLine.startsWith('data:')) continue;
+      const jsonStr = cleanLine.slice(5).trim();
+      if (!jsonStr || jsonStr === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const delta = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
+        text += delta;
+      } catch {
+        // Skip invalid SSE chunks
+      }
+    }
+  } else {
+    // Normal JSON response
+    try {
+      const parsed = JSON.parse(trimmed);
+      text = parsed.choices?.[0]?.message?.content || parsed.choices?.[0]?.delta?.content || '';
+    } catch {
+      text = trimmed;
+    }
+  }
+
+  // Strip reasoning block if returned by models like DeepSeek / MiniMax
+  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
   if (!text) {
     throw new Error('Respuesta vacía del servicio de IA');
   }
