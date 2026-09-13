@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   Mail,
@@ -18,8 +18,6 @@ import {
   MinusSquare,
   Folder,
   X,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 
 interface Email {
@@ -56,10 +54,10 @@ interface EmailListProps {
   availableAccounts?: { email: string; name: string }[];
   selectedAccount?: string;
   onAccountChange?: (account: string) => void;
-  page?: number;
-  totalPages?: number;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   totalCount?: number;
-  onPageChange?: (page: number) => void;
 }
 
 function SenderAvatar({ name, address }: { name: string; address: string }) {
@@ -118,14 +116,34 @@ export default function EmailList({
   availableAccounts = [],
   selectedAccount = '',
   onAccountChange = () => {},
-  page = 1,
-  totalPages = 1,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
   totalCount = 0,
-  onPageChange,
 }: EmailListProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchFolderOpen, setBatchFolderOpen] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Progressive infinite scroll observer
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore || !onLoadMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: '250px' }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, onLoadMore]);
 
   // Clear batch selection when changing folders or accounts
   useEffect(() => {
@@ -615,39 +633,37 @@ export default function EmailList({
                 </div>
               );
             })}
+            {/* Sentinel for progressive infinite scroll */}
+            {hasMore && (
+              <div ref={sentinelRef} className="py-3 flex justify-center items-center">
+                {loadingMore && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                    <span>Cargando más correos...</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!hasMore && emails.length > 0 && (
+              <div className="py-3 text-center text-[11px] text-muted-foreground/50">
+                Fin de la lista
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Pagination Footer */}
-      {totalPages > 1 && onPageChange && (
+      {/* Progressive scroll counter */}
+      {totalCount > 0 && (
         <div className="shrink-0 px-3.5 py-2 border-t border-border bg-card flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            {Math.min((page - 1) * 30 + 1, totalCount)} - {Math.min(page * 30, totalCount)} de {totalCount}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-              className="p-1 rounded hover:bg-muted disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed transition-colors"
-              title="Página anterior"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </button>
-            <span className="font-semibold text-foreground px-1">
-              {page} / {totalPages}
+          <span>{emails.length} de {totalCount} correos</span>
+          {loadingMore && (
+            <span className="flex items-center gap-1.5 text-primary font-medium text-[11px]">
+              <span className="h-2.5 w-2.5 rounded-full border border-primary border-t-transparent animate-spin" />
+              Cargando...
             </span>
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-              className="p-1 rounded hover:bg-muted disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed transition-colors"
-              title="Página siguiente"
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          )}
         </div>
       )}
     </div>

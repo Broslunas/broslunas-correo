@@ -98,10 +98,11 @@ function MailContent() {
   const [syncing, setSyncing] = useState(false);
   // Responsive: track which "panel" is visible on mobile/tablet
   const [mobileView, setMobileView] = useState<MobileView>('list');
-  // Pagination
+  // Pagination & infinite scroll
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Reset selected email and mobile view when folder changes in URL
   useEffect(() => {
@@ -269,19 +270,21 @@ function MailContent() {
   };
 
   const fetchEmails = useCallback(async () => {
-    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}_${currentPage}`;
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
     setSyncing(true);
     try {
-      const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}&page=${currentPage}`);
+      const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}&page=1`);
       if (res.ok) {
         const data = await res.json();
         const freshEmails = data.emails || [];
         setEmails(freshEmails);
+        setCurrentPage(1);
         if (data.pagination) {
           setTotalPages(data.pagination.totalPages || 1);
           setTotalCount(data.pagination.totalCount || 0);
         }
-        localStorage.setItem(cacheKey, JSON.stringify(freshEmails));
+        // ponytail: cache first 30 items to prevent browser storage quota overflow
+        localStorage.setItem(cacheKey, JSON.stringify(freshEmails.slice(0, 30)));
         if (selectedEmail && !freshEmails.some((e: Email) => e._id === selectedEmail._id)) {
           setSelectedEmail(null);
         }
@@ -291,11 +294,41 @@ function MailContent() {
     } finally {
       setSyncing(false);
     }
-  }, [currentFolder, searchQuery, selectedAccount, currentPage, selectedEmail]);
+  }, [currentFolder, searchQuery, selectedAccount, selectedEmail]);
 
-  // Fetch on folder/search/account/page change with stale-while-revalidate
+  const hasMore = currentPage < totalPages;
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    const nextPage = currentPage + 1;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}&page=${nextPage}`);
+      if (res.ok) {
+        const data = await res.json();
+        const freshEmails = data.emails || [];
+        setEmails(prev => {
+          const ids = new Set(prev.map(e => e._id));
+          const toAdd = freshEmails.filter((e: Email) => !ids.has(e._id));
+          return [...prev, ...toAdd];
+        });
+        setCurrentPage(nextPage);
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages || 1);
+          setTotalCount(data.pagination.totalCount || 0);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading more emails:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, currentPage, currentFolder, searchQuery, selectedAccount]);
+
+  // Fetch on folder/search/account change with stale-while-revalidate
   useEffect(() => {
-    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}_${currentPage}`;
+    setCurrentPage(1);
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -317,7 +350,7 @@ function MailContent() {
     async function fetchFreshEmails() {
       setSyncing(true);
       try {
-        const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}&page=${currentPage}`);
+        const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}&page=1`);
         if (res.ok && isMounted) {
           const data = await res.json();
           const freshEmails = data.emails || [];
@@ -326,7 +359,7 @@ function MailContent() {
             setTotalPages(data.pagination.totalPages || 1);
             setTotalCount(data.pagination.totalCount || 0);
           }
-          localStorage.setItem(cacheKey, JSON.stringify(freshEmails));
+          localStorage.setItem(cacheKey, JSON.stringify(freshEmails.slice(0, 30)));
           if (selectedEmail && !freshEmails.some((e: Email) => e._id === selectedEmail._id)) {
             setSelectedEmail(null);
           }
@@ -342,13 +375,13 @@ function MailContent() {
     }
     fetchFreshEmails();
     return () => { isMounted = false; };
-  }, [currentFolder, searchQuery, selectedAccount, currentPage]);
+  }, [currentFolder, searchQuery, selectedAccount]);
 
-  // Sync state changes to local cache
+  // Sync state changes to local cache (first 30 items)
   useEffect(() => {
     const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
     try {
-      localStorage.setItem(cacheKey, JSON.stringify(emails));
+      localStorage.setItem(cacheKey, JSON.stringify(emails.slice(0, 30)));
     } catch (err) {
       console.error('Error syncing emails state to cache:', err);
     }
@@ -669,10 +702,10 @@ function MailContent() {
                 setSelectedAccount(acc);
                 setCurrentPage(1);
               }}
-              page={currentPage}
-              totalPages={totalPages}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              onLoadMore={handleLoadMore}
               totalCount={totalCount}
-              onPageChange={setCurrentPage}
             />
           </div>
 
