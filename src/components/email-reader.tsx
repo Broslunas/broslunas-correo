@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import DOMPurify from 'isomorphic-dompurify';
 import {
   Trash2,
@@ -19,6 +19,13 @@ import {
   ChevronDown,
   ExternalLink,
   Sparkles,
+  Star,
+  ShieldCheck,
+  ShieldAlert,
+  Shield,
+  AlertTriangle,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
 
@@ -43,14 +50,20 @@ interface Email {
   attachments?: Attachment[];
   folder: string;
   isRead: boolean;
+  isStarred?: boolean;
   messageId?: string;
   inReplyTo?: string;
   references?: string;
+  authStatus?: {
+    spf?: 'pass' | 'fail' | 'neutral' | 'softfail' | string;
+    dkim?: 'pass' | 'fail' | 'neutral' | string;
+    dmarc?: 'pass' | 'fail' | 'none' | string;
+  };
 }
 
 interface EmailReaderProps {
   email: Email | null;
-  onUpdateEmailStatus: (ids: string[], updates: { folder?: string; isRead?: boolean }) => void;
+  onUpdateEmailStatus: (ids: string[], updates: { folder?: string; isRead?: boolean; isStarred?: boolean }) => void;
   onDeletePermanent: (ids: string[]) => void;
   onReplyClick: (email: Email) => void;
   onReplyAllClick?: (email: Email) => void;
@@ -59,7 +72,45 @@ interface EmailReaderProps {
   isStandalone?: boolean;
 }
 
-function buildEmailSrcdoc(email: Email): string {
+function checkPhishingRisk(from: { name: string; address: string }, authStatus?: Email['authStatus']): { isSuspicious: boolean; reason: string } {
+  const name = (from.name || '').toLowerCase();
+  const address = (from.address || '').toLowerCase();
+  const domain = address.split('@')[1] || '';
+
+  const brandKeywords: { keyword: string; legitDomains: string[] }[] = [
+    { keyword: 'paypal', legitDomains: ['paypal.com', 'paypal.es'] },
+    { keyword: 'google', legitDomains: ['google.com', 'google.es', 'accounts.google.com'] },
+    { keyword: 'apple', legitDomains: ['apple.com', 'icloud.com'] },
+    { keyword: 'microsoft', legitDomains: ['microsoft.com', 'outlook.com', 'live.com'] },
+    { keyword: 'netflix', legitDomains: ['netflix.com'] },
+    { keyword: 'amazon', legitDomains: ['amazon.com', 'amazon.es'] },
+    { keyword: 'banco', legitDomains: ['bbva.com', 'santander.com', 'caixabank.com'] },
+    { keyword: 'soporte', legitDomains: [] },
+  ];
+
+  for (const { keyword, legitDomains } of brandKeywords) {
+    if (name.includes(keyword)) {
+      const isLegit = legitDomains.some(d => domain === d || domain.endsWith('.' + d));
+      if (!isLegit && legitDomains.length > 0) {
+        return {
+          isSuspicious: true,
+          reason: `El remitente dice llamarse "${from.name}", pero la dirección (@${domain}) no coincide con el dominio oficial. Podría tratarse de phishing o suplantación.`,
+        };
+      }
+    }
+  }
+
+  if (authStatus?.spf === 'fail' || authStatus?.dkim === 'fail') {
+    return {
+      isSuspicious: true,
+      reason: 'El mensaje no superó la autenticación SPF o DKIM del servidor. La dirección del remitente puede haber sido falsificada.',
+    };
+  }
+
+  return { isSuspicious: false, reason: '' };
+}
+
+function buildEmailSrcdoc(email: Email, allowExternalImages: boolean): { srcdoc: string; hasExternalImages: boolean } {
   const attachments = email.attachments || [];
   const imageAttachments = attachments.filter((a) => a.contentType?.startsWith('image/'));
 
@@ -90,6 +141,16 @@ function buildEmailSrcdoc(email: Email): string {
 
   processedHtml = processedHtml.replace(/<img[^>]*src=["'][^"']*cid:[^"']*["'][^>]*\/?>/gi, '');
 
+  const hasExternalImages = /<img[^>]+src=["']https?:\/\//i.test(processedHtml) || /url\(['"]?https?:\/\//i.test(processedHtml);
+
+  if (!allowExternalImages && hasExternalImages) {
+    processedHtml = processedHtml.replace(
+      /<img([^>]+)src=["'](https?:\/\/[^"']+)["']([^>]*)>/gi,
+      '<img$1src="data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'28\'><rect width=\'120\' height=\'28\' fill=\'%23374151\' rx=\'4\'/><text x=\'60\' y=\'18\' font-size=\'11\' font-family=\'sans-serif\' text-anchor=\'middle\' fill=\'%239ca3af\'>[Img bloqueada]</text></svg>"$3>'
+    );
+    processedHtml = processedHtml.replace(/url\(['"]?https?:\/\/[^)'"]+['"]?\)/gi, 'none');
+  }
+
   const sanitized = DOMPurify.sanitize(processedHtml, {
     ADD_TAGS: ['style'],
     ADD_ATTR: [
@@ -105,7 +166,7 @@ function buildEmailSrcdoc(email: Email): string {
     ? sanitized
     : '<p style="color:#5f6368;font-style:italic;">El contenido de este mensaje no se puede mostrar de forma segura.</p>';
 
-  return `<!DOCTYPE html>
+  const doc = `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
@@ -146,6 +207,8 @@ function buildEmailSrcdoc(email: Email): string {
 </head>
 <body>${bodyContent}</body>
 </html>`;
+
+  return { srcdoc: doc, hasExternalImages };
 }
 
 function PlainTextBody({ text }: { text: string }) {
@@ -250,12 +313,14 @@ export default function EmailReader({
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [allowExternalImages, setAllowExternalImages] = useState(false);
 
   useEffect(() => {
     setMoveDropdownOpen(false);
     setAiSummary(null);
     setLoadingSummary(false);
     setSummaryError(null);
+    setAllowExternalImages(false);
   }, [email]);
 
   const handleSummarize = async () => {
@@ -338,7 +403,14 @@ export default function EmailReader({
 
   const rawHtml = email.body.html || '';
   const hasContent = rawHtml.trim().length > 0;
-  const srcdoc = hasContent ? buildEmailSrcdoc(email) : null;
+  const { srcdoc, hasExternalImages } = useMemo(() => {
+    if (!hasContent) return { srcdoc: null, hasExternalImages: false };
+    return buildEmailSrcdoc(email, allowExternalImages);
+  }, [email, allowExternalImages, hasContent]);
+
+  const phishingRisk = useMemo(() => {
+    return checkPhishingRisk(email.from, email.authStatus);
+  }, [email.from, email.authStatus]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-card animate-fadeIn">
@@ -393,6 +465,29 @@ export default function EmailReader({
 
         {/* Action buttons */}
         <div className="flex items-center gap-1.5">
+          {/* Star button */}
+          <button
+            id="btn-star"
+            type="button"
+            onClick={() => onUpdateEmailStatus([email._id], { isStarred: !email.isStarred })}
+            title={email.isStarred ? 'Quitar de destacados' : 'Destacar mensaje'}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+          >
+            <Star className={`h-3.5 w-3.5 ${email.isStarred ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
+            <span className="hidden sm:inline">{email.isStarred ? 'Destacado' : 'Destacar'}</span>
+          </button>
+
+          {/* Mark unread */}
+          <button
+            type="button"
+            onClick={() => onUpdateEmailStatus([email._id], { isRead: false })}
+            title="Marcar como no leído"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+          >
+            <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="hidden sm:inline">No leído</span>
+          </button>
+
           {/* Popout email button */}
           {!isStandalone && (
             <button
@@ -534,6 +629,25 @@ export default function EmailReader({
                   Para: {email.to.join(', ')}
                   {email.cc && email.cc.length > 0 && <span> · CC: {email.cc.join(', ')}</span>}
                 </p>
+
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  {email.authStatus?.spf === 'fail' || email.authStatus?.dkim === 'fail' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                      <ShieldAlert className="h-3 w-3" />
+                      Fallo de autenticación (SPF/DKIM)
+                    </span>
+                  ) : email.authStatus?.spf === 'pass' || email.authStatus?.dkim === 'pass' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <ShieldCheck className="h-3 w-3" />
+                      Verificado (SPF/DKIM)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
+                      <Shield className="h-3 w-3" />
+                      Sin firma digital
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -585,6 +699,38 @@ export default function EmailReader({
                   {aiSummary}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Phishing warning banner */}
+        {phishingRisk.isSuspicious && (
+          <div className="px-5 md:px-8 pt-4">
+            <div className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs animate-fadeIn">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-semibold mb-0.5">Aviso de seguridad: Remitente sospechoso</strong>
+                <span>{phishingRisk.reason}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* External Images Blocker banner */}
+        {hasExternalImages && !allowExternalImages && (
+          <div className="px-5 md:px-8 pt-4">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 text-xs text-foreground animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4 text-primary shrink-0" />
+                <span>Se han bloqueado las imágenes remotas para proteger tu privacidad y evitar rastreadores espía.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAllowExternalImages(true)}
+                className="shrink-0 px-3 py-1 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+              >
+                Mostrar imágenes
+              </button>
             </div>
           </div>
         )}

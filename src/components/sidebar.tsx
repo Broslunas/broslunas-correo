@@ -27,6 +27,7 @@ import {
   Settings,
   Clock,
   Menu,
+  Star,
 } from 'lucide-react';
 import ThemeToggle from '@/components/theme-toggle';
 
@@ -75,6 +76,7 @@ export default function Sidebar({
 
   const folders = [
     { id: 'inbox', label: 'Bandeja de entrada', icon: Inbox, group: 'core' },
+    { id: 'starred', label: 'Destacados', icon: Star, group: 'core' },
     { id: 'unread', label: 'No leídos', icon: Mail, group: 'core' },
     { id: 'sent', label: 'Enviados', icon: Send, group: 'core' },
     { id: 'drafts', label: 'Borradores', icon: FileText, group: 'core' },

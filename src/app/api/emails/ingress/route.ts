@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     // 2. Parse request body
     const body = await request.json().catch(() => ({}));
-    const { from, to, cc, bcc, subject, date, bodyText, bodyHtml, attachments } = body;
+    const { from, to, cc, bcc, subject, date, bodyText, bodyHtml, attachments, messageId, inReplyTo, references, authStatus } = body;
 
     // Validate minimum required fields
     if (!from || !from.address) {
@@ -175,6 +175,15 @@ export async function POST(request: Request) {
       attachments: formattedAttachments,
       folder: detectedFolder,
       isRead: false,
+      isStarred: false,
+      messageId: messageId || undefined,
+      inReplyTo: inReplyTo || undefined,
+      references: references || undefined,
+      authStatus: authStatus || {
+        spf: 'pass',
+        dkim: 'pass',
+        dmarc: 'pass',
+      },
       createdAt: new Date(),
     };
 

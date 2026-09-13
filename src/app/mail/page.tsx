@@ -29,9 +29,15 @@ interface Email {
   attachments?: Attachment[];
   folder: string;
   isRead: boolean;
+  isStarred?: boolean;
   messageId?: string;
   inReplyTo?: string;
   references?: string;
+  authStatus?: {
+    spf?: 'pass' | 'fail' | 'neutral' | 'softfail' | string;
+    dkim?: 'pass' | 'fail' | 'neutral' | string;
+    dmarc?: 'pass' | 'fail' | 'none' | string;
+  };
 }
 
 // Mobile view states: 'list' | 'reader'
@@ -60,6 +66,7 @@ function MailContent() {
   const getFolderFromParam = (param: string) => {
     switch (param) {
       case 'main': return 'inbox';
+      case 'starred': return 'starred';
       case 'unread': return 'unread';
       case 'personal': return 'personal';
       case 'work': return 'work';
@@ -90,11 +97,16 @@ function MailContent() {
   const [syncing, setSyncing] = useState(false);
   // Responsive: track which "panel" is visible on mobile/tablet
   const [mobileView, setMobileView] = useState<MobileView>('list');
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Reset selected email and mobile view when folder changes in URL
   useEffect(() => {
     setSelectedEmail(null);
     setMobileView('list');
+    setCurrentPage(1);
   }, [folderPart]);
 
   // Helper to convert base64 VAPID key to Uint8Array
@@ -229,6 +241,7 @@ function MailContent() {
   const getFolderLabel = (folderId: string) => {
     switch (folderId) {
       case 'inbox': return 'Bandeja de entrada';
+      case 'starred': return 'Destacados';
       case 'unread': return 'No leídos';
       case 'personal': return 'Personal';
       case 'work': return 'Trabajo';
@@ -244,14 +257,18 @@ function MailContent() {
   };
 
   const fetchEmails = useCallback(async () => {
-    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}_${currentPage}`;
     setSyncing(true);
     try {
-      const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}`);
+      const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}&page=${currentPage}`);
       if (res.ok) {
         const data = await res.json();
         const freshEmails = data.emails || [];
         setEmails(freshEmails);
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages || 1);
+          setTotalCount(data.pagination.totalCount || 0);
+        }
         localStorage.setItem(cacheKey, JSON.stringify(freshEmails));
         if (selectedEmail && !freshEmails.some((e: Email) => e._id === selectedEmail._id)) {
           setSelectedEmail(null);
@@ -262,11 +279,11 @@ function MailContent() {
     } finally {
       setSyncing(false);
     }
-  }, [currentFolder, searchQuery, selectedAccount, selectedEmail]);
+  }, [currentFolder, searchQuery, selectedAccount, currentPage, selectedEmail]);
 
-  // Fetch on folder/search/account change with stale-while-revalidate
+  // Fetch on folder/search/account/page change with stale-while-revalidate
   useEffect(() => {
-    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
+    const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}_${currentPage}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -288,11 +305,15 @@ function MailContent() {
     async function fetchFreshEmails() {
       setSyncing(true);
       try {
-        const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}`);
+        const res = await fetch(`/api/emails?folder=${currentFolder}&search=${encodeURIComponent(searchQuery)}&account=${encodeURIComponent(selectedAccount)}&page=${currentPage}`);
         if (res.ok && isMounted) {
           const data = await res.json();
           const freshEmails = data.emails || [];
           setEmails(freshEmails);
+          if (data.pagination) {
+            setTotalPages(data.pagination.totalPages || 1);
+            setTotalCount(data.pagination.totalCount || 0);
+          }
           localStorage.setItem(cacheKey, JSON.stringify(freshEmails));
           if (selectedEmail && !freshEmails.some((e: Email) => e._id === selectedEmail._id)) {
             setSelectedEmail(null);
@@ -309,7 +330,7 @@ function MailContent() {
     }
     fetchFreshEmails();
     return () => { isMounted = false; };
-  }, [currentFolder, searchQuery, selectedAccount]);
+  }, [currentFolder, searchQuery, selectedAccount, currentPage]);
 
   // Sync state changes to local cache
   useEffect(() => {
@@ -403,7 +424,7 @@ function MailContent() {
     router.push(`/mail?inbox=${folderPart}/${email._id}`);
   };
 
-  const handleUpdateEmailStatus = async (ids: string[], updates: { folder?: string; isRead?: boolean }) => {
+  const handleUpdateEmailStatus = async (ids: string[], updates: { folder?: string; isRead?: boolean; isStarred?: boolean }) => {
     try {
       const res = await fetch('/api/emails', {
         method: 'PATCH',
@@ -420,6 +441,18 @@ function MailContent() {
           setEmails(prev => prev.map(e => ids.includes(e._id) ? { ...e, isRead: updates.isRead! } : e));
           if (selectedEmail && ids.includes(selectedEmail._id)) {
             setSelectedEmail(prev => prev ? { ...prev, isRead: updates.isRead! } : null);
+          }
+        } else if (updates.isStarred !== undefined) {
+          if (currentFolder === 'starred' && updates.isStarred === false) {
+            setEmails(prev => prev.filter(e => !ids.includes(e._id)));
+            if (selectedEmail && ids.includes(selectedEmail._id)) {
+              router.push(`/mail?inbox=${folderPart}`);
+            }
+          } else {
+            setEmails(prev => prev.map(e => ids.includes(e._id) ? { ...e, isStarred: updates.isStarred! } : e));
+            if (selectedEmail && ids.includes(selectedEmail._id)) {
+              setSelectedEmail(prev => prev ? { ...prev, isStarred: updates.isStarred! } : null);
+            }
           }
         }
       }
@@ -607,7 +640,10 @@ function MailContent() {
               onUpdateEmailStatus={handleUpdateEmailStatus}
               folderLabel={getFolderLabel(currentFolder)}
               searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
+              onSearchChange={(q) => {
+                setSearchQuery(q);
+                setCurrentPage(1);
+              }}
               loading={loading}
               syncing={syncing}
               onSyncClick={fetchEmails}
@@ -616,7 +652,14 @@ function MailContent() {
               onTogglePush={handleTogglePush}
               availableAccounts={availableAccounts}
               selectedAccount={selectedAccount}
-              onAccountChange={setSelectedAccount}
+              onAccountChange={(acc) => {
+                setSelectedAccount(acc);
+                setCurrentPage(1);
+              }}
+              page={currentPage}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              onPageChange={setCurrentPage}
             />
           </div>
 

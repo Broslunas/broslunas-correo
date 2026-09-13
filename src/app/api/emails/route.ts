@@ -84,9 +84,11 @@ export async function GET(request: NextRequest) {
     // Build compound query using $and to join filters safely
     const andClauses: any[] = [];
 
-    // 1. Folder condition (handle virtual 'unread' folder)
+    // 1. Folder condition (handle virtual 'unread' and 'starred' folders)
     if (folder === 'unread') {
       andClauses.push({ isRead: false, folder: { $nin: ['trash', 'spam', 'sent', 'temp_mail'] } });
+    } else if (folder === 'starred') {
+      andClauses.push({ isStarred: true, folder: { $nin: ['trash', 'spam'] } });
     } else {
       andClauses.push({ folder });
     }
@@ -174,7 +176,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { ids, folder, isRead } = body;
+    const { ids, folder, isRead, isStarred } = body;
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
@@ -186,6 +188,7 @@ export async function PATCH(request: NextRequest) {
     const updateFields: any = {};
     if (folder !== undefined) updateFields.folder = folder;
     if (isRead !== undefined) updateFields.isRead = isRead;
+    if (isStarred !== undefined) updateFields.isStarred = isStarred;
 
     if (Object.keys(updateFields).length === 0) {
       return NextResponse.json({ error: 'Nada que actualizar' }, { status: 400 });
