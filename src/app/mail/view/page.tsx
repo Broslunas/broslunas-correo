@@ -130,7 +130,12 @@ function StandaloneViewContent() {
     const cleanSubject = hasRePrefix ? subjectText : `Re: ${subjectText}`;
     const quoteHtml = `<br><br><br><hr style="border:0;border-top:1px solid rgba(45,212,191,0.15);margin:20px 0;"><div style="color:#7d8ba3;font-size:11px;line-height:1.5;">El ${new Date(email.date).toLocaleString('es-ES')} &lt;${email.from.address}&gt; escribió:<br></div><blockquote style="margin:10px 0 0 10px;border-left:2px solid rgba(45,212,191,0.35);padding-left:15px;color:#8d99b3;">${email.body.html || email.body.text}</blockquote>`;
     
+    const replyFrom = email.to?.find(addr =>
+      user?.assignedAddresses?.some(a => a === '*' || a.toLowerCase() === addr.toLowerCase())
+    ) || email.to?.[0];
+
     const composeState = {
+      from: replyFrom,
       to: email.from.address,
       subject: cleanSubject,
       bodyHtml: quoteHtml,
@@ -172,7 +177,12 @@ function StandaloneViewContent() {
     }
     const ccStr = Array.from(recipients).join(', ');
     
+    const replyFrom = email.to?.find(addr =>
+      user?.assignedAddresses?.some(a => a === '*' || a.toLowerCase() === addr.toLowerCase())
+    ) || email.to?.[0];
+
     const composeState = {
+      from: replyFrom,
       to: email.from.address,
       subject: cleanSubject,
       bodyHtml: quoteHtml,

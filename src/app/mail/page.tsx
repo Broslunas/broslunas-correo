@@ -90,7 +90,7 @@ function MailContent() {
   const [availableAccounts, setAvailableAccounts] = useState<{ email: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [composeOpen, setComposeOpen] = useState(false);
-  const [composeData, setComposeData] = useState<{ id?: string; to: string; subject: string; bodyHtml: string; cc?: string; bcc?: string; attachments?: any[]; inReplyTo?: string; references?: string; forwardMode?: boolean } | null>(null);
+  const [composeData, setComposeData] = useState<{ id?: string; from?: string; to: string; subject: string; bodyHtml: string; cc?: string; bcc?: string; attachments?: any[]; inReplyTo?: string; references?: string; forwardMode?: boolean } | null>(null);
   const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; twoFactorEnabled: boolean; assignedAddresses: string[] } | null>(null);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [isPushSupported, setIsPushSupported] = useState(false);
@@ -535,7 +535,11 @@ function MailContent() {
     const existingRefs = email.references ? email.references.split(/[\s]+/).filter(Boolean) : [];
     const newRefs = email.messageId ? [email.messageId] : [];
     const allRefs = Array.from(new Set([...existingRefs, ...newRefs])).join(' ');
+    const replyFrom = email.to?.find(addr =>
+      availableAccounts.some(acc => acc.email.toLowerCase() === addr.toLowerCase())
+    ) || availableAccounts[0]?.email;
     setComposeData({
+      from: replyFrom,
       to: email.from.address,
       subject: cleanSubject,
       bodyHtml: quoteHtml,
@@ -572,7 +576,11 @@ function MailContent() {
     const existingRefs = email.references ? email.references.split(/[\s]+/).filter(Boolean) : [];
     const newRefs = email.messageId ? [email.messageId] : [];
     const allRefs = Array.from(new Set([...existingRefs, ...newRefs])).join(' ');
+    const replyFrom = email.to?.find(addr =>
+      availableAccounts.some(acc => acc.email.toLowerCase() === addr.toLowerCase())
+    ) || availableAccounts[0]?.email;
     setComposeData({
+      from: replyFrom,
       to: email.from.address,
       subject: cleanSubject,
       bodyHtml: quoteHtml,
@@ -720,6 +728,7 @@ function MailContent() {
             <EmailReader
               email={selectedEmail}
               userEmail={user?.email}
+              availableAccounts={availableAccounts}
               onUpdateEmailStatus={handleUpdateEmailStatus}
               onDeletePermanent={handleDeletePermanent}
               onReplyClick={handleReplyClick}

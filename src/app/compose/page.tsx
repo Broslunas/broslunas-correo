@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import ComposeModal from '@/components/compose-modal';
 
 function StandaloneCompose() {
-  const [initialData, setInitialData] = useState<{ to: string; subject: string; bodyHtml: string; cc?: string; bcc?: string } | null>(null);
+  const [initialData, setInitialData] = useState<{ from?: string; to: string; subject: string; bodyHtml: string; cc?: string; bcc?: string } | null>(null);
 
   useEffect(() => {
     // Read from localStorage to preserve state safely without URL length restrictions
