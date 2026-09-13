@@ -7,6 +7,7 @@ import {
   Trash2,
   AlertOctagon,
   PenSquare,
+  Pencil,
   LogOut,
   ShieldCheck,
   Bell,
@@ -156,15 +157,15 @@ export default function Sidebar({
             id="btn-compose-desktop"
             onClick={onComposeClick}
             title={isCollapsed ? 'Redactar' : undefined}
-            className={`group flex items-center gap-3 rounded-2xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 cursor-pointer shrink-0 ${
+            className={`group flex items-center transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg active:scale-95 shrink-0 bg-[#c2e7ff] text-[#001d35] hover:brightness-95 dark:bg-[#c2e7ff] dark:text-[#001d35] dark:hover:brightness-105 font-sans ${
               isCollapsed
-                ? 'h-12 w-12 justify-center bg-card text-foreground border border-border hover:bg-muted'
-                : 'h-13 w-full px-5 justify-start bg-card text-foreground border border-border hover:bg-muted'
+                ? 'h-14 w-14 mx-auto justify-center rounded-2xl'
+                : 'h-14 w-full px-5 justify-start gap-4 rounded-2xl'
             }`}
           >
-            <PenSquare className="h-5 w-5 text-primary shrink-0 transition-transform duration-200 group-hover:scale-110" />
+            <Pencil className="h-5 w-5 shrink-0 text-[#001d35] transition-transform duration-200 group-hover:rotate-6" />
             {!isCollapsed && (
-              <span className="text-sm font-semibold tracking-wide text-foreground animate-fadeIn">
+              <span className="text-sm font-semibold tracking-normal font-sans select-none animate-fadeIn">
                 Redactar
               </span>
             )}
@@ -391,10 +392,10 @@ export default function Sidebar({
           }}
           className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
         >
-          <div className="h-8 w-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-            <PenSquare className="h-4 w-4" />
+          <div className="h-9 w-9 flex items-center justify-center rounded-2xl bg-[#c2e7ff] text-[#001d35] shadow-md">
+            <Pencil className="h-4.5 w-4.5" />
           </div>
-          <span className="text-[10px] font-semibold text-primary">Redactar</span>
+          <span className="text-[10px] font-semibold text-foreground">Redactar</span>
         </button>
 
         {/* More on mobile */}

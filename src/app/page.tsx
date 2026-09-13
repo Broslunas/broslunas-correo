@@ -196,7 +196,7 @@ function InboxSimulation() {
               Buscar correos...
             </div>
           </div>
-          <div className="h-6 px-2.5 rounded flex items-center justify-center text-[10px] font-bold bg-primary/10 border border-primary/20 text-primary">
+          <div className="h-6 px-2.5 rounded-lg flex items-center justify-center text-[10px] font-semibold bg-[#c2e7ff] text-[#001d35] shadow-xs select-none">
             Redactar
           </div>
         </div>
