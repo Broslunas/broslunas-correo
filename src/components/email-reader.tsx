@@ -77,6 +77,7 @@ interface EmailReaderProps {
   onBack?: () => void;
   isStandalone?: boolean;
   userEmail?: string;
+  availableAccounts?: { email: string; name: string }[];
 }
 
 function checkPhishingRisk(from: { name: string; address: string }, authStatus?: Email['authStatus']): { isSuspicious: boolean; reason: string } {
@@ -538,11 +539,47 @@ export default function EmailReader({
   onBack,
   isStandalone = false,
   userEmail,
+  availableAccounts,
 }: EmailReaderProps) {
   const [moveDropdownOpen, setMoveDropdownOpen] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  // Mailboxes and domains for sender resolution
+  const [mailboxes, setMailboxes] = useState<{ email: string; name: string }[]>(availableAccounts || []);
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
+  const [selectedFrom, setSelectedFrom] = useState<string>('');
+
+  useEffect(() => {
+    if (availableAccounts && availableAccounts.length > 0) {
+      setMailboxes(availableAccounts);
+    }
+  }, [availableAccounts]);
+
+  useEffect(() => {
+    fetch('/api/mailboxes')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        if (data.mailboxes && Array.isArray(data.mailboxes)) {
+          setMailboxes(data.mailboxes);
+        }
+        if (data.domains && Array.isArray(data.domains)) {
+          setAllowedDomains(data.domains);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const isLocalAddress = (addr?: string) => {
+    if (!addr) return false;
+    const clean = addr.trim().toLowerCase();
+    if (mailboxes.some((m) => m.email.toLowerCase() === clean)) return true;
+    const domain = clean.split('@')[1];
+    if (domain && allowedDomains.includes(domain)) return true;
+    return false;
+  };
 
   // Thread management
   const [threadMessages, setThreadMessages] = useState<Email[]>(email ? [email] : []);
@@ -610,6 +647,33 @@ export default function EmailReader({
     }
   };
 
+  const latestMessage = threadMessages[threadMessages.length - 1] || email;
+  const isLatestFromLocal = latestMessage ? isLocalAddress(latestMessage.from?.address) : false;
+
+  const toRecipient = latestMessage
+    ? isLatestFromLocal
+      ? ((latestMessage.to || []).find((a) => !isLocalAddress(a)) || latestMessage.to?.[0] || '')
+      : (latestMessage.from?.address || '')
+    : '';
+
+  const recipientName = latestMessage
+    ? isLatestFromLocal
+      ? toRecipient
+      : (latestMessage.from?.name || latestMessage.from?.address || '')
+    : '';
+
+  const defaultFrom = latestMessage
+    ? isLatestFromLocal
+      ? latestMessage.from.address
+      : ((latestMessage.to || []).find((a) => isLocalAddress(a)) || (mailboxes[0]?.email || ''))
+    : (mailboxes[0]?.email || '');
+
+  useEffect(() => {
+    if (defaultFrom) {
+      setSelectedFrom(defaultFrom);
+    }
+  }, [defaultFrom]);
+
   const handleQuickReplySend = async () => {
     if (!quickReplyText.trim() || !email) return;
     setQuickReplySending(true);
@@ -617,9 +681,19 @@ export default function EmailReader({
 
     try {
       const latestMsg = threadMessages[threadMessages.length - 1] || email;
-      const toRecipient = latestMsg.from.address;
-      const fromSender = userEmail || (Array.isArray(latestMsg.to) && latestMsg.to[0]) || '';
+      const fromSender = selectedFrom || defaultFrom || (Array.isArray(latestMsg.to) && latestMsg.to[0]) || '';
       const replySubject = latestMsg.subject.startsWith('Re:') ? latestMsg.subject : `Re: ${latestMsg.subject}`;
+
+      if (!fromSender) {
+        setQuickReplyError('No se encontró una cuenta remitente válida autorizada en el servidor.');
+        setQuickReplySending(false);
+        return;
+      }
+      if (!toRecipient) {
+        setQuickReplyError('No se encontró el destinatario para responder.');
+        setQuickReplySending(false);
+        return;
+      }
 
       const res = await fetch('/api/send', {
         method: 'POST',
@@ -729,7 +803,6 @@ export default function EmailReader({
   }
 
   const allThreadIds = threadMessages.map((m) => m._id);
-  const latestMessage = threadMessages[threadMessages.length - 1] || email;
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-card animate-fadeIn">
@@ -1035,7 +1108,7 @@ export default function EmailReader({
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               <CornerUpLeft className="h-3.5 w-3.5 text-primary" />
-              Respuesta rápida a {latestMessage.from.name || latestMessage.from.address}
+              Respuesta rápida a {recipientName || (latestMessage ? (latestMessage.from.name || latestMessage.from.address) : '')}
             </span>
             <button
               type="button"
@@ -1058,15 +1131,34 @@ export default function EmailReader({
             <p className="text-xs text-destructive font-medium">{quickReplyError}</p>
           )}
 
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-muted-foreground">
-              Se enviará automáticamente a {latestMessage.from.address}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
+              <span>De:</span>
+              {mailboxes.length > 1 ? (
+                <select
+                  value={selectedFrom || defaultFrom}
+                  onChange={(e) => setSelectedFrom(e.target.value)}
+                  className="rounded-md border border-border bg-background px-1.5 py-0.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 cursor-pointer"
+                >
+                  {mailboxes.map((m) => (
+                    <option key={m.email} value={m.email}>
+                      {m.email}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-semibold text-foreground">{selectedFrom || defaultFrom || 'Buzón principal'}</span>
+              )}
+              <span className="text-muted-foreground/60">•</span>
+              <span>Para:</span>
+              <span className="font-semibold text-foreground">{toRecipient || latestMessage.from.address}</span>
+            </div>
+
             <button
               type="button"
               disabled={!quickReplyText.trim() || quickReplySending}
               onClick={handleQuickReplySend}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-95 disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-95 disabled:opacity-50 transition-all cursor-pointer shadow-xs shrink-0"
             >
               {quickReplySending ? (
                 <>

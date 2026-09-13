@@ -2251,6 +2251,114 @@ export default function UserManagement() {
         </div>
       )}
 
+      {/* Edit Mailbox Modal Overlay */}
+      {editingMailbox && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-background border border-border rounded-2xl p-6 shadow-2xl relative animate-zoomIn max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setEditingMailbox(null)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer"
+            >
+              <X className="h-4.5 w-4.5" />
+            </button>
+
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
+              <Edit3 className="h-4.5 w-4.5 text-primary" />
+              Editar Cuenta: <span className="text-primary font-mono font-normal">{editingMailbox.email}</span>
+            </h3>
+
+            <form onSubmit={handleUpdateMailbox} className="space-y-4">
+              {/* Display Name */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                  Nombre Remitente (Display Name)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editMailboxName}
+                  onChange={(e) => setEditMailboxName(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-muted py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                  Estado de la Cuenta
+                </label>
+                <select
+                  value={editMailboxStatus}
+                  onChange={(e) => setEditMailboxStatus(e.target.value as 'active' | 'suspended')}
+                  className="w-full rounded-lg border border-border bg-muted py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="active">Activa (Permitir envíos y recepción)</option>
+                  <option value="suspended">Suspendida (Bloquear envíos desde esta dirección)</option>
+                </select>
+              </div>
+
+              {/* Storage and Daily Send limits */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Cuota Almacenamiento (MB)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0 = Ilimitado"
+                    value={editMailboxStorageLimitMB || ''}
+                    onChange={(e) => setEditMailboxStorageLimitMB(Number(e.target.value) || 0)}
+                    className="w-full rounded-lg border border-border bg-muted py-2 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-[9px] text-muted-foreground">0 para sin límite</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Límite Envíos / Día
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0 = Ilimitado"
+                    value={editMailboxDailySendLimit || ''}
+                    onChange={(e) => setEditMailboxDailySendLimit(Number(e.target.value) || 0)}
+                    className="w-full rounded-lg border border-border bg-muted py-2 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-[9px] text-muted-foreground">0 para sin límite</p>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingMailbox(null)}
+                  className="flex-1 bg-muted hover:bg-muted/80 border border-border text-muted-foreground hover:text-foreground py-2 rounded-lg text-xs font-semibold shadow transition-all cursor-pointer text-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/95 transition-all cursor-pointer"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    'Guardar Cambios'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

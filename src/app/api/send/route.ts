@@ -121,7 +121,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Dirección del remitente (From) inválida' }, { status: 400 });
     }
 
-    const domainDoc = await db.collection('domains').findOne({ domain: fromDomain });
+    const domainDoc = await db.collection('domains').findOne({
+      domain: { $regex: new RegExp(`^${fromDomain.trim()}$`, 'i') }
+    });
     if (!domainDoc) {
       return NextResponse.json({ 
         error: `El dominio del remitente (${fromDomain}) no está permitido en este servidor.` 

@@ -42,6 +42,7 @@ interface ComposeModalProps {
   onClose: () => void;
   initialData: {
     id?: string;
+    from?: string;
     to: string;
     subject: string;
     bodyHtml: string;
@@ -518,6 +519,9 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
   useEffect(() => {
     if (initialData) {
+      if (initialData.from) {
+        setFrom(initialData.from);
+      }
       setTo(initialData.to || '');
       setCc(initialData.cc || '');
       setBcc(initialData.bcc || '');
@@ -689,7 +693,9 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             setAvailableDomains(data.domains);
           }
           if (list.length > 0) {
-            const initialFrom = list[0].email;
+            const initialFrom = (initialData?.from && list.some((m: { email: string }) => m.email.toLowerCase() === initialData.from?.toLowerCase()))
+              ? initialData.from
+              : list[0].email;
             setFrom(initialFrom);
 
             // Wait brief moment for editor content to mount from initialData
@@ -699,7 +705,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               }
             }, 150);
           } else {
-            setFrom('');
+            setFrom(initialData?.from || '');
             if (fullAccessAllowed) {
               setIsCustomSender(true);
             }
