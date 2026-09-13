@@ -19,8 +19,10 @@ import {
   Database,
   Sliders,
   Flame,
-  Ban
+  Ban,
+  FolderOpen
 } from 'lucide-react';
+import AdminDrive from './admin-drive';
 
 interface AllowedUser {
   _id: string;
@@ -47,6 +49,9 @@ interface AllowedMailbox {
   _id: string;
   email: string;
   name: string;
+  storageLimitMB?: number;
+  dailySendLimit?: number;
+  status?: 'active' | 'suspended';
   addedBy: string;
   createdAt: string;
 }
@@ -59,7 +64,7 @@ export default function UserManagement() {
   const [success, setSuccess] = useState('');
 
   // Domain states
-  const [activeTab, setActiveTab] = useState<'users' | 'domains' | 'mailboxes' | 'invitations' | 'storage'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'domains' | 'mailboxes' | 'invitations' | 'storage' | 'drive'>('users');
   const [domains, setDomains] = useState<AllowedDomain[]>([]);
   const [newDomain, setNewDomain] = useState('');
   const [domainsLoading, setDomainsLoading] = useState(false);
@@ -68,7 +73,16 @@ export default function UserManagement() {
   const [mailboxes, setMailboxes] = useState<AllowedMailbox[]>([]);
   const [newMailboxEmail, setNewMailboxEmail] = useState('');
   const [newMailboxName, setNewMailboxName] = useState('');
+  const [newMailboxStorageLimitMB, setNewMailboxStorageLimitMB] = useState(0);
+  const [newMailboxDailySendLimit, setNewMailboxDailySendLimit] = useState(0);
   const [mailboxesLoading, setMailboxesLoading] = useState(false);
+
+  // Mailbox edit modal states
+  const [editingMailbox, setEditingMailbox] = useState<AllowedMailbox | null>(null);
+  const [editMailboxName, setEditMailboxName] = useState('');
+  const [editMailboxStorageLimitMB, setEditMailboxStorageLimitMB] = useState(0);
+  const [editMailboxDailySendLimit, setEditMailboxDailySendLimit] = useState(0);
+  const [editMailboxStatus, setEditMailboxStatus] = useState<'active' | 'suspended'>('active');
 
   // Storage and Limits states
   const [storageStats, setStorageStats] = useState<any>(null);
@@ -248,7 +262,12 @@ export default function UserManagement() {
       const res = await fetch('/api/admin/mailboxes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newMailboxEmail, name: newMailboxName })
+        body: JSON.stringify({
+          email: newMailboxEmail,
+          name: newMailboxName,
+          storageLimitMB: Number(newMailboxStorageLimitMB) || 0,
+          dailySendLimit: Number(newMailboxDailySendLimit) || 0
+        })
       });
 
       const data = await res.json();
@@ -257,9 +276,57 @@ export default function UserManagement() {
         setSuccess(`Cuenta ${newMailboxEmail} registrada correctamente.`);
         setNewMailboxEmail('');
         setNewMailboxName('');
+        setNewMailboxStorageLimitMB(0);
+        setNewMailboxDailySendLimit(0);
         fetchMailboxes();
       } else {
         setError(data.error || 'Error al registrar la cuenta de correo');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error al conectar con el servidor.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const startEditMailbox = (box: AllowedMailbox) => {
+    setEditingMailbox(box);
+    setEditMailboxName(box.name || '');
+    setEditMailboxStorageLimitMB(box.storageLimitMB || 0);
+    setEditMailboxDailySendLimit(box.dailySendLimit || 0);
+    setEditMailboxStatus(box.status || 'active');
+  };
+
+  const handleUpdateMailbox = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMailbox) return;
+
+    setError('');
+    setSuccess('');
+    setActionLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/mailboxes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: editingMailbox.email,
+          name: editMailboxName,
+          storageLimitMB: Number(editMailboxStorageLimitMB) || 0,
+          dailySendLimit: Number(editMailboxDailySendLimit) || 0,
+          status: editMailboxStatus
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccess(`Cuenta ${editingMailbox.email} actualizada correctamente.`);
+        setEditingMailbox(null);
+        fetchMailboxes();
+        if (activeTab === 'storage') fetchStorageStats();
+      } else {
+        setError(data.error || 'Error al actualizar cuenta');
       }
     } catch (err) {
       console.error(err);
@@ -717,6 +784,21 @@ export default function UserManagement() {
         >
           <HardDrive className="h-3.5 w-3.5" />
           Almacenamiento y Límites
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('drive');
+            setError('');
+            setSuccess('');
+          }}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 flex items-center gap-1.5 ${
+            activeTab === 'drive'
+              ? 'bg-primary/10 border-primary/20 text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          <FolderOpen className="h-3.5 w-3.5" />
+          Archivos R2 (Drive)
         </button>
       </div>
 
@@ -1230,6 +1312,42 @@ export default function UserManagement() {
                   </p>
                 </div>
 
+                {/* Mailbox Storage Limit */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Cuota Almacenamiento (MB)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newMailboxStorageLimitMB || ''}
+                    onChange={(e) => setNewMailboxStorageLimitMB(Number(e.target.value) || 0)}
+                    placeholder="0 = Ilimitado"
+                    className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
+                    Límite máximo para esta cuenta en MB (0 = sin límite).
+                  </p>
+                </div>
+
+                {/* Mailbox Daily Send Limit */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Límite Diario de Envíos
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newMailboxDailySendLimit || ''}
+                    onChange={(e) => setNewMailboxDailySendLimit(Number(e.target.value) || 0)}
+                    placeholder="0 = Ilimitado"
+                    className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
+                    Máximo de correos salientes diarios (0 = sin límite).
+                  </p>
+                </div>
+
                 <button
                   type="submit"
                   disabled={actionLoading || !newMailboxEmail.trim() || !newMailboxName.trim()}
@@ -1257,7 +1375,7 @@ export default function UserManagement() {
                 <p>{error}</p>
               </div>
             )}
-            
+
             {success && (
               <div className="rounded-xl bg-emerald-950/20 border border-emerald-900/30 p-4 text-xs text-emerald-400 font-medium flex items-start gap-2.5 animate-fadeIn">
                 <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500 mt-0.5" />
@@ -1290,7 +1408,9 @@ export default function UserManagement() {
                     <tr>
                       <th className="py-3 px-4">Nombre Remitente</th>
                       <th className="py-3 px-4">Dirección Email</th>
-                      <th className="py-3 px-4">Registrado por</th>
+                      <th className="py-3 px-4">Estado</th>
+                      <th className="py-3 px-4">Cuota</th>
+                      <th className="py-3 px-4">Límite Diario</th>
                       <th className="py-3 px-4">Fecha</th>
                       <th className="py-3 px-4 text-right">Acciones</th>
                     </tr>
@@ -1304,8 +1424,22 @@ export default function UserManagement() {
                         <td className="py-3.5 px-4 font-mono text-xs text-foreground">
                           {box.email}
                         </td>
-                        <td className="py-3.5 px-4 text-muted-foreground">
-                          {box.addedBy || 'System'}
+                        <td className="py-3.5 px-4">
+                          {box.status === 'suspended' ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded">
+                              <Ban className="h-3 w-3" /> Suspendida
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                              <Check className="h-3 w-3" /> Activa
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-foreground text-xs">
+                          {box.storageLimitMB && box.storageLimitMB > 0 ? `${box.storageLimitMB} MB` : 'Ilimitado'}
+                        </td>
+                        <td className="py-3.5 px-4 text-foreground text-xs">
+                          {box.dailySendLimit && box.dailySendLimit > 0 ? `${box.dailySendLimit}/día` : 'Ilimitado'}
                         </td>
                         <td className="py-3.5 px-4 text-muted-foreground">
                           {new Date(box.createdAt).toLocaleDateString('es-ES', {
@@ -1313,13 +1447,24 @@ export default function UserManagement() {
                           })}
                         </td>
                         <td className="py-3.5 px-4 text-right select-none">
-                          <button
-                            onClick={() => handleDeleteMailbox(box.email)}
-                            className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
-                            title="Eliminar cuenta"
-                          >
-                            <Trash2 className="h-4.5 w-4.5" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => startEditMailbox(box)}
+                              className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                              title="Editar límites y estado"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMailbox(box.email)}
+                              className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                              title="Eliminar cuenta"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1572,7 +1717,7 @@ export default function UserManagement() {
         </div>
       ) : activeTab === 'storage' ? (
         /* Main Viewport for Storage and Limits */
-        <div className="flex-1 flex flex-col overflow-hidden p-6 gap-6 animate-fadeIn">
+        <div className="flex-1 flex flex-col overflow-y-auto p-6 gap-6 animate-fadeIn">
           {/* Top KPI row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
             <div className="bg-card border border-border p-4 rounded-xl backdrop-blur-md relative overflow-hidden">
@@ -1773,7 +1918,130 @@ export default function UserManagement() {
               )}
             </div>
           </section>
+
+          {/* Mailbox Limits & Storage Table */}
+          <section className="shrink-0 flex flex-col min-w-0 bg-card border border-border rounded-xl overflow-hidden backdrop-blur-md">
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                <Mail className="h-4 w-4 text-primary" />
+                Cuotas y Almacenamiento por Buzón / Cuenta de Correo
+              </h3>
+              <span className="text-[11px] text-muted-foreground">
+                {storageStats?.mailboxes?.length || 0} cuenta(s)
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              {storageLoading ? (
+                <div className="p-8 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : !storageStats?.mailboxes || storageStats.mailboxes.length === 0 ? (
+                <div className="p-8 flex flex-col items-center justify-center text-center text-muted-foreground">
+                  <Mail className="h-8 w-8 opacity-30 mb-2" />
+                  <p className="text-xs">No hay buzones registrados para mostrar.</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-card/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                    <tr>
+                      <th className="py-3 px-4">Buzón / Remitente</th>
+                      <th className="py-3 px-4">Estado</th>
+                      <th className="py-3 px-4">Almacenamiento Usado</th>
+                      <th className="py-3 px-4">Cuota Máxima</th>
+                      <th className="py-3 px-4">Envíos Hoy / Límite</th>
+                      <th className="py-3 px-4 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {storageStats.mailboxes.map((m: any) => {
+                      const matchedMailbox = mailboxes.find(box => box.email.toLowerCase() === m.email.toLowerCase());
+                      return (
+                        <tr key={m.email} className="hover:bg-muted/40 transition-all">
+                          <td className="py-3.5 px-4 font-mono text-xs text-foreground select-text">
+                            <div className="font-semibold font-sans text-xs">{m.name}</div>
+                            <div className="text-[11px] text-muted-foreground">{m.email}</div>
+                            <div className="text-[10px] text-muted-foreground/70">{m.emailCount} correos asociados</div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {m.status === 'suspended' ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded">
+                                <Ban className="h-3 w-3" /> Suspendida
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                                <Check className="h-3 w-3" /> Activa
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 min-w-[160px]">
+                            <div className="text-xs font-semibold text-foreground">
+                              {m.usedMB} MB
+                              {m.storageLimitMB > 0 && (
+                                <span className="text-[10px] font-normal text-muted-foreground ml-1">
+                                  ({m.percentUsed}%)
+                                </span>
+                              )}
+                            </div>
+                            {m.storageLimitMB > 0 ? (
+                              <div className="w-full bg-muted rounded-full h-1.5 mt-1 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    (m.percentUsed || 0) >= 90
+                                      ? 'bg-red-500'
+                                      : (m.percentUsed || 0) >= 70
+                                      ? 'bg-amber-500'
+                                      : 'bg-primary'
+                                  }`}
+                                  style={{ width: `${Math.min(100, m.percentUsed || 0)}%` }}
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">Sin cuota límite</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-foreground">
+                            {m.storageLimitMB > 0 ? `${m.storageLimitMB} MB` : 'Ilimitado'}
+                          </td>
+                          <td className="py-3.5 px-4 text-foreground">
+                            <span className="font-semibold">{m.sentToday}</span>
+                            <span className="text-muted-foreground"> / {m.dailySendLimit > 0 ? `${m.dailySendLimit}/día` : 'Ilimitado'}</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (matchedMailbox) {
+                                  startEditMailbox(matchedMailbox);
+                                } else {
+                                  startEditMailbox({
+                                    _id: m.email,
+                                    email: m.email,
+                                    name: m.name || m.email.split('@')[0],
+                                    storageLimitMB: m.storageLimitMB,
+                                    dailySendLimit: m.dailySendLimit,
+                                    status: m.status,
+                                    addedBy: 'admin',
+                                    createdAt: new Date().toISOString()
+                                  });
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded bg-muted hover:bg-muted/80 text-foreground border border-border text-[11px] font-medium transition-all cursor-pointer"
+                            >
+                              Configurar
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
         </div>
+      ) : activeTab === 'drive' ? (
+        <AdminDrive mailboxes={mailboxes} />
       ) : null}
 
       {/* Edit User Modal Overlay */}

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const { db } = await connectToDatabase();
     const mailbox = await db.collection('mailboxes').findOne({ email: cleanFrom });
-    const fromName = mailbox ? mailbox.name : '';
+    const fromName = (body.fromName as string)?.trim() || mailbox?.name || cleanFrom.split('@')[0];
 
     const draftDoc: Record<string, any> = {
       from: {
@@ -134,7 +134,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const mailbox = await db.collection('mailboxes').findOne({ email: cleanFrom });
-    const fromName = mailbox ? mailbox.name : '';
+    const fromName = (body.fromName as string)?.trim() || mailbox?.name || cleanFrom.split('@')[0];
 
     const updateFields: Record<string, any> = {
       from: {

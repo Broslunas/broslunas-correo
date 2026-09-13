@@ -734,16 +734,17 @@ export default function EmailReader({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-card animate-fadeIn">
       {/* Top action toolbar */}
-      <div className="shrink-0 h-14 flex items-center justify-between px-4 md:px-6 gap-3 border-b border-border bg-card">
-        <div className="flex items-center gap-2">
+      <div className="shrink-0 min-h-14 flex items-center justify-between px-3 sm:px-4 md:px-6 gap-2 border-b border-border bg-card overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Mobile back button */}
           {onBack && (
             <button
               onClick={onBack}
-              className="lg:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors cursor-pointer mr-1"
+              title="Volver"
+              className="lg:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors cursor-pointer mr-1 shrink-0"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              Volver
+              <span className="hidden sm:inline">Volver</span>
             </button>
           )}
 
@@ -751,7 +752,8 @@ export default function EmailReader({
           <button
             id="btn-reply"
             onClick={() => onReplyClick(latestMessage)}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:opacity-95 shadow-xs transition-transform active:scale-95 cursor-pointer"
+            title="Responder"
+            className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:opacity-95 shadow-xs transition-transform active:scale-95 cursor-pointer shrink-0"
           >
             <CornerUpLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Responder</span>
@@ -762,10 +764,11 @@ export default function EmailReader({
             <button
               id="btn-reply-all"
               onClick={() => onReplyAllClick(latestMessage)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+              title="Responder a todos"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
             >
               <CornerUpRight className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="hidden sm:inline">Responder a todos</span>
+              <span className="hidden 2xl:inline">Responder a todos</span>
             </button>
           )}
 
@@ -774,26 +777,27 @@ export default function EmailReader({
             <button
               id="btn-forward"
               onClick={() => onForwardClick(latestMessage)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+              title="Reenviar"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
             >
               <Forward className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="hidden sm:inline">Reenviar</span>
+              <span className="hidden 2xl:inline">Reenviar</span>
             </button>
           )}
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {/* Star button */}
           <button
             id="btn-star"
             type="button"
             onClick={() => onUpdateEmailStatus(allThreadIds, { isStarred: !email.isStarred })}
             title={email.isStarred ? 'Quitar de destacados' : 'Destacar mensaje'}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
           >
             <Star className={`h-3.5 w-3.5 ${email.isStarred ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
-            <span className="hidden sm:inline">{email.isStarred ? 'Destacado' : 'Destacar'}</span>
+            <span className="hidden 2xl:inline">{email.isStarred ? 'Destacado' : 'Destacar'}</span>
           </button>
 
           {/* Mark unread */}
@@ -801,10 +805,10 @@ export default function EmailReader({
             type="button"
             onClick={() => onUpdateEmailStatus(allThreadIds, { isRead: false })}
             title="Marcar como no leído"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
           >
             <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="hidden sm:inline">No leído</span>
+            <span className="hidden 2xl:inline">No leído</span>
           </button>
 
           {/* Popout email button */}
@@ -814,22 +818,23 @@ export default function EmailReader({
               type="button"
               onClick={handlePopOut}
               title="Ver en nueva ventana"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
             >
               <ExternalLink className="h-3.5 w-3.5 text-primary shrink-0" />
-              <span className="hidden sm:inline">Nueva ventana</span>
+              <span className="hidden 2xl:inline">Nueva ventana</span>
             </button>
           )}
 
           {/* Categorize / Move dropdown */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setMoveDropdownOpen(!moveDropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+              title="Mover a carpeta"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
             >
               <Folder className="h-3.5 w-3.5 text-primary shrink-0" />
-              <span className="hidden sm:inline">Mover</span>
+              <span className="hidden xl:inline">Mover</span>
               <ChevronDown
                 className={`h-3 w-3 text-muted-foreground transition-transform ${
                   moveDropdownOpen ? 'rotate-180' : ''
@@ -878,10 +883,11 @@ export default function EmailReader({
             <button
               id="btn-restore"
               onClick={() => onUpdateEmailStatus(allThreadIds, { folder: 'inbox' })}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+              title="Recuperar a recibidos"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
             >
               <ArchiveRestore className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="hidden sm:inline">Recuperar</span>
+              <span className="hidden 2xl:inline">Recuperar</span>
             </button>
           )}
 
@@ -889,18 +895,20 @@ export default function EmailReader({
             <button
               id="btn-spam"
               onClick={() => onUpdateEmailStatus(allThreadIds, { folder: 'spam' })}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-amber-600 dark:text-amber-400 transition-colors cursor-pointer"
+              title="Marcar como spam"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-amber-600 dark:text-amber-400 transition-colors cursor-pointer shrink-0"
             >
               <AlertOctagon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Spam</span>
+              <span className="hidden 2xl:inline">Spam</span>
             </button>
           ) : (
             <button
               onClick={() => onUpdateEmailStatus(allThreadIds, { folder: 'inbox' })}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+              title="Marcar como no spam"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer shrink-0"
             >
               <CheckCircle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">No es Spam</span>
+              <span className="hidden 2xl:inline">No es Spam</span>
             </button>
           )}
 
@@ -908,19 +916,21 @@ export default function EmailReader({
             <button
               id="btn-trash"
               onClick={() => onUpdateEmailStatus(allThreadIds, { folder: 'trash' })}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors cursor-pointer"
+              title="Mover a la papelera"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors cursor-pointer shrink-0"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Eliminar</span>
+              <span className="hidden 2xl:inline">Eliminar</span>
             </button>
           ) : (
             <button
               id="btn-delete-permanent"
               onClick={() => onDeletePermanent(allThreadIds)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
+              title="Eliminar definitivamente"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs font-semibold bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-colors cursor-pointer shrink-0"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Eliminar definitivo</span>
+              <span className="hidden 2xl:inline">Eliminar definitivo</span>
             </button>
           )}
         </div>

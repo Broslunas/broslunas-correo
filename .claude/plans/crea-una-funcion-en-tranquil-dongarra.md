@@ -1,75 +1,92 @@
-# Plan de Implementación: Gestión de Correos, Almacenamiento y Límites para Administradores
+# Plan: Límites de Almacenamiento por Buzón y Explorador de Archivos R2 Estilo Google Drive
 
 ## Context
-El sistema de correo actual carece de visibilidad y control sobre el almacenamiento (MongoDB para correos y Cloudflare R2 para adjuntos) y cuotas por usuario. Actualmente cualquier usuario autorizado puede enviar sin límite diario ni control de cuota de disco, y los administradores no tienen herramientas para auditar tamaños de buzón ni ejecutar purgas administrativas (ej. vaciar spam o papelera acumulada). Este cambio agrega gestión de cuotas, métricas de almacenamiento, purga de correos y recomendaciones de administración.
+El usuario solicita ampliar la gestión de almacenamiento y límites para que aplique no sólo por usuario de acceso, sino también **por cuenta de correo/buzón** (`mailboxes`). Además, solicita poder visualizar todos los archivos almacenados en Cloudflare R2 con una experiencia visual estilo **Google Drive** (vista cuadrícula/tarjetas con miniaturas, selector de vista lista, búsqueda, filtros por tipo de archivo, metadatos del correo asociado y acciones de descarga/eliminación).
 
 ---
 
 ## Enfoque Recomendado
 
-### 1. Modelo de Datos y Cuotas de Usuario
-Extender los campos del usuario en MongoDB (colección `users`):
-- `storageLimitMB`: límite en megabytes (0 o null = ilimitado).
-- `dailySendLimit`: límite de correos salientes diarios (0 o null = ilimitado).
-- `status`: `'active' | 'suspended'` (permite suspensión preventiva inmediata).
+### 1. Gestión de Cuotas y Límites por Cuenta de Correo (`mailboxes`)
+- **Extensión de modelo `mailboxes`**:
+  - `storageLimitMB`: Límite en megabytes para el buzón (0 = ilimitado).
+  - `dailySendLimit`: Límite de correos salientes diarios desde esa dirección (0 = ilimitado).
+  - `status`: `'active' | 'suspended'` (permite deshabilitar envíos desde una cuenta específica).
+- **Actualizar `src/app/api/admin/mailboxes/route.ts`**:
+  - `GET`: Retornar `storageLimitMB`, `dailySendLimit`, `status`.
+  - `POST`: Aceptar `storageLimitMB`, `dailySendLimit`, `status`.
+  - `PATCH` (Nuevo): Modificar nombre, límites y estado del buzón.
+- **Actualizar `src/app/api/admin/storage/route.ts`**:
+  - Incorporar en el retorno la clave `mailboxes` con estadísticas por cuenta: correos asociados (`from` o `to`), adjuntos en R2, MB usados, % de cuota consumida y envíos de hoy vs límite diario.
+- **Actualizar `src/app/api/send/route.ts`**:
+  - Validar si el buzón remitente (`cleanFrom`) está suspendido (`403`).
+  - Validar si el buzón remitente superó su límite de envíos diarios (`429`).
+  - Validar si el buzón remitente superó su cuota de almacenamiento (`413`).
 
-### 2. Backend API
-- **`src/app/api/admin/storage/route.ts` (Nuevo)**:
-  - `GET`: Estadísticas agregadas globales y por usuario.
-    - Global: Total de emails, bytes en MongoDB (`$bsonSize`), bytes en adjuntos R2 (suma de `attachments.size` persistidos en `emails`).
-    - Desglose por usuario/buzón: Correos asociados a sus `assignedAddresses` y tamaño acumulado.
-- **`src/app/api/admin/users/route.ts` (Modificar)**:
-  - Extender `GET` para incluir `storageLimitMB`, `dailySendLimit`, `status`.
-  - Extender `PATCH` para permitir actualizar estos límites y estado por usuario.
-- **`src/app/api/admin/emails/route.ts` (Nuevo)**:
-  - `GET`: Búsqueda administrativa de correos con filtros (`folder`, `olderThanDays`, `hasAttachments`, `mailbox`, `search`).
-  - `DELETE`: Purga masiva controlada. Soporta purga de carpetas (`spam`/`trash`) mayores a N días. Elimina adjuntos en Cloudflare R2 y documentos en MongoDB.
-- **`src/app/api/send/route.ts` (Modificar)**:
-  - Enforcement al enviar:
-    1. Bloqueo si `user.status === 'suspended'`.
-    2. Conteo de envíos en el día (`folder: 'sent'`, `date >= startOfDay`) frente a `dailySendLimit`.
-    3. Validación de cuota de almacenamiento si `storageLimitMB` está configurado.
-- **`src/lib/r2.ts` (Modificar)**:
-  - Añadir helper `deleteR2Objects(keys: string[])` usando `DeleteObjectsCommand` de `@aws-sdk/client-s3`.
-
-### 3. Frontend: Panel de Administración
-- **`src/components/user-management.tsx` (Modificar)**:
-  - Nueva pestaña `'storage'` ("Almacenamiento y Límites"):
-    - **KPIs globales**: Almacenamiento DB usado, almacenamiento R2 usado, conteo total de correos y conteo en papelera/spam.
-    - **Tabla de usuarios con cuotas**: Correo, cuota asignada, barra de progreso de almacenamiento usado, límite diario de envíos, estado (Activo/Suspendido), botón para editar cuotas.
-    - **Modal para configurar cuotas y límites por usuario**.
-    - **Sección de Purga y Mantenimiento**: Botón de acción rápida para vaciar Spam y Papelera con más de 30 días, informando correos afectados y espacio estimado a liberar.
+### 2. Explorador de Archivos R2 Estilo Google Drive (`admin-drive.tsx`)
+- **Backend: `src/app/api/admin/files/route.ts` (Nuevo)**:
+  - `GET`:
+    - Lista objetos de Cloudflare R2 usando `ListObjectsV2Command` del SDK `@aws-sdk/client-s3`.
+    - Realiza una consulta batch a MongoDB `emails` sobre `attachments.r2Url` para asociar cada objeto con el correo remitente, destinatario, asunto, fecha y nombre de archivo legible.
+    - Si un archivo en R2 no tiene correo en DB, se clasifica como `isOrphan: true` ("Huérfano").
+    - Admite búsqueda de texto, filtro por categoría (`image`, `document`, `spreadsheet`, `archive`, `media`, `other`, `orphan`), y ordenación por fecha o tamaño.
+    - Paginación integrada (ej. 24 archivos por página).
+  - `DELETE`:
+    - Recibe array de claves `{ keys: string[] }`.
+    - Elimina los objetos en R2 llamando a `deleteR2Objects`.
+    - Actualiza MongoDB con `$pull` para remover esos adjuntos de los correos correspondientes.
+- **Backend: `src/app/api/attachments/route.ts` (Ajuste)**:
+  - Permitir `disposition: inline` cuando se solicite previsualización de PDF (`application/pdf`) o con parámetro `inline=true`.
+- **Frontend: `src/components/admin-drive.tsx` (Nuevo Componente)**:
+  - **Barra de control Google Drive**:
+    - Conmutador de vista: **Cuadrícula** (Grid) con miniaturas vs **Lista** (Table detallada).
+    - Buscador reactivo por nombre de archivo o asunto.
+    - Filtros por tipo de archivo con badges: Todos, Imágenes, Documentos (PDF/Word), Planillas (Excel/CSV), Comprimidos (ZIP/RAR), Multimedia, y Huérfanos.
+    - Selector desplegable para filtrar archivos por cuenta de correo específica.
+    - Barra de estadísticas: total de archivos, total MB en R2, y cantidad de huérfanos detectados.
+  - **Tarjetas en cuadrícula (Google Drive Cards)**:
+    - Previsualización visual inmediata para imágenes (endpoint `/api/attachments?key=...&inline=true`).
+    - Iconografía específica con color por tipo (PDF rojo, Excel verde, Word azul, ZIP naranja, genérico gris).
+    - Nombre del archivo, tamaño formateado (KB/MB), fecha de creación y buzón origen.
+    - Menú de acciones: Previsualizar (modal), Descargar, Eliminar.
+  - **Modal de Previsualización**:
+    - Renderiza imágenes a tamaño completo o PDFs en `iframe` integrado.
+- **Frontend: `src/components/user-management.tsx` (Integración)**:
+  - Añadir pestaña **"Archivos en R2 (Drive)"** (`activeTab === 'drive'`).
+  - En pestaña **"Cuentas de Correo"**: formulario para fijar cuota y límite diario al registrar buzón, tabla con estado y botón para editar límites.
+  - En pestaña **"Almacenamiento y Límites"**: agregar sección de tabla con cuotas y barras de progreso por cada buzón además de los usuarios.
 
 ---
 
 ## Archivos Críticos
-1. `src/components/user-management.tsx` (Nueva pestaña UI, KPIs, tabla de cuotas, modal de límites y panel de purga).
-2. `src/app/api/admin/storage/route.ts` (Endpoint GET de métricas de almacenamiento y cálculo de uso por usuario).
-3. `src/app/api/admin/emails/route.ts` (Endpoint GET de búsqueda admin y DELETE para purgas masivas con limpieza en R2).
-4. `src/app/api/admin/users/route.ts` (Actualización de cuotas y estado en GET y PATCH).
-5. `src/app/api/send/route.ts` (Enforcement de límites diarios, suspensión y cuota de almacenamiento).
-6. `src/lib/r2.ts` (Helper para eliminación por lotes de objetos en Cloudflare R2).
+1. `src/app/api/admin/files/route.ts` (Nuevo endpoint de listado y borrado de archivos R2 enriquecidos).
+2. `src/components/admin-drive.tsx` (Nuevo componente UI estilo Google Drive).
+3. `src/app/api/admin/mailboxes/route.ts` (Soporte GET, POST y PATCH de cuotas y estado por buzón).
+4. `src/app/api/admin/storage/route.ts` (Métricas de uso y cuotas para buzones).
+5. `src/app/api/send/route.ts` (Enforcement de cuotas y límites a nivel buzón remitente).
+6. `src/components/user-management.tsx` (Pestaña Drive y controles de cuota por buzón).
+7. `src/app/api/attachments/route.ts` (Soporte para previsualización inline de PDFs).
 
 ---
 
 ## Funciones y Utilidades Existentes a Reutilizar
+- `s3Client` y `BUCKET_NAME` en `src/lib/r2.ts` para ejecutar `ListObjectsV2Command`.
+- `deleteR2Objects` en `src/lib/r2.ts` para borrado por lotes en R2.
 - `connectToDatabase` en `src/lib/db.ts` para consultas MongoDB.
-- `verifyAdminSession` en `src/app/api/admin/users/route.ts` (o extraer a helper compartido) para proteger rutas admin.
-- `s3Client` y `BUCKET_NAME` en `src/lib/r2.ts` para interacción con Cloudflare R2.
-- `cn` en `src/lib/utils.ts` para estilos condicionales Tailwind.
+- `verifyAdminSession` en endpoints admin para autenticación de cookies de sesión.
 
 ---
 
 ## Verificación y Pruebas
-1. **Prueba de API de Almacenamiento**:
-   - Llamar a `/api/admin/storage` como admin y verificar retorno de bytes y conteos globales y por usuario.
-2. **Prueba de Configuración de Límites**:
-   - Enviar PATCH a `/api/admin/users` asignando `storageLimitMB: 50` y `dailySendLimit: 5`.
-   - Verificar persistencia en MongoDB y reflejo en la UI.
-3. **Prueba de Enforcement**:
-   - Intentar enviar un correo superando `dailySendLimit` y comprobar respuesta HTTP 429 con mensaje explicativo.
-   - Probar envío con usuario suspendido y comprobar respuesta HTTP 403.
-4. **Prueba de Purga**:
-   - Ejecutar purga de spam/papelera vía `/api/admin/emails` y verificar que los correos se eliminen de MongoDB y sus adjuntos se borren de R2 sin dejar huérfanos.
-5. **Prueba de UI**:
-   - Navegar a `/admin`, abrir pestaña "Almacenamiento y Límites", editar cuotas y verificar actualización reactiva.
+1. **Límites de Buzón**:
+   - Asignar a un buzón cuota de 1 MB o límite de 1 envío/día vía `PATCH /api/admin/mailboxes`.
+   - Probar envío desde esa cuenta y confirmar bloqueo HTTP 429 al exceder límite o 413 al exceder cuota.
+   - Probar suspensión de buzón y confirmar HTTP 403.
+2. **Explorador Drive**:
+   - Consultar `/api/admin/files` y verificar listado de archivos con nombres legibles, tamaños y remitentes.
+   - Navegar en la pestaña "Archivos en R2 (Drive)": alternar entre vista cuadrícula y lista.
+   - Filtrar por categoría (ej. imágenes) y verificar que las miniaturas carguen correctamente.
+   - Abrir previsualización de una imagen y de un PDF en modal.
+   - Eliminar un archivo desde el Drive y verificar su remoción de R2 y del array `attachments` en MongoDB.
+3. **TypeScript / Build**:
+   - Ejecutar `npx tsc --noEmit` y suite de auto-verificación en `scripts/`.
