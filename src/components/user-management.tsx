@@ -88,6 +88,7 @@ export default function UserManagement() {
   const [storageStats, setStorageStats] = useState<any>(null);
   const [storageLoading, setStorageLoading] = useState(false);
   const [purgeLoading, setPurgeLoading] = useState(false);
+  const [storageSubTab, setStorageSubTab] = useState<'both' | 'users' | 'mailboxes'>('both');
 
   // Invitation states
   const [invitations, setInvitations] = useState<any[]>([]);
@@ -1810,19 +1811,60 @@ export default function UserManagement() {
             </div>
           </div>
 
-          {/* User Limits & Storage Table */}
-          <section className="flex-1 flex flex-col min-w-0 bg-card border border-border rounded-xl overflow-hidden backdrop-blur-md">
-            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-primary" />
-                Cuotas y Límites por Usuario
-              </h3>
-              <span className="text-[11px] text-muted-foreground">
-                {storageStats?.users?.length || 0} usuario(s)
-              </span>
-            </div>
+          {/* Sub-view Switcher: Both, Users, Mailboxes */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">Mostrar:</span>
+            <button
+              type="button"
+              onClick={() => setStorageSubTab('both')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                storageSubTab === 'both'
+                  ? 'bg-primary/20 border-primary/40 text-primary shadow-xs'
+                  : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              Ver Ambos ({storageStats?.users?.length || 0} usuarios / {storageStats?.mailboxes?.length || 0} buzones)
+            </button>
+            <button
+              type="button"
+              onClick={() => setStorageSubTab('users')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 ${
+                storageSubTab === 'users'
+                  ? 'bg-primary/20 border-primary/40 text-primary shadow-xs'
+                  : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              <User className="h-3.5 w-3.5" />
+              Por Usuarios ({storageStats?.users?.length || 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStorageSubTab('mailboxes')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 ${
+                storageSubTab === 'mailboxes'
+                  ? 'bg-primary/20 border-primary/40 text-primary shadow-xs'
+                  : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Por Cuentas de Correo ({storageStats?.mailboxes?.length || 0})
+            </button>
+          </div>
 
-            <div className="flex-1 overflow-x-auto min-h-0">
+          {/* User Limits & Storage Table */}
+          {(storageSubTab === 'both' || storageSubTab === 'users') && (
+            <section className="shrink-0 flex flex-col min-w-0 bg-card border border-border rounded-xl overflow-hidden backdrop-blur-md">
+              <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                  <Sliders className="h-4 w-4 text-primary" />
+                  Cuotas y Límites por Usuario
+                </h3>
+                <span className="text-[11px] text-muted-foreground">
+                  {storageStats?.users?.length || 0} usuario(s)
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
               {storageLoading ? (
                 <div className="h-full flex items-center justify-center p-8">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -1918,18 +1960,20 @@ export default function UserManagement() {
               )}
             </div>
           </section>
+          )}
 
           {/* Mailbox Limits & Storage Table */}
-          <section className="shrink-0 flex flex-col min-w-0 bg-card border border-border rounded-xl overflow-hidden backdrop-blur-md">
-            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                <Mail className="h-4 w-4 text-primary" />
-                Cuotas y Almacenamiento por Buzón / Cuenta de Correo
-              </h3>
-              <span className="text-[11px] text-muted-foreground">
-                {storageStats?.mailboxes?.length || 0} cuenta(s)
-              </span>
-            </div>
+          {(storageSubTab === 'both' || storageSubTab === 'mailboxes') && (
+            <section className="shrink-0 flex flex-col min-w-0 bg-card border border-border rounded-xl overflow-hidden backdrop-blur-md">
+              <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-primary" />
+                  Cuotas y Almacenamiento por Buzón / Cuenta de Correo
+                </h3>
+                <span className="text-[11px] text-muted-foreground">
+                  {storageStats?.mailboxes?.length || 0} cuenta(s)
+                </span>
+              </div>
 
             <div className="overflow-x-auto">
               {storageLoading ? (
@@ -2039,6 +2083,7 @@ export default function UserManagement() {
               )}
             </div>
           </section>
+          )}
         </div>
       ) : activeTab === 'drive' ? (
         <AdminDrive mailboxes={mailboxes} />
