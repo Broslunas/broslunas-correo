@@ -79,9 +79,9 @@ export async function GET(request: Request) {
     // Set response headers
     const contentType = s3Response.ContentType || 'application/octet-stream';
     const headers = new Headers();
-    // Images are served inline so the browser can render them (e.g. inside email bodies).
-    // All other files force a download.
-    const disposition = contentType.startsWith('image/') ? 'inline' : 'attachment';
+    // Images and PDFs can be served inline so the browser can render them in preview modals.
+    const isInline = contentType.startsWith('image/') || contentType === 'application/pdf' || searchParams.get('inline') === 'true';
+    const disposition = isInline ? 'inline' : 'attachment';
     headers.set('Content-Disposition', `${disposition}; filename="${encodeURIComponent(filename)}"`);
     headers.set('Content-Type', contentType);
     if (s3Response.ContentLength) {

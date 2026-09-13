@@ -104,6 +104,11 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const [error, setError] = useState('');
   const [senderMailboxes, setSenderMailboxes] = useState<{ email: string; name: string; signature?: string }[]>([]);
   const [senderLoading, setSenderLoading] = useState(true);
+  const [hasFullAccess, setHasFullAccess] = useState(assignedAddresses?.includes('*') || false);
+  const [isCustomSender, setIsCustomSender] = useState(false);
+  const [customFromName, setCustomFromName] = useState('');
+  const [saveAsMailbox, setSaveAsMailbox] = useState(false);
+  const [availableDomains, setAvailableDomains] = useState<string[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
 
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -542,6 +547,9 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       setDraftId(null);
       setAttachments([]);
       setEditorContent('');
+      setCustomFromName('');
+      setSaveAsMailbox(false);
+      setIsCustomSender(false);
       if (editorRef.current) {
         editorRef.current.innerHTML = '';
       }
@@ -564,6 +572,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
         const bodyData = {
           id: draftIdRef.current || undefined,
           from,
+          fromName: customFromName ? customFromName.trim() : undefined,
           to: to.split(',').map(email => email.trim()).filter(Boolean),
           cc: cc ? cc.split(',').map(email => email.trim()).filter(Boolean) : [],
           bcc: bcc ? bcc.split(',').map(email => email.trim()).filter(Boolean) : [],
@@ -659,6 +668,12 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   };
 
   useEffect(() => {
+    if (assignedAddresses?.includes('*')) {
+      setHasFullAccess(true);
+    }
+  }, [assignedAddresses]);
+
+  useEffect(() => {
     if (isOpen) {
       setSenderLoading(true);
       fetch('/api/mailboxes')
@@ -666,6 +681,13 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
         .then(data => {
           const list = data.mailboxes || [];
           setSenderMailboxes(list);
+          const fullAccessAllowed = !!(data.hasFullAccess || assignedAddresses?.includes('*'));
+          if (fullAccessAllowed) {
+            setHasFullAccess(true);
+          }
+          if (data.domains) {
+            setAvailableDomains(data.domains);
+          }
           if (list.length > 0) {
             const initialFrom = list[0].email;
             setFrom(initialFrom);
@@ -678,12 +700,15 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             }, 150);
           } else {
             setFrom('');
+            if (fullAccessAllowed) {
+              setIsCustomSender(true);
+            }
           }
         })
         .catch(err => console.error('Error loading sender mailboxes:', err))
         .finally(() => setSenderLoading(false));
     }
-  }, [isOpen]);
+  }, [isOpen, assignedAddresses]);
 
   const fetchTemplates = async () => {
     try {
@@ -972,13 +997,15 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       const res = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          from, 
-          to: toArray, 
-          cc: ccArray, 
-          bcc: bccArray, 
-          subject, 
-          bodyHtml: finalHtml, 
+        body: JSON.stringify({
+          from,
+          fromName: customFromName ? customFromName.trim() : undefined,
+          saveMailbox: saveAsMailbox,
+          to: toArray,
+          cc: ccArray,
+          bcc: bccArray,
+          subject,
+          bodyHtml: finalHtml,
           bodyText: textContent,
           attachments: activeAttachments,
           draftId: draftId || undefined,
@@ -1103,23 +1130,102 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">De:</span>
               {senderLoading ? (
                 <span className="text-xs animate-pulse text-muted-foreground">Cargando...</span>
-              ) : senderMailboxes.length === 0 ? (
+              ) : senderMailboxes.length === 0 && !hasFullAccess ? (
                 <span className="text-xs font-semibold text-destructive">
                   Sin cuentas de correo registradas.
                 </span>
+              ) : isCustomSender ? (
+                <div className="flex-1 flex flex-wrap items-center gap-2 py-0.5">
+                  <div className="flex-1 flex items-center min-w-[180px]">
+                    <input
+                      type="email"
+                      required
+                      value={from}
+                      onChange={(e) => handleFromChange(e.target.value)}
+                      placeholder={availableDomains.length > 0 ? `nuevo@${availableDomains[0]}` : "nuevo@dominio.com"}
+                      style={{ ...inputStyle, fontWeight: 600 }}
+                      className="text-foreground placeholder:text-muted-foreground"
+                      list="compose-allowed-domains"
+                    />
+                    {availableDomains.length > 0 && (
+                      <datalist id="compose-allowed-domains">
+                        {availableDomains.map((d, i) => (
+                          <option key={i} value={`contacto@${d}`} />
+                        ))}
+                      </datalist>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={customFromName}
+                    onChange={(e) => setCustomFromName(e.target.value)}
+                    placeholder="Nombre (opcional)"
+                    style={{ ...inputStyle, width: '130px' }}
+                    className="text-foreground placeholder:text-muted-foreground text-xs"
+                  />
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={saveAsMailbox}
+                      onChange={(e) => setSaveAsMailbox(e.target.checked)}
+                      className="rounded border-border accent-primary cursor-pointer"
+                    />
+                    <span>Guardar cuenta</span>
+                  </label>
+                  {senderMailboxes.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomSender(false);
+                        handleFromChange(senderMailboxes[0].email);
+                      }}
+                      className="text-[11px] text-primary hover:underline cursor-pointer ml-auto shrink-0"
+                    >
+                      Elegir existente
+                    </button>
+                  )}
+                </div>
               ) : (
-                <select
-                  value={from}
-                  onChange={(e) => handleFromChange(e.target.value)}
-                  style={{ ...inputStyle, cursor: 'pointer', fontWeight: 600 }}
-                  className="bg-card text-foreground"
-                >
-                  {senderMailboxes.map((box, idx) => (
-                    <option key={`${box.email || ''}-${idx}`} value={box.email} className="bg-card text-foreground">
-                      {box.name} &lt;{box.email}&gt;
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1 flex items-center gap-2">
+                  <select
+                    value={from}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setIsCustomSender(true);
+                        setFrom('');
+                      } else {
+                        handleFromChange(e.target.value);
+                      }
+                    }}
+                    style={{ ...inputStyle, cursor: 'pointer', fontWeight: 600, flex: 1 }}
+                    className="bg-card text-foreground"
+                  >
+                    {senderMailboxes.map((box, idx) => (
+                      <option key={`${box.email || ''}-${idx}`} value={box.email} className="bg-card text-foreground">
+                        {box.name} &lt;{box.email}&gt;
+                      </option>
+                    ))}
+                    {hasFullAccess && (
+                      <option value="__custom__" className="bg-card text-primary font-semibold">
+                        + Nueva dirección sin cuenta...
+                      </option>
+                    )}
+                  </select>
+                  {hasFullAccess && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomSender(true);
+                        setFrom('');
+                      }}
+                      className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                      title="Crear o redactar desde un correo sin cuenta"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Sin cuenta</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 

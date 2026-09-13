@@ -51,6 +51,9 @@ export async function GET(request: NextRequest) {
       _id: m._id.toString(),
       email: m.email,
       name: m.name,
+      storageLimitMB: typeof m.storageLimitMB === 'number' ? m.storageLimitMB : 0,
+      dailySendLimit: typeof m.dailySendLimit === 'number' ? m.dailySendLimit : 0,
+      status: m.status || 'active',
       addedBy: m.addedBy || 'System',
       createdAt: m.createdAt
     }));
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { email, name } = body;
+    const { email, name, storageLimitMB, dailySendLimit, status } = body;
 
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return NextResponse.json({ error: 'La dirección de correo electrónico es obligatoria y debe ser válida' }, { status: 400 });
@@ -102,8 +105,12 @@ export async function POST(request: NextRequest) {
     const newMailboxDoc = {
       email: cleanEmail,
       name: cleanName,
+      storageLimitMB: typeof storageLimitMB === 'number' && storageLimitMB >= 0 ? storageLimitMB : 0,
+      dailySendLimit: typeof dailySendLimit === 'number' && dailySendLimit >= 0 ? dailySendLimit : 0,
+      status: status === 'suspended' ? 'suspended' : 'active',
       addedBy: auth.email,
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     const result = await db.collection('mailboxes').insertOne(newMailboxDoc);
@@ -116,6 +123,58 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating mailbox in API:', error);
     return NextResponse.json({ error: 'Error interno al registrar la cuenta de correo' }, { status: 500 });
+  }
+}
+
+// PATCH: Update mailbox settings, name, limits, or status (admin only)
+export async function PATCH(request: NextRequest) {
+  const auth = await verifyAdminSession(request);
+  if (!auth.success) return auth.errorResponse!;
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { email, name, storageLimitMB, dailySendLimit, status } = body;
+
+    if (!email || typeof email !== 'string') {
+      return NextResponse.json({ error: 'La dirección de correo electrónico es obligatoria' }, { status: 400 });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const updateFields: any = { updatedAt: new Date() };
+
+    if (name && typeof name === 'string' && name.trim()) {
+      updateFields.name = name.trim();
+    }
+
+    if (typeof storageLimitMB === 'number') {
+      updateFields.storageLimitMB = Math.max(0, storageLimitMB);
+    }
+
+    if (typeof dailySendLimit === 'number') {
+      updateFields.dailySendLimit = Math.max(0, dailySendLimit);
+    }
+
+    if (status === 'active' || status === 'suspended') {
+      updateFields.status = status;
+    }
+
+    const { db } = await connectToDatabase();
+    const result = await db.collection('mailboxes').updateOne(
+      { email: cleanEmail },
+      { $set: updateFields }
+    );
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: 'Cuenta de correo no encontrada' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Cuenta de correo actualizada correctamente'
+    });
+  } catch (error) {
+    console.error('Error updating mailbox in API:', error);
+    return NextResponse.json({ error: 'Error interno al actualizar la cuenta de correo' }, { status: 500 });
   }
 }
 

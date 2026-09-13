@@ -108,6 +108,52 @@ export async function GET(request: NextRequest) {
       };
     }));
 
+    // Per-mailbox breakdown
+    const mailboxes = await db.collection('mailboxes').find({}).toArray();
+    const mailboxStats = await Promise.all(mailboxes.map(async (m) => {
+      const mbEmail = m.email.toLowerCase();
+      const mbFilter = {
+        $or: [
+          { 'from.address': mbEmail },
+          { 'to.address': mbEmail }
+        ]
+      };
+
+      const emailCount = await db.collection('emails').countDocuments(mbFilter);
+
+      const attAgg = await db.collection('emails').aggregate([
+        { $match: mbFilter },
+        { $unwind: '$attachments' },
+        { $group: { _id: null, totalBytes: { $sum: '$attachments.size' } } }
+      ]).toArray();
+      const attachmentsBytes = attAgg[0]?.totalBytes || 0;
+      const estimatedBytes = (emailCount * 2048) + attachmentsBytes;
+
+      const sentToday = await db.collection('emails').countDocuments({
+        'from.address': mbEmail,
+        folder: 'sent',
+        date: { $gte: startOfDay }
+      });
+
+      const storageLimitMB = typeof m.storageLimitMB === 'number' ? m.storageLimitMB : 0;
+      const dailySendLimit = typeof m.dailySendLimit === 'number' ? m.dailySendLimit : 0;
+
+      return {
+        email: m.email,
+        name: m.name,
+        status: m.status || 'active',
+        storageLimitMB,
+        dailySendLimit,
+        usedBytes: estimatedBytes,
+        usedMB: Number((estimatedBytes / (1024 * 1024)).toFixed(2)),
+        emailCount,
+        sentToday,
+        percentUsed: storageLimitMB > 0
+          ? Math.min(100, Number(((estimatedBytes / (storageLimitMB * 1024 * 1024)) * 100).toFixed(1)))
+          : null
+      };
+    }));
+
     return NextResponse.json({
       global: {
         totalEmails,
@@ -119,7 +165,8 @@ export async function GET(request: NextRequest) {
         totalStorageBytes: dbSizeBytes + totalAttachmentBytes,
         totalStorageMB: Number(((dbSizeBytes + totalAttachmentBytes) / (1024 * 1024)).toFixed(2))
       },
-      users: userStats
+      users: userStats,
+      mailboxes: mailboxStats
     });
   } catch (error) {
     console.error('Storage stats error:', error);

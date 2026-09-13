@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json().catch(() => ({}));
-    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, attachments, draftId, inReplyTo, references } = body;
+    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, saveMailbox, attachments, draftId, inReplyTo, references } = body;
 
     // Validate inputs
     if (!from || typeof from !== 'string' || !from.includes('@')) {
@@ -130,10 +130,67 @@ export async function POST(request: NextRequest) {
 
     // Verify if the sender is registered in the mailboxes collection
     const mailbox = await db.collection('mailboxes').findOne({ email: cleanFrom });
-    if (!mailbox) {
+    if (!mailbox && !assignedAddresses.includes('*')) {
       return NextResponse.json({
         error: `La cuenta de correo remitente (${cleanFrom}) no está registrada en el servidor. Regístrala en la sección de administración primero.`
       }, { status: 400 });
+    }
+
+    // Check mailbox level suspension and limits
+    if (mailbox?.status === 'suspended') {
+      return NextResponse.json({
+        error: `La cuenta de correo remitente (${cleanFrom}) ha sido suspendida.`
+      }, { status: 403 });
+    }
+
+    if (mailbox?.dailySendLimit && mailbox.dailySendLimit > 0) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const sentTodayMb = await db.collection('emails').countDocuments({
+        'from.address': cleanFrom,
+        folder: 'sent',
+        date: { $gte: startOfDay }
+      });
+      if (sentTodayMb >= mailbox.dailySendLimit) {
+        return NextResponse.json({
+          error: `La cuenta (${cleanFrom}) alcanzó su límite diario de envíos (${mailbox.dailySendLimit} correos/día).`
+        }, { status: 429 });
+      }
+    }
+
+    if (mailbox?.storageLimitMB && mailbox.storageLimitMB > 0) {
+      const mbFilter = {
+        $or: [
+          { 'from.address': cleanFrom },
+          { 'to.address': cleanFrom }
+        ]
+      };
+      const emailCountMb = await db.collection('emails').countDocuments(mbFilter);
+      const attAggMb = await db.collection('emails').aggregate([
+        { $match: mbFilter },
+        { $unwind: '$attachments' },
+        { $group: { _id: null, totalBytes: { $sum: '$attachments.size' } } }
+      ]).toArray();
+      const usedBytesMb = (emailCountMb * 2048) + (attAggMb[0]?.totalBytes || 0);
+      const limitBytesMb = mailbox.storageLimitMB * 1024 * 1024;
+      if (usedBytesMb >= limitBytesMb) {
+        return NextResponse.json({
+          error: `La cuenta (${cleanFrom}) superó su cuota de almacenamiento (${mailbox.storageLimitMB} MB). Elimina correos o archivos antes de enviar.`
+        }, { status: 413 });
+      }
+    }
+
+    // Auto-register mailbox if user with full access requested it
+    if (!mailbox && assignedAddresses.includes('*') && saveMailbox) {
+      await db.collection('mailboxes').insertOne({
+        email: cleanFrom,
+        name: (customFromName as string)?.trim() || cleanFrom.split('@')[0],
+        storageLimitMB: 0,
+        dailySendLimit: 0,
+        status: 'active',
+        addedBy: userEmail,
+        createdAt: new Date()
+      }).catch(() => {});
     }
 
     const apiKey = process.env.MAILJET_API_KEY;
@@ -146,7 +203,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const fromName = mailbox.name;
+    const fromName = (customFromName as string)?.trim() || mailbox?.name || cleanFrom.split('@')[0];
 
     // 4. Map arrays into Mailjet format
     const mailjetTo = to.map((email: string) => ({ Email: email.trim() }));

@@ -57,7 +57,14 @@ export async function GET(request: NextRequest) {
       signature: m.signature || ''
     }));
 
-    return NextResponse.json({ mailboxes: result });
+    const domains = await db.collection('domains').find({}).toArray();
+    const domainList = domains.map(d => d.domain);
+
+    return NextResponse.json({
+      mailboxes: result,
+      hasFullAccess: assignedAddresses.includes('*'),
+      domains: domainList
+    });
   } catch (err) {
     console.error('Error fetching authorized mailboxes:', err);
     return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 });
