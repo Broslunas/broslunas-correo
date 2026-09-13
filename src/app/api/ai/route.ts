@@ -38,10 +38,16 @@ async function getAuthenticatedUser(request: NextRequest): Promise<{ success: bo
 async function callGeminiAPI(prompt: string, customSystemInstruction?: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6L8ms8_TV660I_dHngdFjJzgSQCOsYSqpJOocQe2Brg9Q';
   const modelToTry = process.env.GEMINI_MODEL || 'gemini-3.1-flash-live-preview';
-  
-  // List of models to try in sequence as fallbacks in case the live-flash/preview model fails or is rate-limited
-  const models = [modelToTry, 'gemini-3.1-flash-live-preview', 'gemini-2.5-flash', 'gemini-2.0-flash'];
-  
+
+  // List of models to try in sequence as fallbacks (Gemini 3 Flash Live, Gemini 3 Flash, Gemini 2.5 Flash, Gemini 2.0 Flash)
+  const models = Array.from(new Set([
+    modelToTry,
+    'gemini-3.1-flash-live-preview',
+    'gemini-3-flash-preview',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash'
+  ]));
+
   let lastError: any = null;
 
   for (const model of models) {
@@ -50,7 +56,10 @@ async function callGeminiAPI(prompt: string, customSystemInstruction?: string): 
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             systemInstruction: customSystemInstruction ? { parts: [{ text: customSystemInstruction }] } : undefined,
