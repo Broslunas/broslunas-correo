@@ -335,7 +335,7 @@ export default function EmailList({
         )}
 
         {/* Account Selector */}
-        {availableAccounts && availableAccounts.length > 0 && (
+        {availableAccounts && availableAccounts.length > 0 && folderLabel !== 'Catch-All' && (
           <div className="relative">
             <button
               type="button"
@@ -570,6 +570,13 @@ export default function EmailList({
                     >
                       {email.subject || '(Sin asunto)'}
                     </p>
+
+                    {/* Catch-All recipient address */}
+                    {folderLabel === 'Catch-All' && email.to && email.to.length > 0 && (
+                      <p className="text-[10px] text-primary/80 font-medium truncate mb-0.5">
+                        Para: {email.to.join(', ')}
+                      </p>
+                    )}
 
                     {/* Row 3: Snippet */}
                     <p className="text-[11px] text-muted-foreground/80 line-clamp-1">

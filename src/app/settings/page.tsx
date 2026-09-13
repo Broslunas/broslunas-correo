@@ -735,6 +735,7 @@ function SettingsContent() {
         onFolderChange={handleFolderChange}
         onComposeClick={() => setComposeOpen(true)}
         role={user?.role}
+        canViewAllAccounts={user?.assignedAddresses?.includes('*')}
         twoFactorEnabled={user?.twoFactorEnabled}
         onSecurityClick={() => setTwoFactorModalOpen(true)}
         isPushSupported={isPushSupported}

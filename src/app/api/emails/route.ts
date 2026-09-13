@@ -98,14 +98,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado para ver esta cuenta' }, { status: 403 });
     }
 
+    // Security check: only users with wildcard access can view catch-all emails
+    if (folder === 'catchall' && !assignedAddresses.includes('*')) {
+      return NextResponse.json({ error: 'No autorizado para ver correos de cuentas no registradas' }, { status: 403 });
+    }
+
     // Build compound query using $and to join filters safely
     const andClauses: any[] = [];
 
-    // 1. Folder condition (handle virtual 'unread' and 'starred' folders)
+    // 1. Folder condition (handle virtual 'unread', 'starred', and 'catchall' folders)
     if (folder === 'unread') {
       andClauses.push({ isRead: false, folder: { $nin: ['trash', 'spam', 'sent', 'temp_mail'] } });
     } else if (folder === 'starred') {
       andClauses.push({ isStarred: true, folder: { $nin: ['trash', 'spam'] } });
+    } else if (folder === 'catchall') {
+      // Fetch all registered mailbox addresses
+      // ponytail: in-memory array of mailboxes is sufficient until thousands of mailboxes exist
+      const registeredMailboxes = await db.collection('mailboxes')
+        .find({}, { projection: { email: 1 } })
+        .toArray();
+      const registeredEmails = registeredMailboxes
+        .map((m: any) => (m.email || '').trim().toLowerCase())
+        .filter(Boolean);
+
+      const catchAllFilter: any = {
+        folder: { $nin: ['trash', 'spam', 'sent', 'drafts', 'temp_mail'] }
+      };
+      if (registeredEmails.length > 0) {
+        catchAllFilter.to = { $nin: registeredEmails };
+        catchAllFilter.cc = { $nin: registeredEmails };
+        catchAllFilter.bcc = { $nin: registeredEmails };
+      }
+      andClauses.push(catchAllFilter);
     } else {
       andClauses.push({ folder });
     }

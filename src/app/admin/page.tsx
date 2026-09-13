@@ -153,6 +153,7 @@ export default function AdminPage() {
         onFolderChange={handleFolderChange}
         onComposeClick={handleComposeClick}
         role={user?.role}
+        canViewAllAccounts={user?.assignedAddresses?.includes('*')}
         twoFactorEnabled={user?.twoFactorEnabled}
         onSecurityClick={() => setTwoFactorModalOpen(true)}
         onSettingsClick={() => router.push('/settings')}

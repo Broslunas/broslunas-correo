@@ -73,6 +73,7 @@ function MailContent() {
       case 'commercial': return 'commercial';
       case 'newsletter': return 'newsletter';
       case 'social': return 'social';
+      case 'catchall': return 'catchall';
       case 'sent': return 'sent';
       case 'spam': return 'spam';
       case 'trash': return 'trash';
@@ -107,7 +108,17 @@ function MailContent() {
     setSelectedEmail(null);
     setMobileView('list');
     setCurrentPage(1);
+    if (folderPart === 'catchall') {
+      setSelectedAccount('');
+    }
   }, [folderPart]);
+
+  // Guard catch-all category for unauthorized users
+  useEffect(() => {
+    if (user && !user.assignedAddresses?.includes('*') && folderPart === 'catchall') {
+      router.replace('/mail?inbox=main');
+    }
+  }, [user, folderPart, router]);
 
   // Helper to convert base64 VAPID key to Uint8Array
   const urlBase64ToUint8Array = (base64String: string) => {
@@ -248,6 +259,7 @@ function MailContent() {
       case 'commercial': return 'Comercial';
       case 'newsletter': return 'Newsletters';
       case 'social': return 'Redes Sociales';
+      case 'catchall': return 'Catch-All';
       case 'sent':  return 'Enviados';
       case 'spam':  return 'Spam';
       case 'trash': return 'Papelera';
@@ -581,6 +593,7 @@ function MailContent() {
         onFolderChange={handleFolderChange}
         onComposeClick={handleComposeClick}
         role={user?.role}
+        canViewAllAccounts={user?.assignedAddresses?.includes('*')}
         twoFactorEnabled={user?.twoFactorEnabled}
         onSecurityClick={() => setTwoFactorModalOpen(true)}
         onSettingsClick={() => router.push('/settings')}

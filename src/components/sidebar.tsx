@@ -28,6 +28,7 @@ import {
   Clock,
   Menu,
   Star,
+  AtSign,
 } from 'lucide-react';
 import ThemeToggle from '@/components/theme-toggle';
 
@@ -36,6 +37,7 @@ interface SidebarProps {
   onFolderChange: (folder: string) => void;
   onComposeClick: () => void;
   role?: string;
+  canViewAllAccounts?: boolean;
   twoFactorEnabled?: boolean;
   onSecurityClick?: () => void;
   onSettingsClick?: () => void;
@@ -49,6 +51,7 @@ export default function Sidebar({
   onFolderChange,
   onComposeClick,
   role,
+  canViewAllAccounts,
   twoFactorEnabled,
   onSecurityClick,
   onSettingsClick,
@@ -86,6 +89,9 @@ export default function Sidebar({
     { id: 'commercial', label: 'Comercial', icon: Tag, group: 'categories' },
     { id: 'newsletter', label: 'Newsletters', icon: Newspaper, group: 'categories' },
     { id: 'social', label: 'Redes Sociales', icon: Users, group: 'categories' },
+    ...(canViewAllAccounts
+      ? [{ id: 'catchall', label: 'Catch-All', icon: AtSign, group: 'categories' }]
+      : []),
 
     { id: 'spam', label: 'Spam', icon: AlertOctagon, group: 'system' },
     { id: 'trash', label: 'Papelera', icon: Trash2, group: 'system' },

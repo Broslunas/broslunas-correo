@@ -36,13 +36,17 @@ async function getAuthenticatedUser(request: NextRequest): Promise<{ success: bo
 
 // Call Gemini API with fallback models if the first model fails
 async function callGeminiAPI(prompt: string, customSystemInstruction?: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6L8ms8_TV660I_dHngdFjJzgSQCOsYSqpJOocQe2Brg9Q';
-  const modelToTry = process.env.GEMINI_MODEL || 'gemini-3.1-flash-live-preview';
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY no configurada');
+  }
+  const modelToTry = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
-  // List of models to try in sequence as fallbacks (Gemini 3 Flash Live, Gemini 3 Flash, Gemini 2.5 Flash, Gemini 2.0 Flash)
+  // List of models to try in sequence as fallbacks
   const models = Array.from(new Set([
     modelToTry,
-    'gemini-3.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
   ]));
 
   let lastError: any = null;
