@@ -31,7 +31,11 @@ import {
   FileText,
   Check,
   Sparkles,
+  Bookmark,
+  Plus,
+  Trash2,
 } from 'lucide-react';
+import type { CannedTemplate } from '@/lib/templates';
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -131,6 +135,15 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const [showHtmlModal, setShowHtmlModal] = useState(false);
   const [htmlCode, setHtmlCode] = useState('');
   const [importMode, setImportMode] = useState<'replace' | 'insert'>('replace');
+
+  // Templates States
+  const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
+  const [predefinedTemplates, setPredefinedTemplates] = useState<CannedTemplate[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<CannedTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [newTemplateTitle, setNewTemplateTitle] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   // Attachment states
   const [attachments, setAttachments] = useState<{
@@ -656,7 +669,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           if (list.length > 0) {
             const initialFrom = list[0].email;
             setFrom(initialFrom);
-            
+
             // Wait brief moment for editor content to mount from initialData
             setTimeout(() => {
               if (!initialData?.id) {
@@ -669,6 +682,28 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
         })
         .catch(err => console.error('Error loading sender mailboxes:', err))
         .finally(() => setSenderLoading(false));
+    }
+  }, [isOpen]);
+
+  const fetchTemplates = async () => {
+    try {
+      setTemplatesLoading(true);
+      const res = await fetch('/api/templates');
+      if (res.ok) {
+        const data = await res.json();
+        setPredefinedTemplates(data.predefined || []);
+        setCustomTemplates(data.custom || []);
+      }
+    } catch (err) {
+      console.error('Error fetching templates:', err);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchTemplates();
     }
   }, [isOpen]);
 
@@ -699,7 +734,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       if (sel && sel.getRangeAt && sel.rangeCount) {
         range = sel.getRangeAt(0);
         range.deleteContents();
-        const el = document.createElement("div");
+        const el = document.createElement('div');
         el.innerHTML = html;
         const frag = document.createDocumentFragment();
         let node, lastNode;
@@ -717,6 +752,51 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       } else if (editorRef.current) {
         editorRef.current.innerHTML += html;
       }
+    }
+  };
+
+  const handleApplyTemplate = (template: CannedTemplate) => {
+    if (!subject.trim() && template.subject) {
+      setSubject(template.subject);
+    }
+    insertHtmlAtCursor(template.bodyHtml);
+    setShowTemplatesDropdown(false);
+  };
+
+  const handleSaveCustomTemplate = async () => {
+    if (!newTemplateTitle.trim() || !editorRef.current) return;
+    setSavingTemplate(true);
+    try {
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTemplateTitle.trim(),
+          subject: subject || '',
+          bodyHtml: editorRef.current.innerHTML || '',
+        }),
+      });
+      if (res.ok) {
+        setNewTemplateTitle('');
+        setShowSaveTemplateModal(false);
+        fetchTemplates();
+      }
+    } catch (err) {
+      console.error('Error saving template:', err);
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleDeleteCustomTemplate = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/templates?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCustomTemplates(prev => prev.filter(t => t.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting template:', err);
     }
   };
 
@@ -1421,6 +1501,103 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 className="hidden"
                 multiple
               />
+
+              {/* Canned Templates Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  title="Plantillas y respuestas predefinidas"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTemplatesDropdown(!showTemplatesDropdown);
+                    setShowColorDropdown(false);
+                    setShowFontDropdown(false);
+                    setShowSizeDropdown(false);
+                  }}
+                  className={`h-7 px-2 flex items-center gap-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                    showTemplatesDropdown
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  <Bookmark className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline text-[11px]">Plantillas</span>
+                </button>
+
+                {showTemplatesDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowTemplatesDropdown(false)} />
+                    <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto rounded-xl border border-border bg-card p-2 shadow-2xl animate-fadeIn space-y-2">
+                      <div className="flex items-center justify-between px-1 pb-1 border-b border-border/60">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Plantillas de respuesta
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowTemplatesDropdown(false);
+                            setShowSaveTemplateModal(true);
+                          }}
+                          className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Guardar actual
+                        </button>
+                      </div>
+
+                      {/* Custom user templates */}
+                      {customTemplates.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold text-primary px-1 mb-1">Mis plantillas</p>
+                          <div className="space-y-0.5">
+                            {customTemplates.map((tmpl) => (
+                              <div
+                                key={tmpl.id}
+                                onClick={() => handleApplyTemplate(tmpl)}
+                                className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-muted text-foreground text-xs cursor-pointer transition-colors"
+                              >
+                                <div className="truncate min-w-0 pr-1">
+                                  <p className="font-medium truncate">{tmpl.title}</p>
+                                  {tmpl.subject && (
+                                    <p className="text-[10px] text-muted-foreground truncate">{tmpl.subject}</p>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  title="Eliminar plantilla"
+                                  onClick={(e) => handleDeleteCustomTemplate(tmpl.id, e)}
+                                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Predefined templates */}
+                      <div>
+                        <p className="text-[10px] font-semibold text-muted-foreground px-1 mb-1">Predefinidas</p>
+                        <div className="space-y-0.5">
+                          {predefinedTemplates.map((tmpl) => (
+                            <div
+                              key={tmpl.id}
+                              onClick={() => handleApplyTemplate(tmpl)}
+                              className="p-1.5 rounded-lg hover:bg-muted text-foreground text-xs cursor-pointer transition-colors"
+                            >
+                              <p className="font-medium truncate">{tmpl.title}</p>
+                              {tmpl.subject && (
+                                <p className="text-[10px] text-muted-foreground truncate">{tmpl.subject}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
               <button
                 type="button"
                 title="Eliminar formato"
@@ -1829,6 +2006,63 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   className="px-5 py-2 rounded-xl text-xs font-semibold shadow-xs hover:opacity-90 active:scale-95 transition-transform cursor-pointer bg-primary text-primary-foreground"
                 >
                   Importar HTML
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Custom Template Modal */}
+        {showSaveTemplateModal && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+            <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl animate-fadeInUp text-foreground space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Bookmark className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold text-foreground">Guardar como Plantilla</h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSaveTemplateModal(false)}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Guarda el contenido y asunto actuales como plantilla personalizada reutilizable.
+              </p>
+
+              <div>
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                  Nombre de la plantilla
+                </label>
+                <input
+                  type="text"
+                  value={newTemplateTitle}
+                  onChange={(e) => setNewTemplateTitle(e.target.value)}
+                  placeholder="Ej: Agradecimiento reunión, Presupuesto base..."
+                  className="w-full rounded-xl px-3 py-2 text-xs bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveTemplateModal(false)}
+                  className="px-3.5 py-1.5 rounded-xl text-xs border border-border text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={!newTemplateTitle.trim() || savingTemplate}
+                  onClick={handleSaveCustomTemplate}
+                  className="px-4 py-1.5 rounded-xl text-xs bg-primary text-primary-foreground font-semibold hover:opacity-95 disabled:opacity-50 cursor-pointer shadow-xs"
+                >
+                  {savingTemplate ? 'Guardando...' : 'Guardar plantilla'}
                 </button>
               </div>
             </div>

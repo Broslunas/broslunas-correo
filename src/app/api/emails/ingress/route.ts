@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
+import { resolveThreadId, normalizeSubject } from '@/lib/threads';
 import webPush from 'web-push';
 
 
@@ -157,7 +158,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // 6. Build email document
+    // 6. Resolve thread ID
+    const threadId = await resolveThreadId(db, {
+      messageId: messageId || undefined,
+      inReplyTo: inReplyTo || undefined,
+      references: references || undefined,
+      subject: subject || '',
+    });
+
+    // 7. Build email document
     const incomingEmailDocument = {
       from: {
         name: from.name || '',
@@ -167,6 +176,7 @@ export async function POST(request: Request) {
       cc: parseRecipientField(cc).map((c: string) => c.trim().toLowerCase()),
       bcc: parseRecipientField(bcc).map((b: string) => b.trim().toLowerCase()),
       subject: subject || '(Sin Asunto)',
+      normalizedSubject: normalizeSubject(subject || ''),
       date: date ? new Date(date) : new Date(),
       body: {
         text: bodyText || '',
@@ -176,6 +186,7 @@ export async function POST(request: Request) {
       folder: detectedFolder,
       isRead: false,
       isStarred: false,
+      threadId,
       messageId: messageId || undefined,
       inReplyTo: inReplyTo || undefined,
       references: references || undefined,

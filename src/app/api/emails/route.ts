@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { connectToDatabase } from '@/lib/db';
+import { parseSearchQuery } from '@/lib/search-parser';
 import { ObjectId } from 'mongodb';
 
 export const dynamic = 'force-dynamic';
@@ -64,7 +65,23 @@ export async function GET(request: NextRequest) {
       if (!email) {
         return NextResponse.json({ error: 'Correo no encontrado' }, { status: 404 });
       }
-      return NextResponse.json({ email });
+
+      // If the email has a threadId, retrieve all messages in the thread
+      let threadEmails: any[] = [email];
+      if (email.threadId) {
+        const threadQuery: any = { threadId: email.threadId };
+        if (!assignedAddresses.includes('*')) {
+          threadQuery.$or = [
+            { to: { $in: assignedAddresses } },
+            { cc: { $in: assignedAddresses } },
+            { bcc: { $in: assignedAddresses } },
+            { 'from.address': { $in: assignedAddresses } }
+          ];
+        }
+        threadEmails = await db.collection('emails').find(threadQuery).sort({ date: 1 }).toArray();
+      }
+
+      return NextResponse.json({ email, threadEmails });
     }
 
     const folder = searchParams.get('folder') || 'inbox';
@@ -126,16 +143,10 @@ export async function GET(request: NextRequest) {
 
     // 3. Search query condition (if provided)
     if (searchQuery) {
-      const regex = new RegExp(searchQuery, 'i');
-      andClauses.push({
-        $or: [
-          { subject: regex },
-          { 'body.text': regex },
-          { 'from.name': regex },
-          { 'from.address': regex },
-          { to: regex }
-        ]
-      });
+      const searchClauses = parseSearchQuery(searchQuery);
+      if (searchClauses.length > 0) {
+        andClauses.push(...searchClauses);
+      }
     }
 
     const query = { $and: andClauses };
@@ -148,6 +159,22 @@ export async function GET(request: NextRequest) {
       .skip(skip)
       .limit(limit)
       .toArray();
+
+    // Enrich emails with thread message counts
+    const threadIds = Array.from(new Set(emails.map(e => e.threadId).filter(Boolean)));
+    if (threadIds.length > 0) {
+      const threadCounts = await db.collection('emails').aggregate([
+        { $match: { threadId: { $in: threadIds } } },
+        { $group: { _id: '$threadId', count: { $sum: 1 } } }
+      ]).toArray();
+
+      const countMap = new Map<string, number>(threadCounts.map(tc => [String(tc._id), tc.count]));
+      for (const email of emails) {
+        if (email.threadId && countMap.has(email.threadId)) {
+          email.threadCount = countMap.get(email.threadId);
+        }
+      }
+    }
 
     // Get total count for pagination calculations
     const totalCount = await db.collection('emails').countDocuments(query);

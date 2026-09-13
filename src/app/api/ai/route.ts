@@ -42,10 +42,7 @@ async function callGeminiAPI(prompt: string, customSystemInstruction?: string): 
   // List of models to try in sequence as fallbacks (Gemini 3 Flash Live, Gemini 3 Flash, Gemini 2.5 Flash, Gemini 2.0 Flash)
   const models = Array.from(new Set([
     modelToTry,
-    'gemini-3.1-flash-live-preview',
-    'gemini-3-flash-preview',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash'
+    'gemini-3.5-flash-lite',
   ]));
 
   let lastError: any = null;

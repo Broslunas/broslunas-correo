@@ -26,6 +26,10 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  Send,
+  Loader2,
+  ChevronsUpDown,
+  Paperclip,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
 
@@ -51,6 +55,8 @@ interface Email {
   folder: string;
   isRead: boolean;
   isStarred?: boolean;
+  threadId?: string;
+  threadCount?: number;
   messageId?: string;
   inReplyTo?: string;
   references?: string;
@@ -70,6 +76,7 @@ interface EmailReaderProps {
   onForwardClick?: (email: Email) => void;
   onBack?: () => void;
   isStandalone?: boolean;
+  userEmail?: string;
 }
 
 function checkPhishingRisk(from: { name: string; address: string }, authStatus?: Email['authStatus']): { isSuspicious: boolean; reason: string } {
@@ -177,27 +184,29 @@ function buildEmailSrcdoc(email: Email, allowExternalImages: boolean): { srcdoc:
   html, body {
     margin: 0; padding: 0;
     background: transparent;
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: inherit;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-size: 14px;
-    line-height: 1.65;
+    line-height: 1.6;
     word-break: break-word;
-    overflow-x: hidden;
+    overflow-wrap: break-word;
   }
   @media (prefers-color-scheme: dark) {
-    html, body { color: #e2e2e9; }
-    a { color: #a8c7fa; text-decoration: underline; }
-    a:hover { color: #d3e3fd; }
-    blockquote { border-left: 3px solid #a8c7fa; color: #9aa0a6; margin: 8px 0 8px 16px; padding-left: 12px; }
-    pre, code { background: rgba(255,255,255,0.08); border-radius: 6px; padding: 2px 6px; font-size: 12px; font-family: monospace; }
-    hr { border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 16px 0; }
+    body { color: #e5e7eb; }
+    a { color: #60a5fa !important; }
+    hr { border-color: rgba(255,255,255,0.1) !important; }
   }
   @media (prefers-color-scheme: light) {
-    html, body { color: #1f1f1f; }
-    a { color: #0b57d0; text-decoration: underline; }
-    a:hover { color: #0842a0; }
-    blockquote { border-left: 3px solid #0b57d0; color: #5f6368; margin: 8px 0 8px 16px; padding-left: 12px; }
-    pre, code { background: rgba(0,0,0,0.05); border-radius: 6px; padding: 2px 6px; font-size: 12px; font-family: monospace; }
-    hr { border: none; border-top: 1px solid rgba(0,0,0,0.08); margin: 16px 0; }
+    body { color: #1f2937; }
+    a { color: #2563eb !important; }
+    hr { border-color: rgba(0,0,0,0.08) !important; }
+  }
+  a { text-decoration: underline; }
+  blockquote {
+    border-left: 3px solid #3b82f6;
+    margin: 12px 0;
+    padding: 4px 12px;
+    color: #6b7280;
   }
   img { max-width: 100%; height: auto; display: block; }
   table { border-collapse: collapse; max-width: 100%; }
@@ -289,12 +298,232 @@ function SenderAvatar({ name, address }: { name: string; address: string }) {
   const [from, to] = colors[idx];
   return (
     <div
-      className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 select-none text-white shadow-xs"
+      className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 select-none text-white shadow-xs"
       style={{
         background: `linear-gradient(135deg, ${from}, ${to})`,
       }}
     >
       {letter}
+    </div>
+  );
+}
+
+// Single message card inside conversation thread
+function ThreadMessageItem({
+  msg,
+  isExpanded,
+  isOnly,
+  onToggle,
+  onReplyClick,
+  onForwardClick,
+  onUpdateEmailStatus,
+}: {
+  msg: Email;
+  isExpanded: boolean;
+  isOnly: boolean;
+  onToggle: () => void;
+  onReplyClick: (email: Email) => void;
+  onForwardClick?: (email: Email) => void;
+  onUpdateEmailStatus: (ids: string[], updates: { isStarred?: boolean }) => void;
+}) {
+  const [allowExternalImages, setAllowExternalImages] = useState(false);
+
+  const rawHtml = msg.body.html || '';
+  const hasContent = rawHtml.trim().length > 0;
+  const { srcdoc, hasExternalImages } = useMemo(() => {
+    if (!hasContent) return { srcdoc: null, hasExternalImages: false };
+    return buildEmailSrcdoc(msg, allowExternalImages);
+  }, [msg, allowExternalImages, hasContent]);
+
+  const phishingRisk = useMemo(() => {
+    return checkPhishingRisk(msg.from, msg.authStatus);
+  }, [msg.from, msg.authStatus]);
+
+  const formattedDate = new Date(msg.date).toLocaleString('es-ES', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const realAttachments = (msg.attachments || []).filter(
+    (att) => att.disposition !== 'inline' && !att.contentId
+  );
+
+  if (!isExpanded) {
+    return (
+      <div
+        onClick={onToggle}
+        className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-border bg-card hover:bg-muted/40 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <SenderAvatar name={msg.from.name} address={msg.from.address} />
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-semibold text-foreground truncate">
+              {msg.from.name || msg.from.address}
+            </span>
+            <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+              {msg.body.text ? msg.body.text.replace(/\s+/g, ' ').slice(0, 80) : '(Sin contenido de texto)'}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
+          {realAttachments.length > 0 && <Paperclip className="h-3 w-3 text-muted-foreground" />}
+          <span className="text-[11px]">{formattedDate}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs space-y-4">
+      {/* Message Header */}
+      <div
+        onClick={!isOnly ? onToggle : undefined}
+        className={`px-5 py-4 border-b border-border/60 bg-muted/10 ${!isOnly ? 'cursor-pointer hover:bg-muted/20' : ''}`}
+      >
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <SenderAvatar name={msg.from.name} address={msg.from.address} />
+            <div>
+              <p className="text-sm font-semibold select-text text-foreground">
+                {msg.from.name || '(Sin nombre)'}{' '}
+                <span className="font-normal text-xs text-muted-foreground">
+                  &lt;{msg.from.address}&gt;
+                </span>
+              </p>
+              <p className="text-xs mt-0.5 select-text text-muted-foreground">
+                Para: {msg.to.join(', ')}
+                {msg.cc && msg.cc.length > 0 && <span> · CC: {msg.cc.join(', ')}</span>}
+              </p>
+
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {msg.authStatus?.spf === 'fail' || msg.authStatus?.dkim === 'fail' ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    <ShieldAlert className="h-3 w-3" />
+                    Fallo SPF/DKIM
+                  </span>
+                ) : msg.authStatus?.spf === 'pass' || msg.authStatus?.dkim === 'pass' ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <ShieldCheck className="h-3 w-3" />
+                    Verificado
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
+                    <Shield className="h-3 w-3" />
+                    Sin firma
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <time className="text-xs text-muted-foreground">
+              {formattedDate}
+            </time>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdateEmailStatus([msg._id], { isStarred: !msg.isStarred });
+              }}
+              title={msg.isStarred ? 'Quitar de destacados' : 'Destacar'}
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <Star className={`h-3.5 w-3.5 ${msg.isStarred ? 'fill-amber-400 text-amber-400' : ''}`} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReplyClick(msg);
+              }}
+              title="Responder a este mensaje"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <CornerUpLeft className="h-3.5 w-3.5" />
+            </button>
+            {onForwardClick && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onForwardClick(msg);
+                }}
+                title="Reenviar este mensaje"
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <Forward className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Phishing warning banner */}
+      {phishingRisk.isSuspicious && (
+        <div className="mx-5 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 flex items-start gap-2.5 text-xs">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <span className="font-bold block">Aviso de seguridad</span>
+            <span>{phishingRisk.reason}</span>
+          </div>
+        </div>
+      )}
+
+      {/* External images banner */}
+      {hasExternalImages && (
+        <div className="mx-5 p-2.5 rounded-xl border border-border bg-muted/40 flex items-center justify-between text-xs gap-3">
+          <span className="text-muted-foreground text-[11px]">
+            {allowExternalImages ? 'Mostrando imágenes remotas.' : 'Las imágenes externas han sido bloqueadas.'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAllowExternalImages(!allowExternalImages)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-background border border-border text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
+          >
+            {allowExternalImages ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+            <span>{allowExternalImages ? 'Bloquear imágenes' : 'Cargar imágenes'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Message Body */}
+      <div className="px-5 pb-4">
+        {srcdoc ? <EmailIframe srcdoc={srcdoc} /> : <PlainTextBody text={msg.body.text} />}
+      </div>
+
+      {/* Attachments */}
+      {realAttachments.length > 0 && (
+        <div className="mx-5 mb-5 rounded-xl p-3 space-y-2 bg-muted/30 border border-border">
+          <h4 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-primary">
+            <FileArchive className="h-3.5 w-3.5" />
+            Adjuntos ({realAttachments.length})
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {realAttachments.map((att, index) => (
+              <a
+                key={index}
+                href={`/api/attachments?key=${att.r2Url}&filename=${encodeURIComponent(att.filename)}`}
+                className="group flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/80 transition-colors text-xs text-foreground"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                  <div className="truncate">
+                    <p className="font-semibold truncate">{att.filename}</p>
+                    <p className="text-[10px] text-muted-foreground">{formatBytes(att.size)}</p>
+                  </div>
+                </div>
+                <div className="h-6 w-6 rounded-md flex items-center justify-center shrink-0 ml-2 text-primary bg-primary/10">
+                  <Download className="h-3 w-3" />
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -308,26 +537,140 @@ export default function EmailReader({
   onForwardClick,
   onBack,
   isStandalone = false,
+  userEmail,
 }: EmailReaderProps) {
   const [moveDropdownOpen, setMoveDropdownOpen] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
-  const [allowExternalImages, setAllowExternalImages] = useState(false);
+
+  // Thread management
+  const [threadMessages, setThreadMessages] = useState<Email[]>(email ? [email] : []);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(email ? [email._id] : []));
+  const [quickReplyText, setQuickReplyText] = useState('');
+  const [quickReplySending, setQuickReplySending] = useState(false);
+  const [quickReplyError, setQuickReplyError] = useState<string | null>(null);
 
   useEffect(() => {
     setMoveDropdownOpen(false);
     setAiSummary(null);
     setLoadingSummary(false);
     setSummaryError(null);
-    setAllowExternalImages(false);
-  }, [email]);
+    setQuickReplyText('');
+    setQuickReplyError(null);
+
+    if (!email) {
+      setThreadMessages([]);
+      setExpandedIds(new Set());
+      return;
+    }
+
+    setThreadMessages([email]);
+    setExpandedIds(new Set([email._id]));
+
+    let isMounted = true;
+    fetch(`/api/emails?id=${email._id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isMounted || !data) return;
+        if (data.threadEmails && Array.isArray(data.threadEmails) && data.threadEmails.length > 0) {
+          setThreadMessages(data.threadEmails);
+          // By default expand the newest message
+          const latest = data.threadEmails[data.threadEmails.length - 1];
+          setExpandedIds(new Set([latest._id]));
+        }
+      })
+      .catch((err) => console.error('Error fetching thread:', err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [email?._id]);
+
+  const toggleExpandMessage = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size > 1) next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleExpandAll = () => {
+    if (expandedIds.size === threadMessages.length) {
+      // Keep only latest expanded
+      const latest = threadMessages[threadMessages.length - 1];
+      setExpandedIds(new Set(latest ? [latest._id] : []));
+    } else {
+      // Expand all
+      setExpandedIds(new Set(threadMessages.map((m) => m._id)));
+    }
+  };
+
+  const handleQuickReplySend = async () => {
+    if (!quickReplyText.trim() || !email) return;
+    setQuickReplySending(true);
+    setQuickReplyError(null);
+
+    try {
+      const latestMsg = threadMessages[threadMessages.length - 1] || email;
+      const toRecipient = latestMsg.from.address;
+      const fromSender = userEmail || (Array.isArray(latestMsg.to) && latestMsg.to[0]) || '';
+      const replySubject = latestMsg.subject.startsWith('Re:') ? latestMsg.subject : `Re: ${latestMsg.subject}`;
+
+      const res = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: fromSender,
+          to: [toRecipient],
+          subject: replySubject,
+          bodyText: quickReplyText,
+          bodyHtml: `<p>${quickReplyText.replace(/\n/g, '<br>')}</p>`,
+          inReplyTo: latestMsg.messageId || undefined,
+          references: latestMsg.messageId ? `${latestMsg.references || ''} ${latestMsg.messageId}`.trim() : undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setQuickReplyText('');
+        // Refresh thread emails
+        const refRes = await fetch(`/api/emails?id=${email._id}`);
+        if (refRes.ok) {
+          const refData = await refRes.json();
+          if (refData.threadEmails) {
+            setThreadMessages(refData.threadEmails);
+            const newest = refData.threadEmails[refData.threadEmails.length - 1];
+            setExpandedIds((prev) => {
+              const next = new Set(Array.from(prev));
+              next.add(newest._id);
+              return next;
+            });
+          }
+        }
+      } else {
+        setQuickReplyError(data.error || 'Error al enviar respuesta rápida');
+      }
+    } catch (err: any) {
+      setQuickReplyError('Error de conexión al enviar respuesta');
+    } finally {
+      setQuickReplySending(false);
+    }
+  };
 
   const handleSummarize = async () => {
     if (!email) return;
     setLoadingSummary(true);
     setSummaryError(null);
     try {
+      const fullContext = threadMessages
+        .map((m) => `De: ${m.from.name || m.from.address}\nTexto: ${m.body.text || m.body.html || ''}`)
+        .join('\n---\n');
+
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -336,7 +679,7 @@ export default function EmailReader({
           emailContext: {
             from: email.from.name ? `${email.from.name} <${email.from.address}>` : email.from.address,
             subject: email.subject,
-            body: email.body.text || email.body.html || '',
+            body: fullContext,
           },
         }),
       });
@@ -385,32 +728,8 @@ export default function EmailReader({
     );
   }
 
-  const formattedDate = new Date(email.date).toLocaleString('es-ES', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  const realAttachments = (email.attachments || []).filter(
-    (att) => !(
-      att.disposition === 'inline' ||
-      (att.contentId && att.contentType?.startsWith('image/'))
-    )
-  );
-
-  const rawHtml = email.body.html || '';
-  const hasContent = rawHtml.trim().length > 0;
-  const { srcdoc, hasExternalImages } = useMemo(() => {
-    if (!hasContent) return { srcdoc: null, hasExternalImages: false };
-    return buildEmailSrcdoc(email, allowExternalImages);
-  }, [email, allowExternalImages, hasContent]);
-
-  const phishingRisk = useMemo(() => {
-    return checkPhishingRisk(email.from, email.authStatus);
-  }, [email.from, email.authStatus]);
+  const allThreadIds = threadMessages.map((m) => m._id);
+  const latestMessage = threadMessages[threadMessages.length - 1] || email;
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-card animate-fadeIn">
@@ -431,7 +750,7 @@ export default function EmailReader({
           {/* Reply */}
           <button
             id="btn-reply"
-            onClick={() => onReplyClick(email)}
+            onClick={() => onReplyClick(latestMessage)}
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:opacity-95 shadow-xs transition-transform active:scale-95 cursor-pointer"
           >
             <CornerUpLeft className="h-3.5 w-3.5" />
@@ -442,7 +761,7 @@ export default function EmailReader({
           {onReplyAllClick && (
             <button
               id="btn-reply-all"
-              onClick={() => onReplyAllClick(email)}
+              onClick={() => onReplyAllClick(latestMessage)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
             >
               <CornerUpRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -454,7 +773,7 @@ export default function EmailReader({
           {onForwardClick && (
             <button
               id="btn-forward"
-              onClick={() => onForwardClick(email)}
+              onClick={() => onForwardClick(latestMessage)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
             >
               <Forward className="h-3.5 w-3.5 text-muted-foreground" />
@@ -469,7 +788,7 @@ export default function EmailReader({
           <button
             id="btn-star"
             type="button"
-            onClick={() => onUpdateEmailStatus([email._id], { isStarred: !email.isStarred })}
+            onClick={() => onUpdateEmailStatus(allThreadIds, { isStarred: !email.isStarred })}
             title={email.isStarred ? 'Quitar de destacados' : 'Destacar mensaje'}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
           >
@@ -480,7 +799,7 @@ export default function EmailReader({
           {/* Mark unread */}
           <button
             type="button"
-            onClick={() => onUpdateEmailStatus([email._id], { isRead: false })}
+            onClick={() => onUpdateEmailStatus(allThreadIds, { isRead: false })}
             title="Marcar como no leído"
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
           >
@@ -536,7 +855,7 @@ export default function EmailReader({
                         type="button"
                         key={targetFolder.id}
                         onClick={() => {
-                          onUpdateEmailStatus([email._id], { folder: targetFolder.id });
+                          onUpdateEmailStatus(allThreadIds, { folder: targetFolder.id });
                           setMoveDropdownOpen(false);
                         }}
                         disabled={isCurrent}
@@ -558,7 +877,7 @@ export default function EmailReader({
           {email.folder !== 'inbox' && (
             <button
               id="btn-restore"
-              onClick={() => onUpdateEmailStatus([email._id], { folder: 'inbox' })}
+              onClick={() => onUpdateEmailStatus(allThreadIds, { folder: 'inbox' })}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
             >
               <ArchiveRestore className="h-3.5 w-3.5 text-muted-foreground" />
@@ -569,7 +888,7 @@ export default function EmailReader({
           {email.folder !== 'spam' ? (
             <button
               id="btn-spam"
-              onClick={() => onUpdateEmailStatus([email._id], { folder: 'spam' })}
+              onClick={() => onUpdateEmailStatus(allThreadIds, { folder: 'spam' })}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-amber-600 dark:text-amber-400 transition-colors cursor-pointer"
             >
               <AlertOctagon className="h-3.5 w-3.5" />
@@ -577,7 +896,7 @@ export default function EmailReader({
             </button>
           ) : (
             <button
-              onClick={() => onUpdateEmailStatus([email._id], { folder: 'inbox' })}
+              onClick={() => onUpdateEmailStatus(allThreadIds, { folder: 'inbox' })}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
             >
               <CheckCircle className="h-3.5 w-3.5" />
@@ -588,7 +907,7 @@ export default function EmailReader({
           {email.folder !== 'trash' ? (
             <button
               id="btn-trash"
-              onClick={() => onUpdateEmailStatus([email._id], { folder: 'trash' })}
+              onClick={() => onUpdateEmailStatus(allThreadIds, { folder: 'trash' })}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors cursor-pointer"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -597,7 +916,7 @@ export default function EmailReader({
           ) : (
             <button
               id="btn-delete-permanent"
-              onClick={() => onDeletePermanent([email._id])}
+              onClick={() => onDeletePermanent(allThreadIds)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -608,175 +927,151 @@ export default function EmailReader({
       </div>
 
       {/* Scrollable email content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Email header */}
-        <div className="px-5 md:px-8 pt-6 pb-5 border-b border-border bg-card">
-          <h1 className="text-lg md:text-xl font-bold mb-4 leading-snug select-text text-foreground">
-            {email.subject || '(Sin asunto)'}
-          </h1>
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
+        {/* Thread Header */}
+        <div className="pb-3 border-b border-border flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-lg md:text-xl font-bold leading-snug select-text text-foreground">
+              {email.subject || '(Sin asunto)'}
+            </h1>
+            {threadMessages.length > 1 && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Conversación con {threadMessages.length} mensajes
+              </p>
+            )}
+          </div>
 
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <SenderAvatar name={email.from.name} address={email.from.address} />
-              <div>
-                <p className="text-sm font-semibold select-text text-foreground">
-                  {email.from.name || '(Sin nombre)'}{' '}
-                  <span className="font-normal text-xs text-muted-foreground">
-                    &lt;{email.from.address}&gt;
-                  </span>
-                </p>
-                <p className="text-xs mt-0.5 select-text text-muted-foreground">
-                  Para: {email.to.join(', ')}
-                  {email.cc && email.cc.length > 0 && <span> · CC: {email.cc.join(', ')}</span>}
-                </p>
-
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {email.authStatus?.spf === 'fail' || email.authStatus?.dkim === 'fail' ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                      <ShieldAlert className="h-3 w-3" />
-                      Fallo de autenticación (SPF/DKIM)
-                    </span>
-                  ) : email.authStatus?.spf === 'pass' || email.authStatus?.dkim === 'pass' ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      <ShieldCheck className="h-3 w-3" />
-                      Verificado (SPF/DKIM)
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
-                      <Shield className="h-3 w-3" />
-                      Sin firma digital
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end gap-2 shrink-0">
-              <time className="text-xs shrink-0 capitalize text-muted-foreground">
-                {formattedDate}
-              </time>
-
+          <div className="flex items-center gap-2">
+            {threadMessages.length > 1 && (
               <button
                 type="button"
-                onClick={handleSummarize}
-                disabled={loadingSummary}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors cursor-pointer disabled:opacity-50"
+                onClick={toggleExpandAll}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer font-medium"
               >
-                <Sparkles className="h-3 w-3 animate-pulse" />
-                Resumir IA
+                <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>
+                  {expandedIds.size === threadMessages.length ? 'Colapsar anteriores' : 'Expandir todos'}
+                </span>
               </button>
-            </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSummarize}
+              disabled={loadingSummary}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className="h-3 w-3 animate-pulse" />
+              Resumir hilo con IA
+            </button>
           </div>
         </div>
 
         {/* AI Summary Section */}
         {(loadingSummary || aiSummary || summaryError) && (
-          <div className="px-5 md:px-8 pt-6">
-            <div className="rounded-2xl p-4 border border-primary/20 bg-primary/5 text-xs text-foreground">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-bold flex items-center gap-1.5 uppercase tracking-wider text-[10px] text-primary">
-                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                  Resumen por Gemini IA
-                </h4>
-                {aiSummary && (
-                  <button
-                    onClick={() => setAiSummary(null)}
-                    className="text-muted-foreground hover:text-foreground text-[10px] cursor-pointer"
-                  >
-                    Ocultar
-                  </button>
-                )}
-              </div>
-              {loadingSummary && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="h-3.5 w-3.5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                  Generando resumen inteligente...
-                </div>
-              )}
-              {summaryError && <div className="text-destructive font-medium">{summaryError}</div>}
+          <div className="rounded-2xl p-4 border border-primary/20 bg-primary/5 text-xs text-foreground">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-bold flex items-center gap-1.5 uppercase tracking-wider text-[10px] text-primary">
+                <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                Resumen por Gemini IA
+              </h4>
               {aiSummary && (
-                <div className="text-foreground leading-relaxed whitespace-pre-line select-text">
-                  {aiSummary}
-                </div>
+                <button
+                  onClick={() => setAiSummary(null)}
+                  className="text-muted-foreground hover:text-foreground text-[10px] cursor-pointer"
+                >
+                  Ocultar
+                </button>
               )}
             </div>
-          </div>
-        )}
 
-        {/* Phishing warning banner */}
-        {phishingRisk.isSuspicious && (
-          <div className="px-5 md:px-8 pt-4">
-            <div className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs animate-fadeIn">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <strong className="block font-semibold mb-0.5">Aviso de seguridad: Remitente sospechoso</strong>
-                <span>{phishingRisk.reason}</span>
+            {loadingSummary && (
+              <div className="flex items-center gap-2 text-muted-foreground py-2">
+                <div className="h-3.5 w-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span>Generando resumen inteligente de la conversación...</span>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* External Images Blocker banner */}
-        {hasExternalImages && !allowExternalImages && (
-          <div className="px-5 md:px-8 pt-4">
-            <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 text-xs text-foreground animate-fadeIn">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-primary shrink-0" />
-                <span>Se han bloqueado las imágenes remotas para proteger tu privacidad y evitar rastreadores espía.</span>
+            {summaryError && (
+              <p className="text-destructive font-medium">{summaryError}</p>
+            )}
+
+            {aiSummary && (
+              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed whitespace-pre-wrap">
+                {aiSummary}
               </div>
-              <button
-                type="button"
-                onClick={() => setAllowExternalImages(true)}
-                className="shrink-0 px-3 py-1 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
-              >
-                Mostrar imágenes
-              </button>
-            </div>
+            )}
           </div>
         )}
 
-        {/* Email body */}
-        <div className="px-5 md:px-8 py-6">
-          {srcdoc ? (
-            <EmailIframe key={email._id} srcdoc={srcdoc} />
-          ) : (
-            <PlainTextBody text={email.body.text} />
-          )}
+        {/* Chronological Message Chain */}
+        <div className="space-y-3">
+          {threadMessages.map((msg) => (
+            <ThreadMessageItem
+              key={msg._id}
+              msg={msg}
+              isExpanded={expandedIds.has(msg._id)}
+              isOnly={threadMessages.length === 1}
+              onToggle={() => toggleExpandMessage(msg._id)}
+              onReplyClick={onReplyClick}
+              onForwardClick={onForwardClick}
+              onUpdateEmailStatus={onUpdateEmailStatus}
+            />
+          ))}
         </div>
 
-        {/* Attachments */}
-        {realAttachments.length > 0 && (
-          <div className="px-5 md:px-8 pb-8">
-            <div className="rounded-2xl p-4 space-y-3 bg-muted/40 border border-border">
-              <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2 text-primary">
-                <FileArchive className="h-4 w-4" />
-                Archivos adjuntos ({realAttachments.length})
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {realAttachments.map((att, index) => (
-                  <a
-                    key={index}
-                    href={`/api/attachments?key=${att.r2Url}&filename=${encodeURIComponent(att.filename)}`}
-                    className="group flex items-center justify-between p-2.5 rounded-xl border border-border bg-card hover:bg-muted/80 transition-colors text-xs text-foreground"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-primary">
-                        <FileText className="h-4 w-4" />
-                      </div>
-                      <div className="truncate">
-                        <p className="font-semibold truncate">{att.filename}</p>
-                        <p className="text-[10px] text-muted-foreground">{formatBytes(att.size)}</p>
-                      </div>
-                    </div>
-                    <div className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ml-2 text-primary bg-primary/10">
-                      <Download className="h-3.5 w-3.5" />
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
+        {/* Quick Reply Box */}
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <CornerUpLeft className="h-3.5 w-3.5 text-primary" />
+              Respuesta rápida a {latestMessage.from.name || latestMessage.from.address}
+            </span>
+            <button
+              type="button"
+              onClick={() => onReplyClick(latestMessage)}
+              className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
+            >
+              Abrir en editor completo
+            </button>
           </div>
-        )}
+
+          <textarea
+            value={quickReplyText}
+            onChange={(e) => setQuickReplyText(e.target.value)}
+            placeholder="Escribe una respuesta rápida aquí..."
+            rows={3}
+            className="w-full rounded-xl p-3 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+          />
+
+          {quickReplyError && (
+            <p className="text-xs text-destructive font-medium">{quickReplyError}</p>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-[11px] text-muted-foreground">
+              Se enviará automáticamente a {latestMessage.from.address}
+            </span>
+            <button
+              type="button"
+              disabled={!quickReplyText.trim() || quickReplySending}
+              onClick={handleQuickReplySend}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-95 disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+            >
+              {quickReplySending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  Enviar respuesta
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

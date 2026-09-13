@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { connectToDatabase } from '@/lib/db';
+import { resolveThreadId, normalizeSubject } from '@/lib/threads';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client, BUCKET_NAME } from '@/lib/r2';
 
@@ -247,7 +248,15 @@ export async function POST(request: NextRequest) {
     const responseData = await response.json();
     const mailjetMessageId = responseData.Messages?.[0]?.To?.[0]?.MessageID || `sent-${crypto.randomUUID()}`;
 
-    // 7. Store copy in MongoDB 'sent' folder
+    // 7. Resolve thread ID for conversation continuity
+    const threadId = await resolveThreadId(db, {
+      messageId: String(mailjetMessageId),
+      inReplyTo: inReplyTo || undefined,
+      references: references || undefined,
+      subject: subject || '',
+    });
+
+    // 8. Store copy in MongoDB 'sent' folder
     const sentEmailDocument: Record<string, any> = {
       from: {
         name: fromName,
@@ -257,6 +266,7 @@ export async function POST(request: NextRequest) {
       cc: cc || [],
       bcc: bcc || [],
       subject: subject || '(Sin Asunto)',
+      normalizedSubject: normalizeSubject(subject || ''),
       date: new Date(),
       body: {
         text: bodyText || '',
@@ -265,6 +275,7 @@ export async function POST(request: NextRequest) {
       attachments: combinedDbAttachments,
       folder: 'sent',
       isRead: true,
+      threadId,
       messageId: String(mailjetMessageId),
       ...(inReplyTo ? { inReplyTo } : {}),
       ...(references ? { references } : {}),

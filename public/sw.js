@@ -1,6 +1,6 @@
 // Service Worker for Webmail Cache and Push Notifications
 
-const CACHE_NAME = 'broslunas-correo-v1';
+const CACHE_NAME = 'broslunas-correo-v2';
 const ASSETS_TO_CACHE = [
   '/favicon.png',
   '/favicon.ico',
@@ -37,10 +37,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Exclude API calls, auth pages, and Next.js static asset compiler chunks in dev/prod to avoid collisions
+  // Exclude navigations, API calls, auth pages, and Next.js compiler chunks to avoid breaking page transitions
   if (
-    url.pathname.startsWith('/api') || 
-    url.pathname.startsWith('/auth') || 
+    event.request.mode === 'navigate' ||
+    url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/auth') ||
     url.pathname.startsWith('/_next') ||
     url.hostname === 'localhost'
   ) {
@@ -48,20 +49,22 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Cache dynamic assets if they are valid basic responses (e.g. static assets, images)
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).then((response) => {
         if (response && response.status === 200 && response.type === 'basic') {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          if (['image', 'font', 'style', 'script'].includes(event.request.destination)) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
         }
         return response;
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
+      });
+    })
   );
 });
 

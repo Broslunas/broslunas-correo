@@ -242,6 +242,7 @@ function StandaloneViewContent() {
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       <EmailReader
         email={email}
+        userEmail={user?.email}
         onUpdateEmailStatus={handleUpdateEmailStatus}
         onDeletePermanent={handleDeletePermanent}
         onReplyClick={handleReplyClick}

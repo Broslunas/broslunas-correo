@@ -35,6 +35,8 @@ interface Email {
   folder: string;
   isRead: boolean;
   isStarred?: boolean;
+  threadId?: string;
+  threadCount?: number;
 }
 
 interface EmailListProps {
@@ -410,9 +412,53 @@ export default function EmailList({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar en el correo..."
-            className="w-full rounded-full py-2 pl-9 pr-4 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+            placeholder="Buscar con operadores (from:, has:attachment)..."
+            className="w-full rounded-full py-2 pl-9 pr-8 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Search Operator Quick Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[10px]">
+          {[
+            { label: 'Adjuntos', token: 'has:attachment' },
+            { label: 'No leídos', token: 'is:unread' },
+            { label: 'Destacados', token: 'is:starred' },
+            { label: 'De:', token: 'from:' },
+            { label: 'Para:', token: 'to:' },
+            { label: 'Asunto:', token: 'subject:' },
+          ].map((chip) => {
+            const isActive = searchQuery.toLowerCase().includes(chip.token.toLowerCase());
+            return (
+              <button
+                key={chip.token}
+                type="button"
+                onClick={() => {
+                  if (!searchQuery.toLowerCase().includes(chip.token.toLowerCase())) {
+                    const next = searchQuery ? `${searchQuery.trim()} ${chip.token}` : chip.token;
+                    onSearchChange(next);
+                  }
+                  const el = document.getElementById('email-search');
+                  el?.focus();
+                }}
+                className={`px-2 py-0.5 rounded-full whitespace-nowrap transition-colors border cursor-pointer ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border-border/60'
+                }`}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -468,17 +514,24 @@ export default function EmailList({
                   <SenderAvatar name={email.from.name} address={email.from.address} />
 
                   <div className="flex-1 min-w-0 pr-1">
-                    {/* Row 1: Sender + date + star */}
+                    {/* Row 1: Sender + thread count + date + star */}
                     <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span
-                        className={`text-xs truncate ${
-                          email.isRead
-                            ? 'font-medium text-muted-foreground'
-                            : 'font-bold text-foreground'
-                        }`}
-                      >
-                        {email.from.name || email.from.address}
-                      </span>
+                      <div className="flex items-center gap-1.5 truncate min-w-0">
+                        <span
+                          className={`text-xs truncate ${
+                            email.isRead
+                              ? 'font-medium text-muted-foreground'
+                              : 'font-bold text-foreground'
+                          }`}
+                        >
+                          {email.from.name || email.from.address}
+                        </span>
+                        {email.threadCount && email.threadCount > 1 && (
+                          <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/10 text-primary border border-primary/20">
+                            {email.threadCount}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"

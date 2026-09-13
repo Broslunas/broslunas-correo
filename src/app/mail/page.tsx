@@ -673,6 +673,7 @@ function MailContent() {
           >
             <EmailReader
               email={selectedEmail}
+              userEmail={user?.email}
               onUpdateEmailStatus={handleUpdateEmailStatus}
               onDeletePermanent={handleDeletePermanent}
               onReplyClick={handleReplyClick}
