@@ -540,8 +540,7 @@ function MailContent() {
 
   return (
     <div
-      className="flex h-screen w-screen overflow-hidden"
-      style={{ background: 'hsl(222 47% 4%)' }}
+      className="flex h-screen w-screen overflow-hidden bg-background text-foreground"
     >
       {/* Sidebar (desktop: fixed icon column | mobile: bottom nav rendered inside Sidebar) */}
       <Sidebar

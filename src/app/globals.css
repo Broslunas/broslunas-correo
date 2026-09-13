@@ -3,264 +3,72 @@
 @tailwind utilities;
 
 @layer base {
-  :root, .theme-aurora-frost {
-    /* === Aurora Frost (Default) === */
-    --background: 222 47% 4%;
-    --foreground: 210 40% 96%;
-    --card: 220 35% 7%;
-    --card-foreground: 210 40% 96%;
-    --primary: 174 72% 52%;
-    --primary-foreground: 222 47% 4%;
-    --secondary: 220 30% 10%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 220 30% 9%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 192 85% 58%;
-    --accent-foreground: 222 47% 4%;
-    --destructive: 0 78% 60%;
+  :root {
+    /* === Gmail Clean Light (Default White) === */
+    --background: 220 27% 98%;      /* #f6f8fc base app surface */
+    --foreground: 0 0% 12%;         /* #1f1f1f primary text */
+    --card: 0 0% 100%;              /* #ffffff container / card */
+    --card-foreground: 0 0% 12%;    /* #1f1f1f */
+    --primary: 217 90% 43%;         /* #0b57d0 Google Blue */
+    --primary-foreground: 0 0% 100%;/* #ffffff */
+    --secondary: 220 20% 93%;       /* #e9eef6 */
+    --secondary-foreground: 0 0% 12%;
+    --muted: 220 18% 92%;           /* #e7ebf0 */
+    --muted-foreground: 225 6% 40%; /* #5e6268 */
+    --accent: 216 90% 91%;          /* #d3e3fd Gmail active pill */
+    --accent-foreground: 217 90% 16%;/* #041e49 */
+    --destructive: 0 75% 55%;       /* #dc2626 */
     --destructive-foreground: 0 0% 100%;
-    --border: 220 30% 12%;
-    --input: 220 30% 10%;
-    --ring: 174 72% 52%;
+    --border: 228 15% 88%;          /* #dedfe7 */
+    --input: 228 15% 88%;
+    --ring: 217 90% 43%;
     --radius: 0.75rem;
 
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-sunset-glow {
-    /* === Sunset Glow === */
-    --background: 260 40% 4%;
-    --foreground: 210 40% 96%;
-    --card: 260 30% 7%;
-    --card-foreground: 210 40% 96%;
-    --primary: 20 90% 60%;
-    --primary-foreground: 260 40% 4%;
-    --secondary: 260 20% 10%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 260 20% 9%;
-    --muted-foreground: 260 15% 55%;
-    --accent: 40 95% 60%;
-    --accent-foreground: 260 40% 4%;
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 260 25% 12%;
-    --input: 260 20% 10%;
-    --ring: 20 90% 60%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-emerald-forest {
-    /* === Emerald Forest === */
-    --background: 150 40% 3%;
-    --foreground: 140 30% 95%;
-    --card: 150 30% 6%;
-    --card-foreground: 140 30% 95%;
-    --primary: 142 70% 45%;
-    --primary-foreground: 150 40% 3%;
-    --secondary: 150 20% 8%;
-    --secondary-foreground: 140 30% 95%;
-    --muted: 150 20% 7%;
-    --muted-foreground: 150 15% 50%;
-    --accent: 160 84% 39%;
-    --accent-foreground: 150 40% 3%;
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 150 25% 10%;
-    --input: 150 20% 8%;
-    --ring: 142 70% 45%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-rose-wine {
-    /* === Rose Wine === */
-    --background: 340 40% 4%;
-    --foreground: 340 20% 96%;
-    --card: 340 30% 7%;
-    --card-foreground: 340 20% 96%;
-    --primary: 345 75% 60%;
-    --primary-foreground: 340 40% 4%;
-    --secondary: 340 20% 10%;
-    --secondary-foreground: 340 20% 96%;
-    --muted: 340 20% 9%;
-    --muted-foreground: 340 15% 55%;
-    --accent: 330 85% 65%;
-    --accent-foreground: 340 40% 4%;
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 340 25% 12%;
-    --input: 340 20% 10%;
-    --ring: 345 75% 60%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-cyberpunk-neon {
-    /* === Cyberpunk Neon === */
-    --background: 230 20% 5%;
-    --foreground: 180 100% 95%;
-    --card: 230 15% 9%;
-    --card-foreground: 180 100% 95%;
-    --primary: 320 100% 60%;
-    --primary-foreground: 230 20% 5%;
-    --secondary: 230 15% 11%;
-    --secondary-foreground: 180 100% 95%;
-    --muted: 230 15% 10%;
-    --muted-foreground: 230 10% 55%;
-    --accent: 55 100% 50%;
-    --accent-foreground: 230 20% 5%;
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 230 15% 15%;
-    --input: 230 15% 11%;
-    --ring: 320 100% 60%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-nordic-slate {
-    /* === Nordic Slate === */
-    --background: 215 15% 6%;
-    --foreground: 210 20% 95%;
-    --card: 215 12% 9%;
-    --card-foreground: 210 20% 95%;
-    --primary: 200 80% 65%;
-    --primary-foreground: 215 15% 6%;
-    --secondary: 215 12% 12%;
-    --secondary-foreground: 210 20% 95%;
-    --muted: 215 12% 10%;
-    --muted-foreground: 215 10% 55%;
-    --accent: 190 70% 60%;
-    --accent-foreground: 215 15% 6%;
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 215 12% 14%;
-    --input: 215 12% 12%;
-    --ring: 200 80% 65%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-midnight-gold {
-    /* === Midnight Gold === */
-    --background: 0 0% 2%;
-    --foreground: 45 15% 90%;
-    --card: 0 0% 6%;
-    --card-foreground: 45 15% 90%;
-    --primary: 45 70% 55%;
-    --primary-foreground: 0 0% 2%;
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 45 15% 90%;
-    --muted: 0 0% 7%;
-    --muted-foreground: 45 10% 50%;
-    --accent: 40 80% 50%;
-    --accent-foreground: 0 0% 2%;
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 45 10% 12%;
-    --input: 0 0% 8%;
-    --ring: 45 70% 55%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-lavender-mist {
-    /* === Lavender Mist === */
-    --background: 275 35% 4%;
-    --foreground: 275 25% 95%;
-    --card: 275 20% 8%;
-    --card-foreground: 275 25% 95%;
-    --primary: 265 85% 75%;
-    --primary-foreground: 275 35% 4%;
-    --secondary: 275 20% 11%;
-    --secondary-foreground: 275 25% 95%;
-    --muted: 275 20% 10%;
-    --muted-foreground: 275 15% 55%;
-    --accent: 285 70% 70%;
-    --accent-foreground: 275 35% 4%;
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 275 20% 13%;
-    --input: 275 20% 11%;
-    --ring: 265 85% 75%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-ocean-deep {
-    /* === Ocean Deep === */
-    --background: 210 50% 3%;
-    --foreground: 200 40% 95%;
-    --card: 210 40% 6%;
-    --card-foreground: 200 40% 95%;
-    --primary: 195 90% 50%;
-    --primary-foreground: 210 50% 3%;
-    --secondary: 210 30% 9%;
-    --secondary-foreground: 200 40% 95%;
-    --muted: 210 30% 8%;
-    --muted-foreground: 210 20% 50%;
-    --accent: 180 85% 45%;
-    --accent-foreground: 210 50% 3%;
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 210 30% 11%;
-    --input: 210 30% 9%;
-    --ring: 195 90% 50%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-hover: rgba(255, 255, 255, 0.055);
-  }
-
-  .theme-sakura-light {
-    /* === Sakura Light (Light Theme) === */
-    --background: 345 50% 97%;
-    --foreground: 345 60% 15%;
-    --card: 345 40% 93%;
-    --card-foreground: 345 60% 15%;
-    --primary: 345 75% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 345 20% 90%;
-    --secondary-foreground: 345 60% 15%;
-    --muted: 345 15% 92%;
-    --muted-foreground: 345 20% 45%;
-    --accent: 330 70% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 78% 50%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 345 25% 85%;
-    --input: 345 20% 92%;
-    --ring: 345 75% 55%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(0, 0, 0, 0.02);
-    --glass-border: rgba(0, 0, 0, 0.05);
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(0, 0, 0, 0.08);
     --glass-hover: rgba(0, 0, 0, 0.04);
+
+    /* Tempmail semantic bridge */
+    --tm-bg: hsl(var(--background));
+    --tm-fg: hsl(var(--foreground));
+    --tm-border: hsl(var(--border));
+    --tm-card-bg: hsl(var(--card));
+    --tm-accent: hsl(var(--primary));
+    --tm-accent-s: hsl(var(--primary)/0.75);
+  }
+
+  .dark {
+    /* === Gmail Clean Dark (Black / Charcoal) === */
+    --background: 225 15% 8%;       /* #111318 deep surface */
+    --foreground: 240 10% 90%;      /* #e2e2e9 */
+    --card: 225 9% 13%;             /* #1e1f24 elevated container */
+    --card-foreground: 240 10% 90%; /* #e2e2e9 */
+    --primary: 217 90% 80%;         /* #a8c7fa Google Blue dark */
+    --primary-foreground: 217 90% 15%;/* #041e49 */
+    --secondary: 225 12% 18%;       /* #282a30 */
+    --secondary-foreground: 240 10% 90%;
+    --muted: 225 12% 16%;           /* #22242a */
+    --muted-foreground: 225 6% 62%; /* #979ba1 */
+    --accent: 203 100% 23%;         /* #004a77 Gmail dark active pill */
+    --accent-foreground: 203 100% 88%;/* #c2e7ff */
+    --destructive: 0 75% 62%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 225 8% 22%;           /* #32343b */
+    --input: 225 8% 22%;
+    --ring: 217 90% 80%;
+    --radius: 0.75rem;
+
+    --glass-bg: rgba(30, 31, 36, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-hover: rgba(255, 255, 255, 0.05);
+
+    /* Tempmail semantic bridge */
+    --tm-bg: hsl(var(--background));
+    --tm-fg: hsl(var(--foreground));
+    --tm-border: hsl(var(--border));
+    --tm-card-bg: hsl(var(--card));
+    --tm-accent: hsl(var(--primary));
+    --tm-accent-s: hsl(var(--primary)/0.75);
   }
 }
 
@@ -272,35 +80,23 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
-}
-
-/* === Dynamic ambient background glows === */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -10;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 60% 40% at 10% 15%, hsl(var(--primary) / 0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 35% at 90% 85%, hsl(var(--accent) / 0.06) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 30% at 50% 50%, hsl(var(--primary) / 0.03) 0%, transparent 80%);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* === Scrollbar === */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary) / 0.25);
+  background: hsl(var(--muted-foreground) / 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.45);
+  background: hsl(var(--muted-foreground) / 0.45);
 }
 
 /* === Glass utility === */
@@ -315,24 +111,19 @@ body::before {
   background: var(--glass-hover);
 }
 
-/* === Primary glow border (active elements) === */
+/* === Primary glow border === */
 .glow-border {
   box-shadow: 0 0 0 1px hsl(var(--primary) / 0.2), 0 0 8px hsl(var(--primary) / 0.15);
 }
 
 /* === Animations === */
-@keyframes aurora-pulse {
-  0%, 100% { opacity: 0.06; transform: scale(1); }
-  50%       { opacity: 0.12; transform: scale(1.08); }
-}
-
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeInLeft {
-  from { opacity: 0; transform: translateX(-12px); }
+  from { opacity: 0; transform: translateX(-8px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
@@ -346,19 +137,10 @@ body::before {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes shimmer {
-  from { background-position: -200% center; }
-  to   { background-position: 200% center; }
-}
-
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
-}
-
-.animate-fadeInUp   { animation: fadeInUp 0.4s ease both; }
-.animate-fadeInLeft { animation: fadeInLeft 0.3s ease both; }
-.animate-fadeIn     { animation: fadeIn 0.25s ease both; }
-.animate-slideInUp  { animation: slideInUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+.animate-fadeInUp   { animation: fadeInUp 0.25s ease both; }
+.animate-fadeInLeft { animation: fadeInLeft 0.2s ease both; }
+.animate-fadeIn     { animation: fadeIn 0.2s ease both; }
+.animate-slideInUp  { animation: slideInUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
 
 /* Stagger delays */
 .delay-75  { animation-delay: 75ms; }
@@ -366,21 +148,13 @@ body::before {
 .delay-225 { animation-delay: 225ms; }
 .delay-300 { animation-delay: 300ms; }
 
-/* === Primary gradient text === */
-.text-gradient-teal {
-  background: linear-gradient(135deg, hsl(var(--primary) / 1), hsl(var(--accent) / 1));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 /* === Editor content styles === */
 .editor-content:focus {
   outline: none;
 }
 .editor-content:empty::before {
   content: attr(data-placeholder);
-  color: hsl(var(--muted-foreground) / 0.45);
+  color: hsl(var(--muted-foreground) / 0.5);
   pointer-events: none;
 }
 
@@ -389,106 +163,4 @@ body::before {
   body {
     overflow: auto;
   }
-}
-
-/* ============================================================
-   TEMP MAIL MODULE — Luxury Gold Design System (.tempmail-scope)
-   Scoped so it never affects the main webmail UI.
-   ============================================================ */
-
-.tempmail-scope {
-  --tm-bg:           #050505;
-  --tm-fg:           #e4e4e7;
-  --tm-card-bg:      #0c0c0e;
-  --tm-border:       rgba(212,175,55,0.14);
-  --tm-accent:       #d4af37;
-  --tm-accent-s:     #f3e5ab;
-  --tm-glow:         rgba(212,175,55,0.05);
-  --tm-font-sans:    'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
-  --tm-font-mono:    'Geist Mono', 'JetBrains Mono', monospace;
-}
-
-.tempmail-scope [data-tm-theme="cyberpunk"] {
-  --tm-accent:   #f59e0b;
-  --tm-accent-s: #fef08a;
-  --tm-border:   rgba(212,175,55,0.22);
-}
-.tempmail-scope [data-tm-theme="nordic"] {
-  --tm-accent:   #c5a880;
-  --tm-accent-s: #e2d4c0;
-  --tm-border:   rgba(197,168,128,0.15);
-}
-.tempmail-scope [data-tm-theme="ocean"] {
-  --tm-accent:   #d4af37;
-  --tm-accent-s: #38bdf8;
-}
-
-.tempmail-scope {
-  color: var(--tm-fg);
-  background: var(--tm-bg);
-  font-family: var(--tm-font-sans);
-}
-
-/* Panels */
-.tm-panel {
-  background: var(--tm-card-bg);
-  border: 1px solid var(--tm-border);
-  border-radius: 16px;
-  box-shadow: 0 4px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
-}
-
-/* Buttons */
-.tm-btn {
-  background: rgba(212,175,55,0.02);
-  color: var(--tm-fg);
-  border: 1px solid var(--tm-border);
-  border-radius: 10px;
-  font-weight: 600;
-  transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
-  cursor: pointer;
-}
-.tm-btn:hover {
-  background: var(--tm-accent);
-  color: #000 !important;
-  border-color: var(--tm-accent);
-  box-shadow: 0 0 15px rgba(212,175,55,0.25);
-}
-.tm-btn:active { transform: scale(0.98); }
-
-/* Inputs */
-.tm-input {
-  background: rgba(0,0,0,0.35);
-  color: var(--tm-fg);
-  border: 1px solid var(--tm-border);
-  border-radius: 10px;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.tm-input:focus {
-  border-color: var(--tm-accent);
-  box-shadow: 0 0 0 1px var(--tm-accent);
-}
-
-/* Scrollbar */
-.tempmail-scope ::-webkit-scrollbar { width: 4px; height: 4px; }
-.tempmail-scope ::-webkit-scrollbar-track { background: transparent; }
-.tempmail-scope ::-webkit-scrollbar-thumb {
-  background: rgba(212,175,55,0.2);
-  border-radius: 9999px;
-}
-.tempmail-scope ::-webkit-scrollbar-thumb:hover { background: var(--tm-accent); }
-
-/* Selection */
-.tempmail-scope ::selection {
-  background: rgba(212,175,55,0.2);
-  color: #fff;
-}
-
-/* Reverse spin animation */
-@keyframes tm-reverse-spin {
-  from { transform: rotate(360deg); }
-  to   { transform: rotate(0deg); }
-}
-.tm-animate-reverse-spin {
-  animation: tm-reverse-spin 20s linear infinite;
 }

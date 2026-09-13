@@ -220,7 +220,7 @@ export default function TwoFactorPage() {
   // Loader screen while checking session state
   if (loadingStatus) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-neutral-950 to-black p-4">
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground p-4">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Verificando estado de seguridad...</p>
@@ -232,21 +232,21 @@ export default function TwoFactorPage() {
   if (!status) return null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-neutral-950 to-black p-4 relative overflow-hidden">
+    <main className="flex min-h-screen items-center justify-center bg-background text-foreground p-4 relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute top-1/4 left-1/4 -z-10 h-72 w-72 rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 -z-10 h-72 w-72 rounded-full bg-indigo-500/5 blur-[120px] pointer-events-none" />
 
-      <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950/80 p-8 shadow-2xl backdrop-blur-xl transition-all duration-300 relative">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl transition-all duration-300 relative">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
         {/* User Google Avatar & Info */}
-        <div className="flex items-center gap-3 bg-neutral-900/40 border border-neutral-900 p-3 rounded-xl mb-6">
+        <div className="flex items-center gap-3 bg-muted/40 border border-border p-3 rounded-xl mb-6">
           {status.picture ? (
-            <img 
-              src={status.picture} 
-              alt={status.name} 
-              className="h-9 w-9 rounded-full border border-neutral-800 pointer-events-none"
+            <img
+              src={status.picture}
+              alt={status.name}
+              className="h-9 w-9 rounded-full border border-border pointer-events-none"
             />
           ) : (
             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
@@ -257,9 +257,9 @@ export default function TwoFactorPage() {
             <p className="text-xs font-semibold text-foreground truncate">{status.name || 'Usuario'}</p>
             <p className="text-[10px] text-muted-foreground truncate">{status.email}</p>
           </div>
-          <button 
+          <button
             onClick={handleCancel}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-neutral-800 transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-muted transition-all cursor-pointer"
             title="Cancelar y Salir"
           >
             <LogOut className="h-4 w-4" />
@@ -293,17 +293,17 @@ export default function TwoFactorPage() {
 
         {/* QR Code Setup block if not configured and using app setup */}
         {verificationMethod === 'app_setup' && status.qrCodeUrl && (
-          <div className="flex flex-col items-center bg-neutral-900/50 border border-neutral-900 rounded-xl p-4 mb-6 space-y-3">
+          <div className="flex flex-col items-center bg-muted/40 border border-border rounded-xl p-4 mb-6 space-y-3">
             <div className="bg-white p-2.5 rounded-lg select-none">
-              <img 
-                src={status.qrCodeUrl} 
-                alt="QR de Autenticación" 
+              <img
+                src={status.qrCodeUrl}
+                alt="QR de Autenticación"
                 className="h-40 w-40 pointer-events-none"
               />
             </div>
             <div className="text-center w-full">
               <p className="text-[10px] text-muted-foreground">¿No puedes escanear el código? Usa esta clave:</p>
-              <code className="text-xs font-mono bg-neutral-950 text-primary border border-neutral-850 px-2.5 py-1 rounded mt-1.5 inline-block tracking-widest select-all">
+              <code className="text-xs font-mono bg-background text-primary border border-border px-2.5 py-1 rounded mt-1.5 inline-block tracking-widest select-all">
                 {status.secret?.replace(/(.{4})/g, '$1 ').trim()}
               </code>
             </div>
@@ -326,7 +326,7 @@ export default function TwoFactorPage() {
                   value={digit}
                   onChange={e => handleChange(idx, e.target.value)}
                   onKeyDown={e => handleKeyDown(idx, e)}
-                  className="w-11 h-12 text-center text-lg font-bold rounded-lg border border-neutral-800 bg-neutral-900/40 text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                  className="w-11 h-12 text-center text-lg font-bold rounded-lg border border-border bg-background text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
                   autoComplete="one-time-code"
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -343,8 +343,8 @@ export default function TwoFactorPage() {
                 disabled={resending || resendCooldown > 0}
                 className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {resendCooldown > 0 
-                  ? `Reenviar código en ${resendCooldown}s` 
+                {resendCooldown > 0
+                  ? `Reenviar código en ${resendCooldown}s`
                   : '¿No recibiste el código? Reenviar por correo'}
               </button>
               {resendSuccess && (
@@ -377,14 +377,14 @@ export default function TwoFactorPage() {
             <button
               type="button"
               onClick={handleCancel}
-              className="flex-1 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-muted-foreground hover:text-foreground py-2.5 rounded-lg text-xs font-semibold shadow transition-all cursor-pointer text-center"
+              className="flex-1 bg-muted hover:bg-muted/80 border border-border text-muted-foreground hover:text-foreground py-2.5 rounded-lg text-xs font-semibold shadow transition-all cursor-pointer text-center"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={verifying || code.some(d => d === '')}
-              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {verifying ? (
                 <>

@@ -59,16 +59,26 @@ interface RoutingRule {
 }
 
 const themes = [
-  { id: 'theme-aurora-frost', name: 'Aurora Frost', primary: '#2dd4bf', accent: '#22d3ee', bg: '#060b18', dark: true },
-  { id: 'theme-sunset-glow', name: 'Sunset Glow', primary: '#f97316', accent: '#eab308', bg: '#0b0214', dark: true },
-  { id: 'theme-emerald-forest', name: 'Emerald Forest', primary: '#22c55e', accent: '#0d9488', bg: '#010f07', dark: true },
-  { id: 'theme-rose-wine', name: 'Rose Wine', primary: '#f43f5e', accent: '#f472b6', bg: '#100208', dark: true },
-  { id: 'theme-cyberpunk-neon', name: 'Cyberpunk Neon', primary: '#ec4899', accent: '#eab308', bg: '#08050e', dark: true },
-  { id: 'theme-nordic-slate', name: 'Nordic Slate', primary: '#38bdf8', accent: '#06b6d4', bg: '#0b0e14', dark: true },
-  { id: 'theme-midnight-gold', name: 'Midnight Gold', primary: '#eab308', accent: '#f59e0b', bg: '#000000', dark: true },
-  { id: 'theme-lavender-mist', name: 'Lavender Mist', primary: '#c084fc', accent: '#d8b4fe', bg: '#0a0314', dark: true },
-  { id: 'theme-ocean-deep', name: 'Ocean Deep', primary: '#0ea5e9', accent: '#14b8a6', bg: '#020b18', dark: true },
-  { id: 'theme-sakura-light', name: 'Sakura Light', primary: '#ec4899', accent: '#db2777', bg: '#fef1f5', dark: false },
+  {
+    id: 'light',
+    name: 'Modo Claro (Gmail White)',
+    desc: 'Fondo blanco y gris suave, tipografía nítida y acentos Google Blue estilo Gmail Material 3.',
+    icon: Sun,
+    primary: '#0b57d0',
+    accent: '#d3e3fd',
+    bg: '#f6f8fc',
+    dark: false,
+  },
+  {
+    id: 'dark',
+    name: 'Modo Oscuro (Gmail Dark)',
+    desc: 'Fondo negro y carbón profundo, acentos azul suave y descanso visual profesional.',
+    icon: Moon,
+    primary: '#a8c7fa',
+    accent: '#004a77',
+    bg: '#111318',
+    dark: true,
+  },
 ];
 
 function SettingsContent() {
@@ -85,7 +95,7 @@ function SettingsContent() {
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
 
   // Theme selection
-  const [selectedTheme, setSelectedTheme] = useState('theme-aurora-frost');
+  const [selectedTheme, setSelectedTheme] = useState('light');
 
   // Mailboxes settings
   const [availableAccounts, setAvailableAccounts] = useState<{ email: string; name: string }[]>([]);
@@ -156,8 +166,13 @@ function SettingsContent() {
   // Load theme & settings on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('webmail_theme') || 'theme-aurora-frost';
-      setSelectedTheme(savedTheme);
+      const isDark = document.documentElement.classList.contains('dark');
+      setSelectedTheme(isDark ? 'dark' : 'light');
+
+      const handleThemeSync = () => {
+        setSelectedTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+      };
+      window.addEventListener('theme-change', handleThemeSync);
 
       // Blacklist load
       const savedBlacklist = localStorage.getItem('webmail_blacklist');
@@ -376,10 +391,18 @@ function SettingsContent() {
   };
 
   const applyTheme = (themeId: string) => {
-    localStorage.setItem('webmail_theme', themeId);
-    const isLight = themeId === 'theme-sakura-light';
-    document.documentElement.className = isLight ? themeId : 'dark ' + themeId;
+    const isDark = themeId === 'dark';
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+      localStorage.setItem('webmail_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+      localStorage.setItem('webmail_theme', 'light');
+    }
     setSelectedTheme(themeId);
+    window.dispatchEvent(new Event('theme-change'));
   };
 
   const handleSaveMailboxSettings = async (e: React.FormEvent) => {
@@ -867,54 +890,68 @@ function SettingsContent() {
               <div className="space-y-6 animate-fadeIn">
                 <div className="space-y-1.5">
                   <h3 className="text-xs font-bold text-primary uppercase tracking-widest">
-                    Temas Disponibles
+                    Tema y Apariencia
                   </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Cambia la personalidad visual de tu correo al instante. Puedes elegir entre los 9 esquemas oscuros inmersivos o probar el tema claro Sakura:
+                    Personaliza la interfaz seleccionando entre el modo claro profesional y el modo oscuro estilo Gmail:
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl pt-1">
                   {themes.map((theme) => {
                     const isActive = selectedTheme === theme.id;
+                    const Icon = theme.icon;
                     return (
                       <button
                         key={theme.id}
                         type="button"
                         onClick={() => applyTheme(theme.id)}
-                        className="flex flex-col items-stretch p-3.5 rounded-xl border text-left transition-all duration-200 hover:scale-[1.02] cursor-pointer"
-                        style={{
-                          background: 'hsl(var(--card) / 0.4)',
-                          borderColor: isActive ? 'hsl(var(--primary))' : 'hsl(var(--border) / 0.8)',
-                          boxShadow: isActive ? '0 0 16px hsl(var(--primary) / 0.15)' : 'none',
-                        }}
+                        className={`flex flex-col items-stretch p-5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
+                          isActive
+                            ? 'bg-accent/40 border-primary shadow-sm ring-2 ring-primary/20'
+                            : 'bg-card border-border hover:border-primary/50 hover:bg-muted/50'
+                        }`}
                       >
-                        <div className="flex items-center justify-between mb-3.5 select-none">
-                          <span className="text-xs font-bold text-foreground truncate max-w-[80%]">
-                            {theme.name}
-                          </span>
-                          {theme.dark ? (
-                            <Moon className="h-3 w-3 text-muted-foreground opacity-50" />
-                          ) : (
-                            <Sun className="h-3 w-3 text-pink-500 animate-pulse" />
+                        <div className="flex items-center justify-between mb-3 select-none">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+                              theme.dark ? 'bg-neutral-800 text-amber-300' : 'bg-blue-100 text-blue-600'
+                            }`}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <span className="text-sm font-bold text-foreground">
+                              {theme.name}
+                            </span>
+                          </div>
+                          {isActive && (
+                            <span className="flex h-6 px-2.5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold">
+                              Activo
+                            </span>
                           )}
                         </div>
 
-                        {/* Colors strip */}
-                        <div className="flex items-center gap-1.5 mt-auto select-none">
-                          <span className="h-4 w-4 rounded-full shadow border border-neutral-900/10 shrink-0" style={{ background: theme.primary }} />
-                          <span className="h-3 w-3 rounded-full shadow border border-neutral-900/10 shrink-0" style={{ background: theme.accent }} />
-                          <span className="h-2.5 w-2.5 rounded-full shadow border border-neutral-900/10 shrink-0 ml-auto" style={{ background: theme.bg }} />
+                        <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                          {theme.desc}
+                        </p>
+
+                        {/* Visual preview strip */}
+                        <div className="flex items-center gap-2 mt-auto p-2 rounded-xl bg-background border border-border">
+                          <span className="h-4 w-4 rounded-full border border-border shrink-0" style={{ background: theme.primary }} />
+                          <span className="h-4 w-4 rounded-full border border-border shrink-0" style={{ background: theme.accent }} />
+                          <span className="h-4 w-4 rounded-full border border-border shrink-0" style={{ background: theme.bg }} />
+                          <span className="text-[10px] text-muted-foreground ml-auto font-mono">
+                            {theme.dark ? '#111318' : '#f6f8fc'}
+                          </span>
                         </div>
                       </button>
                     );
                   })}
                 </div>
 
-                <div className="p-4 rounded-2xl bg-neutral-950/30 border border-neutral-900/50 flex gap-3 text-xs text-muted-foreground leading-normal max-w-xl">
+                <div className="p-4 rounded-2xl bg-card border border-border flex gap-3 text-xs text-muted-foreground leading-normal max-w-2xl shadow-xs">
                   <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <strong>Instrucción de brillo de fondo:</strong> Los halos y resplandores degradados ubicados en los fondos se ajustan automáticamente a la paleta del tema elegido.
+                    <strong>Sincronización instantánea:</strong> El tema seleccionado se guarda en tus preferencias locales y se aplica inmediatamente en toda la bandeja de entrada, redacción, buzón temporal y panel de administración.
                   </div>
                 </div>
               </div>

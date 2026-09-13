@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { generateFunnyEmailName } from '@/lib/tempmail/nameGenerator';
+import ThemeToggle from '@/components/theme-toggle';
 
 const DOMAINS_RAW = process.env.NEXT_PUBLIC_TEMPMAIL_DOMAINS || 'broslunas.link';
 const DOMAINS = DOMAINS_RAW.split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
@@ -171,14 +172,17 @@ export default function TempMailLanding() {
               style={{ border: '1px solid var(--tm-accent)', background: 'var(--tm-bg)' }}>
               <Shield className="w-4 h-4" style={{ color: 'var(--tm-accent)' }} />
             </div>
-            <span className="text-md font-black tracking-widest uppercase text-white">
+            <span className="text-md font-black tracking-widest uppercase text-foreground">
               Broslunas <span style={{ color: 'var(--tm-accent)', fontWeight: 400 }}>Mail</span>
             </span>
           </div>
 
-          <button onClick={handleOpenInbox} className="tm-btn px-4 py-2 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
-            Entrar a Bandeja <ArrowRight className="w-3.5 h-3.5" style={{ color: 'var(--tm-accent)' }} />
-          </button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <button onClick={handleOpenInbox} className="tm-btn px-4 py-2 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+              Entrar a Bandeja <ArrowRight className="w-3.5 h-3.5" style={{ color: 'var(--tm-accent)' }} />
+            </button>
+          </div>
         </header>
 
         {/* ── Hero ── */}
@@ -186,11 +190,11 @@ export default function TempMailLanding() {
           {/* Left */}
           <div className="flex-1 flex flex-col gap-6 text-center lg:text-left">
             <div className="tm-hero-badge inline-flex self-center lg:self-start items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"
-              style={{ background: 'rgba(212,175,55,0.10)', border: '1px solid rgba(212,175,55,0.20)', color: 'var(--tm-accent)' }}>
+              style={{ background: 'hsl(var(--primary)/0.10)', border: '1px solid hsl(var(--primary)/0.20)', color: 'var(--tm-accent)' }}>
               <Lock className="w-3 h-3" /> Privacidad absoluta — sin login
             </div>
 
-            <h1 className="tm-hero-title text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight leading-tight text-white">
+            <h1 className="tm-hero-title text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight leading-tight text-foreground">
               Tu buzón temporal,<br />
               <span className="font-semibold"
                 style={{ background: 'linear-gradient(to right, var(--tm-accent), var(--tm-accent-s))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -198,20 +202,20 @@ export default function TempMailLanding() {
               </span>
             </h1>
 
-            <p className="tm-hero-desc text-slate-400 text-xs sm:text-sm leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">
+            <p className="tm-hero-desc text-muted-foreground text-xs sm:text-sm leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">
               Genera correos de un solo uso para registrarte en cualquier plataforma, evitar el spam y recibir códigos OTP al instante. Almacenado en MongoDB con autodestrucción en 24 horas.
             </p>
 
             <div className="grid grid-cols-3 gap-6 border-t pt-8 mt-4 max-w-md mx-auto lg:mx-0"
               style={{ borderColor: 'var(--tm-border)' }}>
               {[
-                { val: '100%', label: 'Anónimo', color: 'white' },
+                { val: '100%', label: 'Anónimo', color: 'hsl(var(--foreground))' },
                 { val: '< 1s',  label: 'Latencia', color: 'var(--tm-accent)' },
                 { val: '24h',   label: 'Caducidad', color: 'var(--tm-accent-s)' },
               ].map(s => (
                 <div key={s.label} className="tm-hero-stat">
                   <p className="text-xl sm:text-2xl font-semibold" style={{ color: s.color }}>{s.val}</p>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">{s.label}</p>
+                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{s.label}</p>
                 </div>
               ))}
             </div>
@@ -222,11 +226,11 @@ export default function TempMailLanding() {
             <div className="tm-panel p-6 sm:p-8 relative">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Módulo Anónimo</span>
-                  <h3 className="text-sm font-black text-white mt-0.5">Buzón Asignado</h3>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Módulo Anónimo</span>
+                  <h3 className="text-sm font-black text-foreground mt-0.5">Buzón Asignado</h3>
                 </div>
                 <span className="text-[9px] px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5"
-                  style={{ background: 'rgba(212,175,55,0.10)', border: '1px solid rgba(212,175,55,0.20)', color: 'var(--tm-accent)' }}>
+                  style={{ background: 'hsl(var(--primary)/0.10)', border: '1px solid hsl(var(--primary)/0.20)', color: 'var(--tm-accent)' }}>
                   <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--tm-accent)' }} />
                   Conectado
                 </span>
@@ -236,15 +240,15 @@ export default function TempMailLanding() {
               <div className="tm-input p-4 flex items-center justify-between gap-3 shadow-inner">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
-                    style={{ background: 'rgba(212,175,55,0.10)', color: 'var(--tm-accent)' }}>@</div>
+                    style={{ background: 'hsl(var(--primary)/0.10)', color: 'var(--tm-accent)' }}>@</div>
                   <div className="flex flex-col overflow-hidden">
-                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Tu Email Temporal</span>
-                    <span className="font-mono text-xs sm:text-sm text-white truncate font-bold">
+                    <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider">Tu Email Temporal</span>
+                    <span className="font-mono text-xs sm:text-sm text-foreground truncate font-bold">
                       {emailAddress || 'generando...'}
                     </span>
                   </div>
                 </div>
-                <button onClick={handleCopy} className="p-2 hover:bg-white/5 rounded-lg transition-colors text-slate-400 hover:text-white" title="Copiar">
+                <button onClick={handleCopy} className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground" title="Copiar">
                   <Copy className="w-4 h-4" style={{ color: 'var(--tm-accent)' }} />
                 </button>
               </div>
@@ -256,12 +260,12 @@ export default function TempMailLanding() {
                     value={customUsername}
                     onChange={e => setCustomUsername(e.target.value)}
                     placeholder="Crear apodo personalizado"
-                    className="bg-transparent px-4 py-3 outline-none flex-1 text-xs text-white placeholder-slate-600 font-medium"
+                    className="bg-transparent px-4 py-3 outline-none flex-1 text-xs text-foreground placeholder:text-muted-foreground font-medium"
                     style={{ fontFamily: 'var(--tm-font-sans)' }}
                     onKeyDown={e => e.key === 'Enter' && handleApply()}
                   />
                   <button onClick={() => setCustomUsername(generateFunnyEmailName())}
-                    className="p-1.5 hover:bg-white/5 text-slate-500 hover:text-white rounded-lg transition-colors pl-3"
+                    className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors pl-3"
                     style={{ borderLeft: '1px solid var(--tm-border)' }} title="Alias divertido">
                     <Sparkles className="w-3.5 h-3.5" />
                   </button>
@@ -277,8 +281,8 @@ export default function TempMailLanding() {
                         style={{ background: 'var(--tm-card-bg)', border: '1px solid var(--tm-border)' }}>
                         {DOMAINS.map(dom => (
                           <button key={dom} onClick={() => { setSelectedDomain(dom); setIsDomainOpen(false); }}
-                            className="w-full text-left px-3 py-2 text-xs font-mono rounded-lg hover:bg-white/5 transition-colors"
-                            style={{ color: selectedDomain === dom ? 'var(--tm-accent)' : '#94a3b8' }}>
+                            className="w-full text-left px-3 py-2 text-xs font-mono rounded-lg hover:bg-muted transition-colors"
+                            style={{ color: selectedDomain === dom ? 'var(--tm-accent)' : 'hsl(var(--muted-foreground))' }}>
                             @{dom}
                           </button>
                         ))}
@@ -295,16 +299,15 @@ export default function TempMailLanding() {
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <button onClick={handleGenerate}
                   className="flex-1 py-3.5 tm-btn text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2">
-                  <RefreshCw className="w-3.5 h-3.5 text-slate-400" /> Cambiar Dirección
+                  <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" /> Cambiar Dirección
                 </button>
                 <button onClick={handleOpenInbox}
-                  className="flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 text-black shadow-lg transition-all hover:brightness-110 active:scale-[0.98]"
-                  style={{ background: 'linear-gradient(to right, var(--tm-accent), var(--tm-accent-s))', boxShadow: '0 8px 20px rgba(212,175,55,0.15)' }}>
+                  className="flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 bg-primary text-primary-foreground shadow-lg transition-all hover:bg-primary/95 active:scale-[0.98]">
                   Abrir Buzón <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
-              <p className="text-[9px] text-slate-600 text-center font-bold font-mono mt-4">
+              <p className="text-[9px] text-muted-foreground text-center font-bold font-mono mt-4">
                 * El buzón caduca y se destruye automáticamente en 24 horas.
               </p>
             </div>
@@ -315,8 +318,8 @@ export default function TempMailLanding() {
         <section className="tm-specs w-full max-w-7xl mx-auto px-6 py-16" style={{ borderTop: '1px solid var(--tm-border)' }}>
           <div className="text-center max-w-xl mx-auto mb-12">
             <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--tm-accent)' }}>Tecnología</span>
-            <h2 className="text-2xl sm:text-3xl font-light tracking-tight text-white mt-1">Diseñado sin intermediarios</h2>
-            <p className="text-slate-400 text-xs mt-2 leading-relaxed font-medium">
+            <h2 className="text-2xl sm:text-3xl font-light tracking-tight text-foreground mt-1">Diseñado sin intermediarios</h2>
+            <p className="text-muted-foreground text-xs mt-2 leading-relaxed font-medium">
               Correo temporal integrado en la misma infraestructura del webmail. Sin servicios externos.
             </p>
           </div>
@@ -326,13 +329,13 @@ export default function TempMailLanding() {
               { Icon: Lock, title: 'Extractor OTP', desc: 'Detecta automáticamente códigos de verificación de 4-8 dígitos y los presenta en un bloque de un clic.' },
               { Icon: Zap, title: 'Sin Login', desc: 'No necesitas cuenta. Solo el alias y 24 horas de inbox desechable protegido por sesión.' },
             ].map(({ Icon, title, desc }, i) => (
-              <div key={i} className="tm-spec-card tm-panel p-6 hover:bg-white/[0.01] transition-all group">
+              <div key={i} className="tm-spec-card tm-panel p-6 hover:bg-muted/50 transition-all group">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-300"
-                  style={{ border: '1px solid rgba(212,175,55,0.20)', background: 'rgba(255,255,255,0.05)' }}>
+                  style={{ border: '1px solid hsl(var(--primary)/0.20)', background: 'hsl(var(--primary)/0.05)' }}>
                   <Icon className="w-5 h-5" style={{ color: 'var(--tm-accent)' }} />
                 </div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-white">{title}</h3>
-                <p className="text-slate-400 text-xs mt-2 leading-relaxed font-medium">{desc}</p>
+                <h3 className="text-xs font-black uppercase tracking-wider text-foreground">{title}</h3>
+                <p className="text-muted-foreground text-xs mt-2 leading-relaxed font-medium">{desc}</p>
               </div>
             ))}
           </div>
@@ -340,7 +343,7 @@ export default function TempMailLanding() {
 
         {/* ── FAQ ── */}
         <section className="tm-faq w-full max-w-3xl mx-auto px-6 py-12" style={{ borderTop: '1px solid var(--tm-border)' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest text-center mb-8 text-white">Preguntas Frecuentes</h2>
+          <h2 className="text-xs font-black uppercase tracking-widest text-center mb-8 text-foreground">Preguntas Frecuentes</h2>
           <div className="flex flex-col gap-3">
             {faqs.map((faq, idx) => (
               <div key={idx} className="tm-faq-item tm-panel overflow-hidden">

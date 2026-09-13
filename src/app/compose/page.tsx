@@ -22,7 +22,7 @@ function StandaloneCompose() {
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-[#060b18] flex items-center justify-center p-0">
+    <div className="fixed inset-0 bg-background text-foreground flex items-center justify-center p-0">
       {/* We configure ComposeModal to render fullscreen inside this standalone page */}
       <ComposeModal
         isOpen={true}
@@ -37,8 +37,8 @@ function StandaloneCompose() {
 export default function ComposePage() {
   return (
     <Suspense fallback={
-      <div className="flex h-screen w-screen items-center justify-center bg-[#060b18]">
-        <div className="h-8 w-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--primary)) transparent transparent transparent' }} />
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     }>
       <StandaloneCompose />

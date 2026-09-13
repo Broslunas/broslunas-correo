@@ -186,13 +186,13 @@ export default function TwoFactorModal({ isOpen, onClose, onStatusChange }: TwoF
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-2xl p-6 shadow-2xl relative animate-zoomIn">
-        
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-card border border-border text-foreground rounded-2xl p-6 shadow-2xl relative animate-zoomIn">
+
         {/* Close Button */}
-        <button 
+        <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-900 transition-all cursor-pointer"
+          className="absolute top-4 right-4 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
         >
           <X className="h-4.5 w-4.5" />
         </button>
@@ -240,17 +240,17 @@ export default function TwoFactorModal({ isOpen, onClose, onStatusChange }: TwoF
                   <button
                     type="button"
                     onClick={onClose}
-                    className="flex-1 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-muted-foreground hover:text-foreground py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+                    className="flex-1 bg-muted hover:bg-muted/80 border border-border text-muted-foreground hover:text-foreground py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Cerrar
                   </button>
-                  
+
                   {!status.require2FA ? (
                     <button
                       type="button"
                       disabled={actionLoading}
                       onClick={handleDisable2FA}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-red-950/30 hover:bg-red-900/30 border border-red-900/20 text-red-400 py-2 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 border border-destructive/20 text-destructive py-2 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {actionLoading ? (
                         <>
@@ -262,7 +262,7 @@ export default function TwoFactorModal({ isOpen, onClose, onStatusChange }: TwoF
                       )}
                     </button>
                   ) : (
-                    <div className="flex-1 flex items-center justify-center gap-1.5 p-2 rounded-lg bg-neutral-900 border border-border/40 text-[9px] text-amber-500 select-none">
+                    <div className="flex-1 flex items-center justify-center gap-1.5 p-2 rounded-lg bg-muted border border-border text-[9px] text-amber-500 select-none">
                       <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
                       <span>2FA Obligatorio por Admin</span>
                     </div>
@@ -278,17 +278,17 @@ export default function TwoFactorModal({ isOpen, onClose, onStatusChange }: TwoF
 
                 {/* QR setup block */}
                 {status.qrCodeUrl && (
-                  <div className="flex flex-col items-center bg-neutral-900/50 border border-neutral-900 rounded-xl p-4 space-y-3">
+                  <div className="flex flex-col items-center bg-muted/40 border border-border rounded-xl p-4 space-y-3">
                     <div className="bg-white p-2 rounded-lg select-none">
-                      <img 
-                        src={status.qrCodeUrl} 
-                        alt="QR de Autenticación" 
+                      <img
+                        src={status.qrCodeUrl}
+                        alt="QR de Autenticación"
                         className="h-36 w-36 pointer-events-none"
                       />
                     </div>
                     <div className="text-center w-full">
                       <p className="text-[10px] text-muted-foreground">¿No puedes escanear? Copia esta clave:</p>
-                      <code className="text-xs font-mono bg-neutral-950 text-primary border border-neutral-850 px-2 py-0.5 rounded mt-1.5 inline-block tracking-wider select-all">
+                      <code className="text-xs font-mono bg-background text-primary border border-border px-2 py-0.5 rounded mt-1.5 inline-block tracking-wider select-all">
                         {status.secret?.replace(/(.{4})/g, '$1 ').trim()}
                       </code>
                     </div>
@@ -311,7 +311,7 @@ export default function TwoFactorModal({ isOpen, onClose, onStatusChange }: TwoF
                           value={digit}
                           onChange={e => handleChange(idx, e.target.value)}
                           onKeyDown={e => handleKeyDown(idx, e)}
-                          className="w-10 h-11 text-center text-sm font-bold rounded-lg border border-neutral-800 bg-neutral-900/40 text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                          className="w-10 h-11 text-center text-sm font-bold rounded-lg border border-border bg-background text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
                           autoComplete="one-time-code"
                           inputMode="numeric"
                           pattern="[0-9]*"
@@ -324,7 +324,7 @@ export default function TwoFactorModal({ isOpen, onClose, onStatusChange }: TwoF
                     <button
                       type="button"
                       onClick={onClose}
-                      className="flex-1 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-muted-foreground hover:text-foreground py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+                      className="flex-1 bg-muted hover:bg-muted/80 border border-border text-muted-foreground hover:text-foreground py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Cancelar
                     </button>

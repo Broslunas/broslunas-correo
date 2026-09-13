@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import ThemeToggle from '@/components/theme-toggle';
 import { 
   ShieldCheck, 
   Loader2, 
@@ -106,16 +107,10 @@ function InviteContent() {
   if (loading) {
     return (
       <div
-        className="rounded-2xl p-10 flex flex-col items-center justify-center gap-4 text-center max-w-sm w-full relative overflow-hidden"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-        }}
+        className="rounded-2xl p-10 flex flex-col items-center justify-center gap-4 text-center max-w-sm w-full relative overflow-hidden bg-card border border-border shadow-xl"
       >
-        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'hsl(var(--primary))' }} />
-        <p className="text-slate-400 text-sm">Validando invitación...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground text-sm">Validando invitación...</p>
       </div>
     );
   }
@@ -123,23 +118,17 @@ function InviteContent() {
   if (error) {
     return (
       <div
-        className="rounded-2xl p-8 flex flex-col items-center text-center max-w-md w-full relative overflow-hidden"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-        }}
+        className="rounded-2xl p-8 flex flex-col items-center text-center max-w-md w-full relative overflow-hidden bg-card border border-border shadow-xl"
       >
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
-        <div className="h-12 w-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4 animate-bounce">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-destructive/30 to-transparent" />
+        <div className="h-12 w-12 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive mb-4 animate-bounce">
           <AlertCircle className="h-6 w-6" />
         </div>
-        <h2 className="text-base font-bold text-slate-100 mb-2">Invitación Inválida</h2>
-        <p className="text-xs text-slate-400 leading-relaxed mb-6">{error}</p>
+        <h2 className="text-base font-bold text-foreground mb-2">Invitación Inválida</h2>
+        <p className="text-xs text-muted-foreground leading-relaxed mb-6">{error}</p>
         <button
           onClick={() => { window.location.href = '/'; }}
-          className="w-full py-2.5 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 text-slate-200 transition-all cursor-pointer"
+          className="w-full py-2.5 rounded-xl text-xs font-semibold bg-muted hover:bg-muted/80 border border-border text-foreground transition-all cursor-pointer"
         >
           Volver a Inicio
         </button>
@@ -152,14 +141,7 @@ function InviteContent() {
       <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full blur-[60px] pointer-events-none" style={{ background: 'hsl(var(--primary)/0.1)' }} />
 
       <div
-        className="relative rounded-2xl p-6 sm:p-8 overflow-hidden flex flex-col justify-between flex-1 h-full"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px hsl(var(--primary)/0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
-        }}
+        className="relative rounded-2xl p-6 sm:p-8 overflow-hidden flex flex-col justify-between flex-1 h-full bg-card border border-border shadow-2xl"
       >
         {/* Top shimmer line */}
         <div
@@ -176,13 +158,13 @@ function InviteContent() {
                 className="h-1.5 rounded-full transition-all duration-300"
                 style={{
                   width: s === step ? '24px' : '8px',
-                  background: s === step ? 'hsl(var(--primary))' : s < step ? 'hsl(var(--primary)/0.6)' : 'rgba(255,255,255,0.1)',
+                  background: s === step ? 'hsl(var(--primary))' : s < step ? 'hsl(var(--primary)/0.6)' : 'hsl(var(--muted))',
                   boxShadow: s === step ? '0 0 8px hsl(var(--primary)/0.6)' : 'none',
                 }}
               />
             ))}
           </div>
-          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
             Paso {step} de 4
           </span>
         </div>
@@ -514,44 +496,35 @@ function InviteContent() {
 export default function InvitePage() {
   return (
     <main
-      className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden"
-      style={{ background: 'hsl(222 47% 4%)' }}
+      className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden bg-background text-foreground"
     >
+      {/* Theme toggle */}
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
       {/* Background orbs */}
       <div
-        className="absolute top-[-10%] left-[-5%] h-[400px] w-[400px] rounded-full pointer-events-none"
+        className="absolute top-[-10%] left-[-5%] h-[400px] w-[400px] rounded-full pointer-events-none opacity-40 dark:opacity-20"
         style={{
-          background: 'radial-gradient(circle, hsl(var(--primary)/0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--primary)/0.1) 0%, transparent 70%)',
           animation: 'aurora-pulse 8s ease-in-out infinite',
         }}
       />
       <div
-        className="absolute bottom-[-10%] right-[-5%] h-[350px] w-[350px] rounded-full pointer-events-none"
+        className="absolute bottom-[-10%] right-[-5%] h-[350px] w-[350px] rounded-full pointer-events-none opacity-40 dark:opacity-20"
         style={{
-          background: 'radial-gradient(circle, hsl(var(--accent)/0.05) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--accent)/0.1) 0%, transparent 70%)',
           animation: 'aurora-pulse 10s ease-in-out infinite 2s',
-        }}
-      />
-
-      {/* Grid overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.02]"
-        style={{
-          backgroundImage: 'radial-gradient(hsl(var(--primary)/0.2) 1px, transparent 0)',
-          backgroundSize: '32px 32px',
         }}
       />
 
       <Suspense fallback={
         <div
-          className="w-full max-w-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-3"
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
+          className="w-full max-w-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-card border border-border"
         >
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'hsl(var(--primary))' }} />
-          <p className="text-sm" style={{ color: 'hsl(215 20% 55%)' }}>Cargando...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Cargando...</p>
         </div>
       }>
         <InviteContent />

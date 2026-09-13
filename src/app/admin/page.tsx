@@ -146,10 +146,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div
-      className="flex h-screen w-screen overflow-hidden"
-      style={{ background: 'hsl(222 47% 4%)' }}
-    >
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* Sidebar */}
       <Sidebar
         currentFolder="admin"

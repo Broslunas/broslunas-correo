@@ -14,6 +14,7 @@ import { es } from 'date-fns/locale';
 import { Toaster, toast } from 'sonner';
 import { generateFunnyEmailName } from '@/lib/tempmail/nameGenerator';
 import { playNotificationSound } from '@/lib/tempmail/audio';
+import ThemeToggle from '@/components/theme-toggle';
 
 /* ── Constants ── */
 const DOMAINS_RAW = process.env.NEXT_PUBLIC_TEMPMAIL_DOMAINS || 'broslunas.link';
@@ -72,8 +73,6 @@ export default function TempMailDashboard() {
   const [timeRemaining, setTimeRemaining] = useState('');
   const [isOnline, setIsOnline] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [theme, setTheme] = useState('classic');
-  const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [emailInvertColors, setEmailInvertColors] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,10 +115,7 @@ export default function TempMailDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── Theme init ── */
   useEffect(() => {
-    const saved = localStorage.getItem('tm_theme') || 'classic';
-    setTheme(saved);
     setIsMounted(true);
   }, []);
 
@@ -256,12 +252,6 @@ export default function TempMailDashboard() {
     } finally { setIsDeleting(false); }
   };
 
-  const changeTheme = (t: string) => {
-    setTheme(t);
-    localStorage.setItem('tm_theme', t);
-    setIsThemeOpen(false);
-  };
-
   const filteredEmails = emails.filter(e => {
     const q = searchQuery.toLowerCase();
     return e.subject?.toLowerCase().includes(q) || e.from?.toLowerCase().includes(q) || e.text?.toLowerCase().includes(q);
@@ -309,23 +299,18 @@ export default function TempMailDashboard() {
     );
   }
 
-  const themeAttr = theme === 'classic' ? undefined : theme;
-
   return (
     <>
-      <Toaster position="bottom-right" theme="dark" closeButton toastOptions={{
+      <Toaster position="bottom-right" closeButton toastOptions={{
         classNames: {
-          toast: 'bg-[#0c0c0e] text-[#e4e4e7] border border-[rgba(212,175,55,0.14)] shadow-2xl rounded-2xl p-4',
-          title: 'text-xs font-black uppercase tracking-wide',
-          description: 'text-[10px] text-slate-400 mt-1',
-          closeButton: 'bg-black/60 border border-[rgba(212,175,55,0.14)] text-[#d4af37] hover:text-white',
+          toast: 'bg-card text-foreground border border-border shadow-2xl rounded-2xl p-4',
+          title: 'text-xs font-bold uppercase tracking-wide',
+          description: 'text-[10px] text-muted-foreground mt-1',
+          closeButton: 'bg-muted border border-border text-foreground hover:text-primary',
         }
       }} />
 
-      <div
-        className="tempmail-scope h-screen h-[100dvh] w-screen flex flex-col p-4 md:p-6 select-none overflow-hidden relative"
-        data-tm-theme={themeAttr}
-      >
+      <div className="tempmail-scope h-screen h-[100dvh] w-screen flex flex-col p-4 md:p-6 select-none overflow-hidden relative bg-background text-foreground">
         {/* Background glows */}
         <div className="absolute top-[-30%] left-[-20%] w-[70%] h-[70%] rounded-full blur-[140px] pointer-events-none"
           style={{ background: 'rgba(212,175,55,0.04)' }} />
@@ -388,30 +373,8 @@ export default function TempMailDashboard() {
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--tm-accent)' }} />
               </button>
 
-              {/* Theme */}
-              <div className="relative">
-                <button onClick={() => setIsThemeOpen(!isThemeOpen)}
-                  className="tm-btn px-3 py-2 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <Palette className="w-3.5 h-3.5" style={{ color: 'var(--tm-accent)' }} />
-                  <span className="capitalize">{theme}</span>
-                  <ChevronDown className="w-2.5 h-2.5 text-slate-500" />
-                </button>
-                <AnimatePresence>
-                  {isThemeOpen && (
-                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                      className="absolute right-0 top-full mt-2 w-44 z-50 p-1.5 rounded-xl shadow-2xl"
-                      style={{ background: 'var(--tm-card-bg)', border: '1px solid var(--tm-border)' }}>
-                      {[{ id: 'classic', name: 'Classic Gold' }, { id: 'cyberpunk', name: 'Amber Glow' }, { id: 'nordic', name: 'Bronze Luxury' }, { id: 'ocean', name: 'Deep Sea Gold' }].map(t => (
-                        <button key={t.id} onClick={() => changeTheme(t.id)}
-                          className="w-full text-left px-3 py-2 text-[9px] font-bold rounded-lg hover:bg-white/5 transition-colors"
-                          style={{ color: theme === t.id ? 'var(--tm-accent)' : '#94a3b8', background: theme === t.id ? 'rgba(255,255,255,0.05)' : undefined }}>
-                          {t.name}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              {/* Theme Toggle */}
+              <ThemeToggle />
 
               {/* Panic */}
               <button onClick={() => { if (confirm('¿Limpiar sesión y salir?')) { localStorage.removeItem('tm_address'); localStorage.removeItem('tm_created'); localStorage.removeItem('tm_session_token'); window.location.href = 'https://www.google.com'; } }}

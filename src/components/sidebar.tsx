@@ -25,7 +25,9 @@ import {
   FileText,
   Settings,
   Clock,
+  Menu,
 } from 'lucide-react';
+import ThemeToggle from '@/components/theme-toggle';
 
 interface SidebarProps {
   currentFolder: string;
@@ -53,12 +55,12 @@ export default function Sidebar({
   onTogglePush,
 }: SidebarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed to match SSR
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
-    setIsCollapsed(saved !== 'false');
+    setIsCollapsed(saved === 'true');
     setIsHydrated(true);
   }, []);
 
@@ -73,18 +75,18 @@ export default function Sidebar({
   const folders = [
     { id: 'inbox', label: 'Bandeja de entrada', icon: Inbox, group: 'core' },
     { id: 'unread', label: 'No leídos', icon: Mail, group: 'core' },
-    { id: 'sent',  label: 'Enviados',           icon: Send, group: 'core' },
-    { id: 'drafts', label: 'Borradores',         icon: FileText, group: 'core' },
-    
+    { id: 'sent', label: 'Enviados', icon: Send, group: 'core' },
+    { id: 'drafts', label: 'Borradores', icon: FileText, group: 'core' },
+
     { id: 'personal', label: 'Personal', icon: User, group: 'categories' },
     { id: 'work', label: 'Trabajo', icon: Briefcase, group: 'categories' },
     { id: 'commercial', label: 'Comercial', icon: Tag, group: 'categories' },
     { id: 'newsletter', label: 'Newsletters', icon: Newspaper, group: 'categories' },
     { id: 'social', label: 'Redes Sociales', icon: Users, group: 'categories' },
-    
-    { id: 'spam',  label: 'Spam',               icon: AlertOctagon, group: 'system' },
-    { id: 'trash', label: 'Papelera',           icon: Trash2, group: 'system' },
-    { id: 'tempmail', label: 'Buzón Temporal',  icon: Clock,  group: 'system' },
+
+    { id: 'spam', label: 'Spam', icon: AlertOctagon, group: 'system' },
+    { id: 'trash', label: 'Papelera', icon: Trash2, group: 'system' },
+    { id: 'tempmail', label: 'Buzón Temporal', icon: Clock, group: 'system' },
   ];
 
   const handleLogout = async () => {
@@ -107,69 +109,70 @@ export default function Sidebar({
 
   const navItems = [
     ...folders,
-    ...(role === 'admin' ? [{ id: 'admin', label: 'Administración', icon: ShieldCheck, group: 'admin' }] : []),
+    ...(role === 'admin'
+      ? [{ id: 'admin', label: 'Administración', icon: ShieldCheck, group: 'admin' }]
+      : []),
   ];
 
-  const mobileCoreItems = folders.filter(f => f.group === 'core');
+  const mobileCoreItems = folders.filter((f) => f.group === 'core');
 
   return (
     <>
-      {/* ====== DESKTOP SIDEBAR ====== */}
+      {/* ====== DESKTOP GMAIL-STYLE SIDEBAR ====== */}
       <aside
-        className="hidden lg:flex flex-col h-full select-none shrink-0 transition-all duration-300 ease-in-out overflow-hidden"
+        className="hidden lg:flex flex-col h-full select-none shrink-0 transition-all duration-300 ease-in-out bg-background border-r border-border overflow-hidden"
         style={{
-          width: isCollapsed ? '68px' : '220px',
-          background: 'rgba(255,255,255,0.02)',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
+          width: isCollapsed ? '72px' : '256px',
         }}
       >
-        {/* Logo */}
-        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-start px-5'} h-16 shrink-0 gap-3`}>
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl transition-all shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.08))',
-              border: '1px solid hsl(var(--primary) / 0.25)',
-              boxShadow: '0 0 16px hsl(var(--primary) / 0.12)',
-            }}
+        {/* Header with Hamburger & Logo */}
+        <div className="flex items-center h-16 px-4 gap-3 shrink-0">
+          <button
+            onClick={toggleCollapse}
+            aria-label={isCollapsed ? 'Expandir panel lateral' : 'Contraer panel lateral'}
+            title={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer shrink-0"
           >
-            <img
-              src="/favicon.png"
-              alt="Broslunas Correo"
-              className="h-5 w-5 object-contain"
-              style={{ filter: 'drop-shadow(0 0 4px hsl(var(--primary) / 0.4))' }}
-            />
-          </div>
+            <Menu className="h-5 w-5" />
+          </button>
+
           {!isCollapsed && (
-            <span className="text-sm font-bold text-foreground truncate tracking-wide animate-fadeIn">
-              Broslunas Correo
-            </span>
+            <div className="flex items-center gap-2.5 overflow-hidden animate-fadeIn">
+              <img
+                src="/favicon.png"
+                alt="Logo"
+                className="h-6 w-6 object-contain shrink-0"
+              />
+              <span className="text-base font-bold text-foreground truncate tracking-tight">
+                Broslunas Correo
+              </span>
+            </div>
           )}
         </div>
 
-        {/* Compose button */}
-        <div className={`flex ${isCollapsed ? 'justify-center' : 'justify-start'} px-3.5 pb-3`}>
+        {/* Compose Button (Gmail FAB Style) */}
+        <div className="px-3.5 py-2 shrink-0">
           <button
             id="btn-compose-desktop"
             onClick={onComposeClick}
-            title={isCollapsed ? "Redactar correo" : undefined}
-            className={`group flex h-10 ${isCollapsed ? 'w-10 justify-center' : 'w-full px-4 justify-start'} items-center gap-3 rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer shrink-0`}
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
-              boxShadow: '0 4px 16px hsl(var(--primary) / 0.25)',
-            }}
+            title={isCollapsed ? 'Redactar' : undefined}
+            className={`group flex items-center gap-3 rounded-2xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 cursor-pointer shrink-0 ${
+              isCollapsed
+                ? 'h-12 w-12 justify-center bg-card text-foreground border border-border hover:bg-muted'
+                : 'h-13 w-full px-5 justify-start bg-card text-foreground border border-border hover:bg-muted'
+            }`}
           >
-            <PenSquare className="h-4.5 w-4.5 shrink-0" style={{ color: 'hsl(var(--primary-foreground))' }} />
+            <PenSquare className="h-5 w-5 text-primary shrink-0 transition-transform duration-200 group-hover:scale-110" />
             {!isCollapsed && (
-              <span className="text-xs font-bold text-[hsl(var(--primary-foreground))] tracking-wide animate-fadeIn">
+              <span className="text-sm font-semibold tracking-wide text-foreground animate-fadeIn">
                 Redactar
               </span>
             )}
           </button>
         </div>
 
-        {/* Nav items */}
-        <nav className={`flex-1 flex flex-col ${isCollapsed ? 'items-center' : 'items-stretch'} gap-1.5 px-3 overflow-y-auto py-2`}>
+        {/* Navigation Items (Gmail Pill Style) */}
+        <nav className="flex-1 flex flex-col gap-0.5 px-3 overflow-y-auto py-2 pr-2">
           {navItems.map((folder, index) => {
             const Icon = folder.icon;
             const isActive = currentFolder === folder.id;
@@ -179,7 +182,7 @@ export default function Sidebar({
             return (
               <React.Fragment key={folder.id}>
                 {showDivider && (
-                  <div className={`h-px my-1.5 bg-neutral-800/80 shrink-0 ${isCollapsed ? 'w-6 mx-auto' : 'w-full'}`} />
+                  <div className={`h-px my-2 bg-border shrink-0 ${isCollapsed ? 'w-8 mx-auto' : 'w-full'}`} />
                 )}
                 <div className="relative group shrink-0">
                   <button
@@ -190,36 +193,31 @@ export default function Sidebar({
                         onFolderChange(folder.id);
                       }
                     }}
-                    className={`flex h-10 ${isCollapsed ? 'w-10 justify-center' : 'w-full px-3.5 justify-start'} items-center gap-3 rounded-xl transition-all duration-150 cursor-pointer`}
-                    style={{
-                      background: isActive
-                        ? 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.08))'
-                        : 'transparent',
-                      border: isActive ? '1px solid hsl(var(--primary) / 0.25)' : '1px solid transparent',
-                      boxShadow: isActive ? '0 0 12px hsl(var(--primary) / 0.1)' : 'none',
-                    }}
+                    className={`flex items-center gap-4 transition-all duration-150 cursor-pointer ${
+                      isCollapsed
+                        ? 'h-10 w-10 mx-auto justify-center rounded-full'
+                        : 'h-10 w-full px-4 justify-start rounded-full'
+                    } ${
+                      isActive
+                        ? 'bg-accent text-accent-foreground font-bold shadow-xs'
+                        : 'text-foreground/80 hover:bg-muted hover:text-foreground font-medium'
+                    }`}
                   >
                     <Icon
-                      className="h-4.5 w-4.5 transition-colors shrink-0"
-                      style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
+                      className={`h-4.5 w-4.5 shrink-0 transition-colors ${
+                        isActive ? 'text-accent-foreground' : 'text-muted-foreground group-hover:text-foreground'
+                      }`}
                     />
                     {!isCollapsed && (
-                      <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--foreground) / 0.75)' }}>
+                      <span className="text-xs truncate tracking-normal animate-fadeIn">
                         {folder.label}
                       </span>
                     )}
                   </button>
-                  {/* Tooltip (only when collapsed) */}
+
+                  {/* Tooltip for collapsed mode */}
                   {isCollapsed && (
-                    <div
-                      className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
-                      style={{
-                        background: 'rgba(10,15,30,0.95)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        color: 'hsl(210 40% 90%)',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-                      }}
-                    >
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 bg-foreground text-background shadow-lg">
                       {folder.label}
                     </div>
                   )}
@@ -229,129 +227,140 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* Footer actions */}
-        <div className={`flex flex-col ${isCollapsed ? 'items-center' : 'items-stretch'} gap-2 px-3 pb-4 shrink-0`}>
-          
-          {/* Collapse/Expand Toggle Button */}
-          <button
-            onClick={toggleCollapse}
-            title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
-            className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer hover:bg-neutral-800/40 border border-transparent shrink-0`}
-            style={{
-              background: 'rgba(255,255,255,0.01)',
-            }}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4.5 w-4.5 text-primary shrink-0" />
-            ) : (
-              <>
-                <ChevronLeft className="h-4.5 w-4.5 text-primary shrink-0" />
-                <span className="text-xs font-semibold text-primary animate-fadeIn whitespace-nowrap">
-                  Colapsar menú
-                </span>
-              </>
-            )}
-          </button>
-
-          {/* Security indicator */}
-          <button
-            onClick={onSecurityClick}
-            title={isCollapsed ? (twoFactorEnabled ? '2FA Activo' : '2FA Inactivo — Configurar') : undefined}
-            className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer shrink-0`}
-            style={{
-              background: twoFactorEnabled
-                ? 'rgba(16,185,129,0.1)'
-                : 'rgba(245,158,11,0.1)',
-              border: twoFactorEnabled
-                ? '1px solid rgba(16,185,129,0.2)'
-                : '1px solid rgba(245,158,11,0.2)',
-            }}
-          >
-            <ShieldAlert
-              className="h-4 w-4 shrink-0"
-              style={{ color: twoFactorEnabled ? 'hsl(152 69% 55%)' : 'hsl(38 92% 55%)' }}
-            />
+        {/* Footer Actions */}
+        <div className="flex flex-col gap-1.5 px-3 py-3 border-t border-border bg-background shrink-0">
+          {/* Theme Toggle Button */}
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between px-2'} h-10 rounded-full hover:bg-muted/70 transition-colors`}>
             {!isCollapsed && (
-              <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: twoFactorEnabled ? 'hsl(152 69% 55%)' : 'hsl(38 92% 55%)' }}>
-                {twoFactorEnabled ? '2FA Activo' : 'Configurar 2FA'}
+              <span className="text-xs font-medium text-muted-foreground animate-fadeIn">
+                Tema
               </span>
             )}
-          </button>
+            <ThemeToggle className="hover:bg-transparent" showLabel={false} />
+          </div>
 
-          {/* Settings Button */}
-          <button
-            onClick={onSettingsClick}
-            title={isCollapsed ? "Configuración" : undefined}
-            className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer shrink-0`}
-            style={{
-              background: currentFolder === 'settings'
-                ? 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.08))'
-                : 'hsl(var(--primary) / 0.02)',
-              border: currentFolder === 'settings'
-                ? '1px solid hsl(var(--primary) / 0.3)'
-                : '1px solid hsl(var(--primary) / 0.1)',
-            }}
-          >
-            <Settings
-              className="h-4 w-4 text-primary shrink-0"
-            />
-            {!isCollapsed && (
-              <span className="text-xs font-semibold text-primary truncate animate-fadeIn">
-                Configuración
-              </span>
-            )}
-          </button>
-
-          {/* Push notifications */}
-          {isPushSupported && (
+          {/* Security / 2FA status */}
+          <div className="relative group shrink-0">
             <button
-              onClick={onTogglePush}
-              title={isCollapsed ? (isPushSubscribed ? 'Notificaciones activas' : 'Activar notificaciones') : undefined}
-              className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer shrink-0`}
-              style={{
-                background: isPushSubscribed ? 'hsl(var(--primary) / 0.1)' : 'rgba(255,255,255,0.03)',
-                border: isPushSubscribed ? '1px solid hsl(var(--primary) / 0.2)' : '1px solid rgba(255,255,255,0.06)',
-              }}
+              onClick={onSecurityClick}
+              title={isCollapsed ? (twoFactorEnabled ? '2FA Activo' : '2FA Inactivo') : undefined}
+              className={`flex items-center gap-3 h-9 transition-colors cursor-pointer ${
+                isCollapsed
+                  ? 'w-9 mx-auto justify-center rounded-full'
+                  : 'w-full px-3 justify-start rounded-full'
+              } ${
+                twoFactorEnabled
+                  ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
+                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
+              }`}
             >
-              {isPushSubscribed
-                ? <Bell className="h-4 w-4 shrink-0" style={{ color: 'hsl(var(--primary))' }} />
-                : <BellOff className="h-4 w-4 shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }} />
-              }
+              <ShieldAlert className="h-4 w-4 shrink-0" />
               {!isCollapsed && (
-                <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: isPushSubscribed ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}>
-                  {isPushSubscribed ? 'Alertas: Activas' : 'Activar Alertas'}
+                <span className="text-xs font-semibold truncate animate-fadeIn">
+                  {twoFactorEnabled ? '2FA Activo' : 'Configurar 2FA'}
                 </span>
               )}
             </button>
+            {isCollapsed && (
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 bg-foreground text-background shadow-lg">
+                {twoFactorEnabled ? '2FA Activo' : 'Configurar 2FA'}
+              </div>
+            )}
+          </div>
+
+          {/* Settings Button */}
+          <div className="relative group shrink-0">
+            <button
+              onClick={onSettingsClick}
+              title={isCollapsed ? 'Configuración' : undefined}
+              className={`flex items-center gap-3 h-9 transition-colors cursor-pointer ${
+                isCollapsed
+                  ? 'w-9 mx-auto justify-center rounded-full'
+                  : 'w-full px-3 justify-start rounded-full'
+              } ${
+                currentFolder === 'settings'
+                  ? 'bg-accent text-accent-foreground font-bold'
+                  : 'text-foreground/80 hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              <Settings className="h-4 w-4 shrink-0" />
+              {!isCollapsed && (
+                <span className="text-xs font-semibold truncate animate-fadeIn">
+                  Configuración
+                </span>
+              )}
+            </button>
+            {isCollapsed && (
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 bg-foreground text-background shadow-lg">
+                Configuración
+              </div>
+            )}
+          </div>
+
+          {/* Push Notifications */}
+          {isPushSupported && (
+            <div className="relative group shrink-0">
+              <button
+                onClick={onTogglePush}
+                title={isCollapsed ? (isPushSubscribed ? 'Notificaciones activas' : 'Activar notificaciones') : undefined}
+                className={`flex items-center gap-3 h-9 transition-colors cursor-pointer ${
+                  isCollapsed
+                    ? 'w-9 mx-auto justify-center rounded-full'
+                    : 'w-full px-3 justify-start rounded-full'
+                } ${
+                  isPushSubscribed
+                    ? 'text-primary hover:bg-primary/10'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {isPushSubscribed ? (
+                  <Bell className="h-4 w-4 shrink-0" />
+                ) : (
+                  <BellOff className="h-4 w-4 shrink-0" />
+                )}
+                {!isCollapsed && (
+                  <span className="text-xs font-semibold truncate animate-fadeIn">
+                    {isPushSubscribed ? 'Alertas activas' : 'Activar alertas'}
+                  </span>
+                )}
+              </button>
+              {isCollapsed && (
+                <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 bg-foreground text-background shadow-lg">
+                  {isPushSubscribed ? 'Alertas activas' : 'Activar alertas'}
+                </div>
+              )}
+            </div>
           )}
 
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            title={isCollapsed ? "Cerrar sesión" : undefined}
-            className={`flex h-9 ${isCollapsed ? 'w-9 justify-center' : 'w-full px-3 justify-start'} items-center gap-3 rounded-xl transition-all cursor-pointer hover:bg-red-500/10 shrink-0`}
-            style={{ border: '1px solid transparent' }}
-          >
-            <LogOut className="h-4 w-4 shrink-0 transition-colors" style={{ color: 'hsl(215 20% 45%)' }} />
-            {!isCollapsed && (
-              <span className="text-xs font-semibold truncate animate-fadeIn" style={{ color: 'hsl(215 20% 45%)' }}>
+          {/* Logout Button */}
+          <div className="relative group shrink-0">
+            <button
+              onClick={handleLogout}
+              title={isCollapsed ? 'Cerrar sesión' : undefined}
+              className={`flex items-center gap-3 h-9 text-destructive hover:bg-destructive/10 transition-colors cursor-pointer ${
+                isCollapsed
+                  ? 'w-9 mx-auto justify-center rounded-full'
+                  : 'w-full px-3 justify-start rounded-full'
+              }`}
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              {!isCollapsed && (
+                <span className="text-xs font-semibold truncate animate-fadeIn">
+                  Cerrar sesión
+                </span>
+              )}
+            </button>
+            {isCollapsed && (
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 bg-foreground text-background shadow-lg">
                 Cerrar sesión
-              </span>
+              </div>
             )}
-          </button>
+          </div>
         </div>
       </aside>
 
       {/* ====== MOBILE BOTTOM NAVIGATION (< lg) ====== */}
-      <nav
-        className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-around px-2 py-1.5 safe-area-pb"
-        style={{
-          background: 'rgba(6,11,24,0.92)',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-        }}
-      >
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-around px-2 py-1.5 bg-background/95 border-t border-border backdrop-blur-md safe-area-pb">
         {mobileCoreItems.map((folder) => {
           const Icon = folder.icon;
           const isActive = currentFolder === folder.id;
@@ -363,22 +372,12 @@ export default function Sidebar({
                 setMobileMenuOpen(false);
                 onFolderChange(folder.id);
               }}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 cursor-pointer min-w-[48px]"
-              style={{
-                background: isActive ? 'hsl(var(--primary) / 0.1)' : 'transparent',
-                border: isActive ? '1px solid hsl(var(--primary) / 0.2)' : '1px solid transparent',
-              }}
+              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-colors cursor-pointer min-w-[48px] ${
+                isActive ? 'text-primary bg-accent/50 font-bold' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <Icon
-                className="h-5 w-5 transition-colors"
-                style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
-              />
-              <span
-                className="text-[9px] font-semibold leading-none"
-                style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
-              >
-                {folder.label.split(' ')[0]}
-              </span>
+              <Icon className="h-5 w-5" />
+              <span className="text-[10px] leading-none">{folder.label.split(' ')[0]}</span>
             </button>
           );
         })}
@@ -390,141 +389,124 @@ export default function Sidebar({
             setMobileMenuOpen(false);
             onComposeClick();
           }}
-          className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all cursor-pointer"
+          className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
         >
-          <div
-            className="h-8 w-8 flex items-center justify-center rounded-xl"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
-              boxShadow: '0 0 12px hsl(var(--primary) / 0.3)',
-            }}
-          >
-            <PenSquare className="h-4 w-4" style={{ color: 'hsl(var(--primary-foreground))' }} />
+          <div className="h-8 w-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+            <PenSquare className="h-4 w-4" />
           </div>
-          <span className="text-[9px] font-semibold animate-pulse" style={{ color: 'hsl(var(--primary))' }}>
-            Redactar
-          </span>
+          <span className="text-[10px] font-semibold text-primary">Redactar</span>
         </button>
 
         {/* More on mobile */}
         <button
-          onClick={() => setMobileMenuOpen(prev => !prev)}
-          className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all cursor-pointer min-w-[48px]"
-          style={{
-            background: mobileMenuOpen ? 'hsl(var(--primary) / 0.1)' : 'transparent',
-            border: mobileMenuOpen ? '1px solid hsl(var(--primary) / 0.2)' : '1px solid transparent',
-          }}
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-colors cursor-pointer min-w-[48px] ${
+            mobileMenuOpen ? 'text-primary bg-accent/50 font-bold' : 'text-muted-foreground hover:text-foreground'
+          }`}
         >
-          <MoreHorizontal
-            className="h-5 w-5 transition-colors"
-            style={{ color: mobileMenuOpen ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
-          />
-          <span
-            className="text-[9px] font-semibold leading-none"
-            style={{ color: mobileMenuOpen ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
-          >
-            Categorías
-          </span>
+          <MoreHorizontal className="h-5 w-5" />
+          <span className="text-[10px] leading-none">Más</span>
         </button>
       </nav>
 
       {/* ====== MOBILE MORE DRAWER ====== */}
       {mobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-30 flex flex-col justify-end bg-black/75 backdrop-blur-sm animate-fadeIn"
+          className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-xs animate-fadeIn"
           onClick={() => setMobileMenuOpen(false)}
         >
           <div
-            className="w-full max-h-[78vh] overflow-y-auto bg-neutral-950 border-t border-neutral-800 rounded-t-3xl p-6 space-y-6 shadow-2xl animate-slideUp"
+            className="w-full max-h-[80vh] overflow-y-auto bg-card border-t border-border rounded-t-3xl p-6 space-y-5 shadow-2xl animate-slideUp"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'linear-gradient(to top, hsl(222 47% 3%), hsl(222 47% 6%))',
-            }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2 select-none">
-                Categorías y Carpetas
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                Carpetas y Ajustes
               </h3>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-900 transition-all cursor-pointer"
-              >
-                <X className="h-4.5 w-4.5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Categorías Section */}
-            <div className="space-y-2.5">
-              <p className="text-[10px] font-bold text-primary/75 uppercase tracking-widest">Categorías</p>
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Categorías</p>
               <div className="grid grid-cols-2 gap-2">
-                {folders.filter(f => f.group === 'categories').map(folder => {
-                  const Icon = folder.icon;
-                  const isActive = currentFolder === folder.id;
-                  return (
-                    <button
-                      key={folder.id}
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        onFolderChange(folder.id);
-                      }}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold"
-                      style={{
-                        background: isActive ? 'hsl(var(--primary) / 0.08)' : 'rgba(255,255,255,0.02)',
-                        borderColor: isActive ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.05)',
-                        color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
-                      }}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{folder.label}</span>
-                    </button>
-                  );
-                })}
+                {folders
+                  .filter((f) => f.group === 'categories')
+                  .map((folder) => {
+                    const Icon = folder.icon;
+                    const isActive = currentFolder === folder.id;
+                    return (
+                      <button
+                        key={folder.id}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          onFolderChange(folder.id);
+                        }}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors cursor-pointer text-left text-xs font-semibold ${
+                          isActive
+                            ? 'bg-accent text-accent-foreground border-border'
+                            : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{folder.label}</span>
+                      </button>
+                    );
+                  })}
               </div>
             </div>
 
             {/* Sistema Section */}
-            <div className="space-y-2.5">
-              <p className="text-[10px] font-bold text-primary/75 uppercase tracking-widest">Sistema</p>
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Sistema</p>
               <div className="grid grid-cols-2 gap-2">
-                {folders.filter(f => f.group === 'system').map(folder => {
-                  const Icon = folder.icon;
-                  const isActive = currentFolder === folder.id;
-                  return (
-                    <button
-                      key={folder.id}
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        if (folder.id === 'tempmail') {
-                          window.location.href = '/tempmail';
-                        } else {
-                          onFolderChange(folder.id);
-                        }
-                      }}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold"
-                      style={{
-                        background: isActive ? 'hsl(var(--primary) / 0.08)' : 'rgba(255,255,255,0.02)',
-                        borderColor: isActive ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.05)',
-                        color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
-                      }}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{folder.label}</span>
-                    </button>
-                  );
-                })}
+                {folders
+                  .filter((f) => f.group === 'system')
+                  .map((folder) => {
+                    const Icon = folder.icon;
+                    const isActive = currentFolder === folder.id;
+                    return (
+                      <button
+                        key={folder.id}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          if (folder.id === 'tempmail') {
+                            window.location.href = '/tempmail';
+                          } else {
+                            onFolderChange(folder.id);
+                          }
+                        }}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors cursor-pointer text-left text-xs font-semibold ${
+                          isActive
+                            ? 'bg-accent text-accent-foreground border-border'
+                            : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{folder.label}</span>
+                      </button>
+                    );
+                  })}
                 {role === 'admin' && (
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
                       onFolderChange('admin');
                     }}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold"
-                    style={{
-                      background: currentFolder === 'admin' ? 'hsl(var(--primary) / 0.08)' : 'rgba(255,255,255,0.02)',
-                      borderColor: currentFolder === 'admin' ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.05)',
-                      color: currentFolder === 'admin' ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
-                    }}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors cursor-pointer text-left text-xs font-semibold ${
+                      currentFolder === 'admin'
+                        ? 'bg-accent text-accent-foreground border-border'
+                        : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted'
+                    }`}
                   >
                     <ShieldCheck className="h-4 w-4 shrink-0" />
                     <span>Administración</span>
@@ -534,40 +516,17 @@ export default function Sidebar({
             </div>
 
             {/* Ajustes y Sesión Section */}
-            <div className="pt-4 border-t border-neutral-900/80 space-y-3 shrink-0">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onSecurityClick?.();
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 text-xs font-bold py-2.5 transition-all text-amber-500 cursor-pointer"
-                >
-                  <ShieldAlert className="h-4 w-4" />
-                  2FA {twoFactorEnabled ? 'Activo ✓' : 'Configurar'}
-                </button>
-                {isPushSupported && (
-                  <button
-                    onClick={onTogglePush}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 text-xs font-bold py-2.5 transition-all cursor-pointer"
-                    style={{ color: isPushSubscribed ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
-                  >
-                    {isPushSubscribed ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-                    Notificaciones
-                  </button>
-                )}
-              </div>
+            <div className="pt-3 border-t border-border space-y-2">
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onSettingsClick?.();
                 }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl border text-xs font-bold py-2.5 transition-all cursor-pointer"
-                style={{
-                  background: currentFolder === 'settings' ? 'hsl(var(--primary) / 0.08)' : 'rgba(255,255,255,0.02)',
-                  borderColor: currentFolder === 'settings' ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.05)',
-                  color: 'hsl(var(--primary))'
-                }}
+                className={`w-full flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                  currentFolder === 'settings'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-background text-foreground hover:bg-muted'
+                }`}
               >
                 <Settings className="h-4 w-4" />
                 Configuración
@@ -577,15 +536,14 @@ export default function Sidebar({
                   setMobileMenuOpen(false);
                   handleLogout();
                 }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-red-950/20 hover:bg-red-950/30 border border-red-900/20 text-red-400 py-2.5 text-xs font-bold transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 text-destructive py-2.5 text-xs font-bold transition-colors cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
                 Cerrar sesión
               </button>
             </div>
-            
-            {/* Safe area padding */}
-            <div className="h-6" />
+
+            <div className="h-4" />
           </div>
         </div>
       )}

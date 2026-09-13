@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Shield, ChevronRight, ArrowLeft } from 'lucide-react';
+import ThemeToggle from '@/components/theme-toggle';
 
 type TabId = 'privacy' | 'terms' | 'cookies';
 
@@ -107,27 +108,30 @@ function PrivacyContent() {
             style={{ border: '1px solid var(--tm-accent)', background: 'var(--tm-bg)' }}>
             <Shield className="w-4 h-4" style={{ color: 'var(--tm-accent)' }} />
           </div>
-          <span className="text-md font-black tracking-widest uppercase text-white">
+          <span className="text-md font-black tracking-widest uppercase text-foreground">
             Broslunas <span style={{ color: 'var(--tm-accent)', fontWeight: 400 }}>Mail</span>
           </span>
         </div>
-        <Link href="/tempmail"
-          className="tm-btn px-4 py-2 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
-          <ArrowLeft className="w-3.5 h-3.5" style={{ color: 'var(--tm-accent)' }} /> Volver
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link href="/tempmail"
+            className="tm-btn px-4 py-2 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <ArrowLeft className="w-3.5 h-3.5" style={{ color: 'var(--tm-accent)' }} /> Volver
+          </Link>
+        </div>
       </header>
 
       {/* Main */}
       <main className="flex-1 w-full max-w-4xl mx-auto px-6 py-8 z-10">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-6">
-          <Link href="/tempmail" className="hover:text-slate-300 transition-colors">Inicio</Link>
+        <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-6">
+          <Link href="/tempmail" className="hover:text-foreground transition-colors">Inicio</Link>
           <ChevronRight className="w-3 h-3" />
           <span style={{ color: 'var(--tm-accent)' }}>{title}</span>
         </div>
 
-        <h1 className="text-3xl font-light text-white mb-2">{title}</h1>
-        <p className="text-slate-400 text-xs mb-8 font-medium">
+        <h1 className="text-3xl font-light text-foreground mb-2">{title}</h1>
+        <p className="text-muted-foreground text-xs mb-8 font-medium">
           Última actualización: 1 de junio de 2026 · Broslunas Mail — Correo Temporal Integrado
         </p>
 
@@ -138,9 +142,9 @@ function PrivacyContent() {
               className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
               style={{
                 border: '1px solid',
-                background: activeTab === tab.id ? 'rgba(212,175,55,0.15)' : 'rgba(0,0,0,0.30)',
-                borderColor: activeTab === tab.id ? 'rgba(212,175,55,0.30)' : 'var(--tm-border)',
-                color: activeTab === tab.id ? 'var(--tm-accent)' : '#94a3b8',
+                background: activeTab === tab.id ? 'hsl(var(--primary)/0.15)' : 'hsl(var(--muted))',
+                borderColor: activeTab === tab.id ? 'hsl(var(--primary)/0.3)' : 'var(--tm-border)',
+                color: activeTab === tab.id ? 'var(--tm-accent)' : 'hsl(var(--muted-foreground))',
               }}>
               {tab.label}
             </button>
@@ -150,14 +154,14 @@ function PrivacyContent() {
         {/* Content */}
         <div className="flex flex-col gap-4">
           {items.map((item, idx) => (
-            <div key={idx} className="tm-panel p-5 sm:p-6">
-              <h3 className="text-xs font-black uppercase tracking-wider mb-3 flex items-center gap-2 text-white">
-                <span className="text-[9px] px-2 py-0.5 rounded font-mono" style={{ background: 'rgba(212,175,55,0.12)', color: 'var(--tm-accent)' }}>
+            <div key={idx} className="tm-panel p-5 sm:p-6 bg-card border border-border">
+              <h3 className="text-xs font-black uppercase tracking-wider mb-3 flex items-center gap-2 text-foreground">
+                <span className="text-[9px] px-2 py-0.5 rounded font-mono" style={{ background: 'hsl(var(--primary)/0.12)', color: 'var(--tm-accent)' }}>
                   {(idx + 1).toString().padStart(2, '0')}
                 </span>
                 {item.heading}
               </h3>
-              <p className="text-slate-400 text-xs leading-relaxed font-medium whitespace-pre-line">{item.body}</p>
+              <p className="text-muted-foreground text-xs leading-relaxed font-medium whitespace-pre-line">{item.body}</p>
             </div>
           ))}
         </div>

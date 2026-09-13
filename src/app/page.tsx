@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import ThemeToggle from '@/components/theme-toggle';
 
 function SecurityCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -44,7 +45,7 @@ function SecurityCarousel() {
   }, [slides.length]);
 
   return (
-    <div className="mt-8 pt-6 border-t border-white/5 relative">
+    <div className="mt-8 pt-6 border-t border-border relative">
       {/* Progress Line Animation Style */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes progress-bar {
@@ -61,19 +62,19 @@ function SecurityCarousel() {
             <div
               key={idx}
               className={`transition-all duration-500 ease-in-out ${
-                isActive 
-                  ? 'opacity-100 translate-y-0 relative block' 
+                isActive
+                  ? 'opacity-100 translate-y-0 relative block'
                   : 'opacity-0 translate-y-2 absolute pointer-events-none hidden'
               }`}
             >
               {isActive && (
                 <div className="flex gap-3 text-left">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary">
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-semibold text-slate-200">{slide.title}</h3>
-                    <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{slide.description}</p>
+                    <h3 className="text-xs font-semibold text-foreground">{slide.title}</h3>
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{slide.description}</p>
                   </div>
                 </div>
               )}
@@ -90,11 +91,11 @@ function SecurityCarousel() {
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
-              className="group relative h-1 rounded-full overflow-hidden transition-all duration-300 cursor-pointer"
-              style={{ width: isActive ? '24px' : '6px', background: 'rgba(255,255,255,0.1)' }}
+              className="group relative h-1 rounded-full overflow-hidden transition-all duration-300 cursor-pointer bg-muted"
+              style={{ width: isActive ? '24px' : '6px' }}
             >
               {isActive && (
-                <div 
+                <div
                   className="absolute inset-y-0 left-0 rounded-full"
                   style={{
                     background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)))',
@@ -146,98 +147,87 @@ function InboxSimulation() {
     <div className="relative w-full max-w-lg select-none">
       {/* Background radial glow */}
       <div className="absolute -inset-10 blur-[80px] rounded-full pointer-events-none" style={{ background: 'hsl(var(--primary)/0.05)' }} />
-      
+
       {/* Floating security card 1 */}
-      <div 
-        className="absolute -top-10 -left-8 z-20 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md animate-bounce"
+      <div
+        className="absolute -top-10 -left-8 z-20 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md animate-bounce bg-card/90 border border-primary/20 shadow-lg"
         style={{
-          background: 'hsl(var(--primary)/0.06)',
-          border: '1px solid hsl(var(--primary)/0.2)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
           animationDuration: '6s'
         }}
       >
-        <div className="h-2 w-2 rounded-full animate-pulse" style={{ background: 'hsl(var(--primary))' }} />
-        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'hsl(var(--primary)/0.9)' }}>Conexión Encriptada SSL</span>
+        <div className="h-2 w-2 rounded-full animate-pulse bg-primary" />
+        <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Conexión Encriptada SSL</span>
       </div>
 
       {/* Floating security card 2 */}
-      <div 
-        className="absolute -bottom-6 -right-6 z-20 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md animate-bounce"
+      <div
+        className="absolute -bottom-6 -right-6 z-20 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md animate-bounce bg-card/90 border border-emerald-500/20 shadow-lg"
         style={{
-          background: 'rgba(16,185,129,0.06)',
-          border: '1px solid rgba(16,185,129,0.2)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
           animationDuration: '7s',
           animationDelay: '1.5s'
         }}
       >
-        <Shield className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-        <span className="text-[9px] font-bold text-emerald-300 uppercase tracking-widest">2FA Activo ✓</span>
+        <Shield className="h-3.5 w-3.5 text-emerald-500 animate-pulse" />
+        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">2FA Activo ✓</span>
       </div>
 
       {/* Mock Client Window */}
       <div
-        className="rounded-2xl overflow-hidden border border-white/5 shadow-2xl relative"
-        style={{
-          background: 'rgba(8,14,30,0.4)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-        }}
+        className="rounded-2xl overflow-hidden border border-border shadow-2xl relative bg-card"
       >
         {/* Window Chrome / Title Bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-white/[0.01]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
           {/* Traffic lights */}
           <div className="flex gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-red-500/40" />
-            <span className="h-2 w-2 rounded-full bg-yellow-500/40" />
-            <span className="h-2 w-2 rounded-full bg-green-500/40" />
+            <span className="h-2 w-2 rounded-full bg-red-500/60" />
+            <span className="h-2 w-2 rounded-full bg-yellow-500/60" />
+            <span className="h-2 w-2 rounded-full bg-green-500/60" />
           </div>
           {/* Window Title */}
-          <div className="text-[9px] text-slate-500 font-semibold tracking-widest uppercase">Bandeja de Entrada — Vista Previa</div>
+          <div className="text-[9px] text-muted-foreground font-semibold tracking-widest uppercase">Bandeja de Entrada — Vista Previa</div>
           <div className="w-10" />
         </div>
 
         {/* Mock Search Bar */}
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-white/[0.005] border-b border-white/5">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-background border-b border-border">
           <div className="flex-1 relative flex items-center">
-            <Search className="absolute left-3 h-3 w-3 text-slate-500" />
-            <div className="w-full bg-white/5 rounded-lg py-1.5 pl-9 text-[11px] text-slate-500 border border-white/[0.03] text-left">
+            <Search className="absolute left-3 h-3 w-3 text-muted-foreground" />
+            <div className="w-full bg-muted/50 rounded-lg py-1.5 pl-9 text-[11px] text-muted-foreground border border-border text-left">
               Buscar correos...
             </div>
           </div>
-          <div className="h-6 px-2.5 rounded flex items-center justify-center text-[10px] font-bold" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
+          <div className="h-6 px-2.5 rounded flex items-center justify-center text-[10px] font-bold bg-primary/10 border border-primary/20 text-primary">
             Redactar
           </div>
         </div>
 
         {/* Email Rows */}
-        <div className="divide-y divide-white/5 p-2">
+        <div className="divide-y divide-border p-2">
           {mockupEmails.map((email, idx) => (
-            <div 
-              key={idx} 
-              className="p-3 flex gap-3 transition-colors hover:bg-white/[0.02] rounded-lg cursor-pointer text-left"
+            <div
+              key={idx}
+              className="p-3 flex gap-3 transition-colors hover:bg-muted/50 rounded-lg cursor-pointer text-left"
             >
               {/* Sender Avatar */}
-              <div 
-                className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-lg"
+              <div
+                className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm"
                 style={{ background: email.avatarBg }}
               >
                 {email.avatar}
               </div>
-              
+
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[11px] truncate ${email.unread ? 'font-bold text-slate-100' : 'text-slate-300'}`}>
+                  <span className={`text-[11px] truncate ${email.unread ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
                     {email.sender}
                   </span>
-                  <span className="text-[9px] text-slate-500 shrink-0">{email.time}</span>
+                  <span className="text-[9px] text-muted-foreground shrink-0">{email.time}</span>
                 </div>
-                <div className={`text-[10px] truncate mt-0.5 ${email.unread ? 'font-semibold text-slate-200' : 'text-slate-400'}`}>
+                <div className={`text-[10px] truncate mt-0.5 ${email.unread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                   {email.subject}
                 </div>
-                <div className="text-[9px] text-slate-500 truncate mt-0.5">
+                <div className="text-[9px] text-muted-foreground truncate mt-0.5">
                   {email.snippet}
                 </div>
               </div>
@@ -245,7 +235,7 @@ function InboxSimulation() {
               {/* Unread indicator */}
               {email.unread && (
                 <div className="flex items-center justify-center shrink-0">
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'hsl(var(--primary))', boxShadow: '0 0 8px hsl(var(--primary)/0.8)' }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-xs" />
                 </div>
               )}
             </div>
@@ -350,14 +340,7 @@ function LoginContent() {
       <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full blur-[60px] pointer-events-none" style={{ background: 'hsl(var(--primary)/0.1)' }} />
 
       <div
-        className="relative rounded-2xl p-8 overflow-hidden"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px hsl(var(--primary)/0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
-        }}
+        className="relative rounded-2xl p-8 overflow-hidden bg-card border border-border shadow-2xl"
       >
         {/* Top shimmer line */}
         <div
@@ -368,35 +351,24 @@ function LoginContent() {
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center mb-8">
           <div
-            className="relative flex h-16 w-16 items-center justify-center rounded-2xl mb-5"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary)/0.15), hsl(var(--accent)/0.08))',
-              border: '1px solid hsl(var(--primary)/0.25)',
-              boxShadow: '0 0 24px hsl(var(--primary)/0.15)',
-            }}
+            className="relative flex h-16 w-16 items-center justify-center rounded-2xl mb-5 bg-primary/10 border border-primary/20 shadow-md"
           >
             <img
               src="/favicon.png"
               alt="Broslunas Correo"
               className="h-9 w-9 object-contain"
-              style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary)/0.4))' }}
             />
             {/* Pulse ring */}
             <div
-              className="absolute inset-0 rounded-2xl animate-ping opacity-20"
-              style={{ border: '1px solid hsl(var(--primary)/0.6)', animationDuration: '2.5s' }}
+              className="absolute inset-0 rounded-2xl animate-ping opacity-20 border border-primary"
+              style={{ animationDuration: '2.5s' }}
             />
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight mb-1" style={{
-            background: 'linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--primary)) 50%, hsl(var(--accent)) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
+          <h1 className="text-2xl font-bold tracking-tight mb-1 text-foreground">
             Broslunas Correo
           </h1>
-          <p className="text-xs" style={{ color: 'hsl(215 20% 55%)' }}>
+          <p className="text-xs text-muted-foreground">
             Acceso seguro y privado en la nube
           </p>
         </div>
@@ -404,16 +376,12 @@ function LoginContent() {
         {/* Error */}
         {displayError && (
           <div
-            className="rounded-xl p-3.5 text-xs flex items-start gap-2.5 mb-5"
-            style={{
-              background: 'rgba(239,68,68,0.08)',
-              border: '1px solid rgba(239,68,68,0.2)',
-            }}
+            className="rounded-xl p-3.5 text-xs flex items-start gap-2.5 mb-5 bg-destructive/10 border border-destructive/20 text-destructive"
           >
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: '#f87171' }} />
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <div className="text-left">
-              <p className="font-semibold" style={{ color: '#fca5a5' }}>Error de acceso</p>
-              <p className="mt-0.5 opacity-85" style={{ color: '#fca5a5' }}>{displayError}</p>
+              <p className="font-semibold">Error de acceso</p>
+              <p className="mt-0.5 opacity-85">{displayError}</p>
             </div>
           </div>
         )}
@@ -423,43 +391,39 @@ function LoginContent() {
           onClick={handlePasskeyLogin}
           disabled={passkeyLoading}
           id="btn-passkey-login"
-          className="group w-full flex items-center justify-center gap-3 rounded-xl py-3.5 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden text-neutral-950 shadow-[0_4px_24px_hsl(var(--primary)/0.2)] disabled:opacity-50 mb-3"
-          style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
-            border: '1px solid hsl(var(--primary)/0.3)',
-          }}
+          className="group w-full flex items-center justify-center gap-3 rounded-xl py-3.5 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden bg-primary text-primary-foreground shadow-md hover:bg-primary/95 disabled:opacity-50 mb-3"
         >
           {/* Shimmer Effect */}
-          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
 
           {passkeyLoading ? (
-            <Loader2 className="h-5 w-5 shrink-0 relative z-10 animate-spin text-neutral-950" />
+            <Loader2 className="h-5 w-5 shrink-0 relative z-10 animate-spin" />
           ) : (
-            <KeyRound className="h-5 w-5 shrink-0 relative z-10 text-neutral-950" />
+            <KeyRound className="h-5 w-5 shrink-0 relative z-10" />
           )}
           <span className="relative z-10 font-bold">
             {passkeyLoading ? 'Iniciando sesión...' : 'Iniciar sesión con Passkey'}
           </span>
           <ArrowRight
-            className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10 text-neutral-950"
+            className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10"
           />
         </button>
 
         {/* Divider */}
         <div className="flex items-center my-4 select-none">
-          <div className="flex-1 h-px bg-white/5" />
-          <span className="px-3 text-[10px] uppercase tracking-widest text-slate-500 font-bold">o también</span>
-          <div className="flex-1 h-px bg-white/5" />
+          <div className="flex-1 h-px bg-border" />
+          <span className="px-3 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">o también</span>
+          <div className="flex-1 h-px bg-border" />
         </div>
 
         {/* Google Login Button */}
         <button
           onClick={handleGoogleLogin}
           id="btn-google-login"
-          className="group w-full flex items-center justify-center gap-3 rounded-xl py-3.5 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.3)]" style={{ '--tw-border-opacity': 1 } as React.CSSProperties}
+          className="group w-full flex items-center justify-center gap-3 rounded-xl py-3.5 px-6 text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] select-none cursor-pointer relative overflow-hidden bg-muted/50 hover:bg-muted border border-border text-foreground shadow-xs"
         >
           {/* Shimmer Effect */}
-          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
 
           {/* Google SVG */}
           <svg className="h-5 w-5 shrink-0 relative z-10" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -470,7 +434,7 @@ function LoginContent() {
           </svg>
           <span className="relative z-10">Iniciar sesión con Google</span>
           <ArrowRight
-            className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10" style={{ color: 'hsl(var(--primary))' }}
+            className="h-4 w-4 absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 z-10 text-primary"
           />
         </button>
 
@@ -479,26 +443,21 @@ function LoginContent() {
 
         {/* Privacy notice */}
         <div
-          className="mt-5 flex items-start gap-2.5 rounded-xl p-3 text-[10px] leading-relaxed text-left"
-          style={{
-            background: 'hsl(var(--primary)/0.04)',
-            border: '1px solid hsl(var(--primary)/0.1)',
-            color: 'hsl(215 20% 50%)',
-          }}
+          className="mt-5 flex items-start gap-2.5 rounded-xl p-3 text-[10px] leading-relaxed text-left bg-muted/40 border border-border text-muted-foreground"
         >
-          <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'hsl(var(--primary))' }} />
+          <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
           <p>
             Acceso restringido únicamente a usuarios autorizados. Los accesos son auditados.
           </p>
         </div>
 
         {/* Legal links footer */}
-        <div className="mt-5 pt-4 border-t border-white/5 flex justify-center gap-4 text-[10px] text-slate-500 font-semibold select-none">
-          <Link href="/privacy" className="transition-colors" style={{}} onMouseEnter={e => (e.currentTarget.style.color='hsl(var(--primary))')} onMouseLeave={e => (e.currentTarget.style.color='')}>
+        <div className="mt-5 pt-4 border-t border-border flex justify-center gap-4 text-[10px] text-muted-foreground font-semibold select-none">
+          <Link href="/privacy" className="transition-colors hover:text-primary">
             Política de Privacidad
           </Link>
           <span>•</span>
-          <Link href="/terms" className="transition-colors" onMouseEnter={e => (e.currentTarget.style.color='hsl(var(--primary))')} onMouseLeave={e => (e.currentTarget.style.color='')}>
+          <Link href="/terms" className="transition-colors hover:text-primary">
             Términos y Condiciones
           </Link>
         </div>
@@ -510,58 +469,41 @@ function LoginContent() {
 export default function LoginPage() {
   return (
     <main
-      className="relative flex min-h-screen items-center justify-center p-4 lg:p-0 overflow-hidden"
-      style={{ background: 'hsl(222 47% 4%)' }}
+      className="relative flex min-h-screen items-center justify-center p-4 lg:p-0 overflow-hidden bg-background text-foreground"
     >
+      {/* Theme toggle in corner */}
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
       {/* Aurora background orbs */}
       <div
-        className="absolute top-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full pointer-events-none"
+        className="absolute top-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full pointer-events-none opacity-40 dark:opacity-20"
         style={{
-          background: 'radial-gradient(circle, hsl(var(--primary)/0.08) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--primary)/0.15) 0%, transparent 70%)',
           animation: 'aurora-pulse 6s ease-in-out infinite',
         }}
       />
       <div
-        className="absolute bottom-[-10%] right-[-5%] h-[400px] w-[400px] rounded-full pointer-events-none"
+        className="absolute bottom-[-10%] right-[-5%] h-[400px] w-[400px] rounded-full pointer-events-none opacity-40 dark:opacity-20"
         style={{
-          background: 'radial-gradient(circle, hsl(var(--accent)/0.07) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--accent)/0.15) 0%, transparent 70%)',
           animation: 'aurora-pulse 8s ease-in-out infinite 2s',
-        }}
-      />
-      <div
-        className="absolute top-[40%] right-[20%] h-[250px] w-[250px] rounded-full pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%)',
-          animation: 'aurora-pulse 10s ease-in-out infinite 4s',
-        }}
-      />
-
-      {/* Grid overlay (Radial dots) */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.02]"
-        style={{
-          backgroundImage: 'radial-gradient(hsl(var(--primary)/0.2) 1px, transparent 0)',
-          backgroundSize: '32px 32px',
         }}
       />
 
       <div className="w-full max-w-6xl mx-auto lg:grid lg:grid-cols-12 lg:gap-12 lg:items-center relative z-10 p-4">
-        
+
         {/* Left Column: Login Portal */}
         <div className="col-span-12 lg:col-span-5 flex items-center justify-center">
           <Suspense fallback={
             <div
-              className="w-full max-w-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-3"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
+              className="w-full max-w-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-card border border-border"
             >
               <div
-                className="h-8 w-8 rounded-full border-2 animate-spin"
-                style={{ borderColor: 'hsl(var(--primary))', borderTopColor: 'transparent' }}
+                className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin"
               />
-              <p className="text-sm" style={{ color: 'hsl(215 20% 55%)' }}>Iniciando interfaz...</p>
+              <p className="text-sm text-muted-foreground">Iniciando interfaz...</p>
             </div>
           }>
             <LoginContent />
@@ -571,17 +513,17 @@ export default function LoginPage() {
         {/* Right Column: Visual Showcase (Hidden on Mobile) */}
         <div className="hidden lg:flex lg:col-span-7 flex-col items-center justify-center relative text-center">
           <div className="mb-8 max-w-md">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4" style={{ background: 'hsl(var(--primary)/0.1)', border: '1px solid hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' }}>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 bg-primary/10 border border-primary/20 text-primary">
               <Sparkles className="h-3.5 w-3.5 animate-pulse" /> Plataforma Segura de Webmail
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-white mb-3 leading-tight">
+            <h2 className="text-3xl font-extrabold tracking-tight text-foreground mb-3 leading-tight">
               Bandeja de Entrada Privada con Experiencia Fluida
             </h2>
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Explora una interfaz de correo ultrarrápida diseñada con técnicas avanzadas de desenfoque de cristal, optimizada para rendimiento móvil y protegida por autenticación de dos factores.
             </p>
           </div>
-          
+
           <InboxSimulation />
         </div>
       </div>

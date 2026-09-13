@@ -531,41 +531,41 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-neutral-950 overflow-hidden">
-      
+    <div className="flex-1 flex flex-col h-full bg-background text-foreground overflow-hidden">
+
       {/* Header bar */}
-      <header className="h-14 border-b border-border flex items-center justify-between px-8 bg-neutral-950/80 backdrop-blur shrink-0">
-        <h1 className="text-sm font-bold tracking-wider uppercase text-muted-foreground flex items-center gap-2">
+      <header className="h-14 border-b border-border flex items-center justify-between px-8 bg-card shrink-0">
+        <h1 className="text-sm font-bold tracking-wider uppercase text-foreground flex items-center gap-2">
           <ShieldCheck className="h-4.5 w-4.5 text-primary" />
           Administración de Accesos
         </h1>
-        <button 
+        <button
           onClick={
-            activeTab === 'users' 
-              ? fetchUsers 
-              : activeTab === 'domains' 
-              ? fetchDomains 
-              : activeTab === 'mailboxes' 
-              ? fetchMailboxes 
+            activeTab === 'users'
+              ? fetchUsers
+              : activeTab === 'domains'
+              ? fetchDomains
+              : activeTab === 'mailboxes'
+              ? fetchMailboxes
               : fetchInvitations
           }
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-900 border border-border/45 transition-all cursor-pointer"
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors cursor-pointer"
           title="Refrescar lista"
         >
           <RefreshCw className={`h-4 w-4 ${(
-            activeTab === 'users' 
-              ? loading 
-              : activeTab === 'domains' 
-              ? domainsLoading 
-              : activeTab === 'mailboxes' 
-              ? mailboxesLoading 
+            activeTab === 'users'
+              ? loading
+              : activeTab === 'domains'
+              ? domainsLoading
+              : activeTab === 'mailboxes'
+              ? mailboxesLoading
               : invitationsLoading
           ) ? 'animate-spin' : ''}`} />
         </button>
       </header>
 
       {/* Tab Selector */}
-      <div className="flex px-8 py-2 border-b border-border/40 bg-neutral-950/40 shrink-0 gap-4 overflow-x-auto">
+      <div className="flex px-8 py-2 border-b border-border bg-muted/30 shrink-0 gap-2 overflow-x-auto">
         <button
           onClick={() => {
             setActiveTab('users');
@@ -575,7 +575,7 @@ export default function UserManagement() {
           className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 ${
             activeTab === 'users'
               ? 'bg-primary/10 border-primary/20 text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
         >
           Gestión de Usuarios
@@ -589,7 +589,7 @@ export default function UserManagement() {
           className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 ${
             activeTab === 'domains'
               ? 'bg-primary/10 border-primary/20 text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
         >
           Dominios Autorizados
@@ -603,7 +603,7 @@ export default function UserManagement() {
           className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 ${
             activeTab === 'mailboxes'
               ? 'bg-primary/10 border-primary/20 text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
         >
           Cuentas de Correo
@@ -619,7 +619,7 @@ export default function UserManagement() {
           className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 ${
             activeTab === 'invitations'
               ? 'bg-primary/10 border-primary/20 text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-900/60'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
         >
           Enlaces de Invitación
@@ -632,7 +632,7 @@ export default function UserManagement() {
         
         {/* Left Side: Create User Form */}
         <section className="w-full lg:w-96 shrink-0 space-y-4">
-          <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative backdrop-blur-md">
+          <div className="bg-card border border-border p-6 rounded-2xl relative backdrop-blur-md">
             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
             
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
@@ -656,7 +656,7 @@ export default function UserManagement() {
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="usuario@gmail.com"
-                    className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -669,7 +669,7 @@ export default function UserManagement() {
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as 'admin' | 'user')}
-                  className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="user">Usuario Común</option>
                   <option value="admin">Administrador</option>
@@ -683,7 +683,7 @@ export default function UserManagement() {
                   id="fullAccess"
                   checked={fullAccess}
                   onChange={(e) => setFullAccess(e.target.checked)}
-                  className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-4 w-4"
+                  className="rounded border-border bg-background text-primary focus:ring-primary h-4 w-4"
                 />
                 <label htmlFor="fullAccess" className="text-xs font-medium text-foreground select-none cursor-pointer">
                   Acceso Total (todas las cuentas)
@@ -697,7 +697,7 @@ export default function UserManagement() {
                   id="newRequire2FA"
                   checked={newRequire2FA}
                   onChange={(e) => setNewRequire2FA(e.target.checked)}
-                  className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-4 w-4"
+                  className="rounded border-border bg-background text-primary focus:ring-primary h-4 w-4"
                 />
                 <label htmlFor="newRequire2FA" className="text-xs font-medium text-foreground select-none cursor-pointer">
                   Exigir 2FA Obligatorio
@@ -721,7 +721,7 @@ export default function UserManagement() {
                       <button
                         type="button"
                         onClick={() => setNewDropdownOpen(!newDropdownOpen)}
-                        className="w-full flex items-center justify-between rounded-lg border border-border bg-neutral-950 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
+                        className="w-full flex items-center justify-between rounded-lg border border-border bg-background py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
                       >
                         <span className="truncate">
                           {newSelectedAddresses.length === 0 
@@ -734,14 +734,14 @@ export default function UserManagement() {
                       {newDropdownOpen && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setNewDropdownOpen(false)} />
-                          <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-2 shadow-xl animate-fadeIn">
+                          <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-border bg-background p-2 shadow-xl animate-fadeIn">
                             <div className="space-y-1">
                               {mailboxes.map(box => {
                                 const isChecked = newSelectedAddresses.includes(box.email);
                                 return (
                                   <label 
                                     key={box._id} 
-                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-900 cursor-pointer select-none text-xs text-foreground text-left"
+                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer select-none text-xs text-foreground text-left"
                                   >
                                     <input
                                       type="checkbox"
@@ -753,7 +753,7 @@ export default function UserManagement() {
                                           setNewSelectedAddresses([...newSelectedAddresses, box.email]);
                                         }
                                       }}
-                                      className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                      className="rounded border-border bg-background text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
                                     />
                                     <div className="truncate flex-1 min-w-0">
                                       <p className="font-semibold text-[11px] truncate">{box.name}</p>
@@ -813,8 +813,8 @@ export default function UserManagement() {
         </section>
 
         {/* Right Side: Users List */}
-        <section className="flex-1 min-w-0 bg-neutral-900/20 border border-border rounded-2xl flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-border/50 bg-neutral-950/20 shrink-0">
+        <section className="flex-1 min-w-0 bg-card border border-border rounded-2xl flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-border/50 bg-muted/30 shrink-0">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               Usuarios Autorizados ({users.length})
             </h3>
@@ -833,7 +833,7 @@ export default function UserManagement() {
               </div>
             ) : (
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 bg-neutral-900/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                <thead className="sticky top-0 bg-card/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
                   <tr>
                     <th className="py-3 px-4">Usuario</th>
                     <th className="py-3 px-4">Rol</th>
@@ -844,11 +844,11 @@ export default function UserManagement() {
                 </thead>
                 <tbody className="divide-y divide-border/40">
                   {users.map((user) => (
-                    <tr key={user._id} className="hover:bg-neutral-900/40 transition-all group">
+                    <tr key={user._id} className="hover:bg-muted/40 transition-all group">
                       {/* Email Profile */}
                       <td className="py-3.5 px-4 font-medium text-foreground select-text">
                         <div className="flex items-center gap-2.5">
-                          <div className="h-7 w-7 rounded-full bg-neutral-800 flex items-center justify-center text-primary font-bold border border-border/30">
+                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-primary font-bold border border-border/30">
                             {user.email[0].toUpperCase()}
                           </div>
                           <div>
@@ -865,7 +865,7 @@ export default function UserManagement() {
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold border ${
                           user.role === 'admin' 
                             ? 'bg-primary/10 border-primary/20 text-primary' 
-                            : 'bg-neutral-800 border-neutral-700 text-muted-foreground'
+                            : 'bg-muted border-border text-muted-foreground'
                         }`}>
                           {user.role === 'admin' ? 'Admin' : 'Usuario'}
                         </span>
@@ -892,7 +892,7 @@ export default function UserManagement() {
                       </td>
 
                       {/* Assigned Addresses */}
-                      <td className="py-3.5 px-4 font-mono text-[10px] text-neutral-300">
+                      <td className="py-3.5 px-4 font-mono text-[10px] text-foreground">
                         {user.assignedAddresses.includes('*') ? (
                           <span className="px-2 py-0.5 rounded-md bg-emerald-950/30 border border-emerald-900/20 text-emerald-400 text-[9px] font-semibold select-none">
                             Acceso Total (*)
@@ -900,7 +900,7 @@ export default function UserManagement() {
                         ) : (
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
                             {user.assignedAddresses.map((addr, i) => (
-                              <span key={i} className="px-1.5 py-0.5 rounded bg-neutral-900 border border-border/40 text-[9px] tracking-tight">
+                              <span key={i} className="px-1.5 py-0.5 rounded bg-muted border border-border/40 text-[9px] tracking-tight">
                                 {addr}
                               </span>
                             ))}
@@ -941,7 +941,7 @@ export default function UserManagement() {
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
           {/* Left Side: Add Domain Form */}
           <section className="w-full lg:w-96 shrink-0 space-y-4">
-            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative backdrop-blur-md">
+            <div className="bg-card border border-border p-6 rounded-2xl relative backdrop-blur-md">
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
@@ -965,7 +965,7 @@ export default function UserManagement() {
                       value={newDomain}
                       onChange={(e) => setNewDomain(e.target.value)}
                       placeholder="ej: broslunas.es"
-                      className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
@@ -1010,8 +1010,8 @@ export default function UserManagement() {
           </section>
 
           {/* Right Side: Domains List */}
-          <section className="flex-1 min-w-0 bg-neutral-900/20 border border-border rounded-2xl flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-border/50 bg-neutral-950/20 shrink-0">
+          <section className="flex-1 min-w-0 bg-card border border-border rounded-2xl flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-border/50 bg-muted/30 shrink-0">
               <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Dominios Permitidos ({domains.length})
               </h3>
@@ -1029,7 +1029,7 @@ export default function UserManagement() {
                 </div>
               ) : (
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="sticky top-0 bg-neutral-900/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                  <thead className="sticky top-0 bg-card/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
                     <tr>
                       <th className="py-3 px-4">Dominio</th>
                       <th className="py-3 px-4">Registrado por</th>
@@ -1039,14 +1039,14 @@ export default function UserManagement() {
                   </thead>
                   <tbody className="divide-y divide-border/40">
                     {domains.map((dom) => (
-                      <tr key={dom._id} className="hover:bg-neutral-900/40 transition-all group">
+                      <tr key={dom._id} className="hover:bg-muted/40 transition-all group">
                         <td className="py-3.5 px-4 font-semibold text-foreground select-text font-mono text-xs">
                           {dom.domain}
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-300">
+                        <td className="py-3.5 px-4 text-foreground">
                           {dom.addedBy || 'System'}
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-400">
+                        <td className="py-3.5 px-4 text-muted-foreground">
                           {new Date(dom.createdAt).toLocaleString('es-ES', {
                             dateStyle: 'medium',
                             timeStyle: 'short'
@@ -1074,7 +1074,7 @@ export default function UserManagement() {
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
           {/* Left Side: Add Mailbox Form */}
           <section className="w-full lg:w-96 shrink-0 space-y-4">
-            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative backdrop-blur-md">
+            <div className="bg-card border border-border p-6 rounded-2xl relative backdrop-blur-md">
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
@@ -1098,7 +1098,7 @@ export default function UserManagement() {
                       value={newMailboxName}
                       onChange={(e) => setNewMailboxName(e.target.value)}
                       placeholder="ej: Pablo Luna (Ventas)"
-                      className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
@@ -1121,7 +1121,7 @@ export default function UserManagement() {
                       value={newMailboxEmail}
                       onChange={(e) => setNewMailboxEmail(e.target.value)}
                       placeholder="ej: contacto@broslunas.es"
-                      className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <p className="text-[9px] text-muted-foreground/60 leading-relaxed">
@@ -1166,8 +1166,8 @@ export default function UserManagement() {
           </section>
 
           {/* Right Side: Mailboxes List */}
-          <section className="flex-1 min-w-0 bg-neutral-900/20 border border-border rounded-2xl flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-border/50 bg-neutral-950/20 shrink-0">
+          <section className="flex-1 min-w-0 bg-card border border-border rounded-2xl flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-border/50 bg-muted/30 shrink-0">
               <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Cuentas de Correo Registradas ({mailboxes.length})
               </h3>
@@ -1185,7 +1185,7 @@ export default function UserManagement() {
                 </div>
               ) : (
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="sticky top-0 bg-neutral-900/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                  <thead className="sticky top-0 bg-card/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
                     <tr>
                       <th className="py-3 px-4">Nombre Remitente</th>
                       <th className="py-3 px-4">Dirección Email</th>
@@ -1196,17 +1196,17 @@ export default function UserManagement() {
                   </thead>
                   <tbody className="divide-y divide-border/40">
                     {mailboxes.map((box) => (
-                      <tr key={box._id} className="hover:bg-neutral-900/40 transition-all group">
+                      <tr key={box._id} className="hover:bg-muted/40 transition-all group">
                         <td className="py-3.5 px-4 font-semibold text-foreground select-text text-xs">
                           {box.name}
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-xs text-neutral-300">
+                        <td className="py-3.5 px-4 font-mono text-xs text-foreground">
                           {box.email}
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-400">
+                        <td className="py-3.5 px-4 text-muted-foreground">
                           {box.addedBy || 'System'}
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-400">
+                        <td className="py-3.5 px-4 text-muted-foreground">
                           {new Date(box.createdAt).toLocaleDateString('es-ES', {
                             dateStyle: 'short'
                           })}
@@ -1233,7 +1233,7 @@ export default function UserManagement() {
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-6 gap-6 animate-fadeIn">
           {/* Left Side: Generate Invitation Form */}
           <section className="w-full lg:w-96 shrink-0 space-y-4">
-            <div className="bg-neutral-900/30 border border-border p-6 rounded-2xl relative backdrop-blur-md">
+            <div className="bg-card border border-border p-6 rounded-2xl relative backdrop-blur-md">
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
@@ -1250,7 +1250,7 @@ export default function UserManagement() {
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as 'admin' | 'user')}
-                    className="w-full rounded-lg border border-border bg-neutral-950 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="user">Usuario Común</option>
                     <option value="admin">Administrador</option>
@@ -1264,7 +1264,7 @@ export default function UserManagement() {
                     id="inviteFullAccess"
                     checked={inviteFullAccess}
                     onChange={(e) => setInviteFullAccess(e.target.checked)}
-                    className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-4 w-4"
+                    className="rounded border-border bg-background text-primary focus:ring-primary h-4 w-4"
                   />
                   <label htmlFor="inviteFullAccess" className="text-xs font-medium text-foreground select-none cursor-pointer">
                     Acceso Total (todas las cuentas)
@@ -1278,7 +1278,7 @@ export default function UserManagement() {
                     id="inviteRequire2FA"
                     checked={inviteRequire2FA}
                     onChange={(e) => setInviteRequire2FA(e.target.checked)}
-                    className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-4 w-4"
+                    className="rounded border-border bg-background text-primary focus:ring-primary h-4 w-4"
                   />
                   <label htmlFor="inviteRequire2FA" className="text-xs font-medium text-foreground select-none cursor-pointer">
                     Exigir 2FA Obligatorio
@@ -1301,7 +1301,7 @@ export default function UserManagement() {
                         <button
                           type="button"
                           onClick={() => setInviteDropdownOpen(!inviteDropdownOpen)}
-                          className="w-full flex items-center justify-between rounded-lg border border-border bg-neutral-950 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
+                          className="w-full flex items-center justify-between rounded-lg border border-border bg-background py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
                         >
                           <span className="truncate">
                             {inviteSelectedAddresses.length === 0 
@@ -1314,14 +1314,14 @@ export default function UserManagement() {
                         {inviteDropdownOpen && (
                           <>
                             <div className="fixed inset-0 z-10" onClick={() => setInviteDropdownOpen(false)} />
-                            <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-2 shadow-xl animate-fadeIn">
+                            <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-border bg-background p-2 shadow-xl animate-fadeIn">
                               <div className="space-y-1">
                                 {mailboxes.map(box => {
                                   const isChecked = inviteSelectedAddresses.includes(box.email);
                                   return (
                                     <label 
                                       key={box._id} 
-                                      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-900 cursor-pointer select-none text-xs text-foreground text-left"
+                                      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer select-none text-xs text-foreground text-left"
                                     >
                                       <input
                                         type="checkbox"
@@ -1333,7 +1333,7 @@ export default function UserManagement() {
                                             setInviteSelectedAddresses([...inviteSelectedAddresses, box.email]);
                                           }
                                         }}
-                                        className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                        className="rounded border-border bg-background text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
                                       />
                                       <div className="truncate flex-1 min-w-0">
                                         <p className="font-semibold text-[11px] truncate">{box.name}</p>
@@ -1371,7 +1371,7 @@ export default function UserManagement() {
               {generatedInvite && (
                 <div className="rounded-xl p-4 space-y-2.5 text-left animate-fadeIn" style={{ border: '1px solid hsl(var(--primary)/0.3)', background: 'hsl(var(--primary)/0.04)' }}>
                   <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'hsl(var(--primary))' }}>¡Enlace Generado!</p>
-                  <p className="text-[10px] text-slate-300 font-mono break-all bg-neutral-950 p-2 rounded border border-white/5 select-text">
+                  <p className="text-[10px] text-slate-300 font-mono break-all bg-background p-2 rounded border border-white/5 select-text">
                     {generatedInvite}
                   </p>
                   <button
@@ -1387,7 +1387,7 @@ export default function UserManagement() {
           </section>
 
           {/* Right Side: List of invitations */}
-          <section className="flex-1 flex flex-col min-w-0 bg-neutral-900/10 border border-border/85 rounded-2xl overflow-hidden backdrop-blur-md">
+          <section className="flex-1 flex flex-col min-w-0 bg-card border border-border/85 rounded-2xl overflow-hidden backdrop-blur-md">
             <div className="flex-1 overflow-x-auto min-h-0">
               {invitationsLoading ? (
                 <div className="h-full flex items-center justify-center p-8">
@@ -1400,7 +1400,7 @@ export default function UserManagement() {
                 </div>
               ) : (
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="sticky top-0 bg-neutral-900/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                  <thead className="sticky top-0 bg-card/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
                     <tr>
                       <th className="py-3 px-4">Enlace</th>
                       <th className="py-3 px-4">Permisos</th>
@@ -1414,8 +1414,8 @@ export default function UserManagement() {
                       const isExpired = new Date() > new Date(invite.expiresAt);
                       const inviteUrl = `${window.location.origin}/invite?token=${invite.token}`;
                       return (
-                        <tr key={invite._id} className="hover:bg-neutral-900/40 transition-all group">
-                          <td className="py-3.5 px-4 font-mono text-[11px] text-neutral-300 max-w-[180px] truncate select-text">
+                        <tr key={invite._id} className="hover:bg-muted/40 transition-all group">
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-foreground max-w-[180px] truncate select-text">
                             <span className="text-primary hover:underline cursor-pointer" onClick={() => copyToClipboard(inviteUrl, invite._id)}>
                               {invite.token.substring(0, 12)}... (Copiar Link)
                             </span>
@@ -1447,7 +1447,7 @@ export default function UserManagement() {
                               </span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 text-neutral-400">
+                          <td className="py-3.5 px-4 text-muted-foreground">
                             <div>{invite.createdBy}</div>
                             <div className="text-[9px] opacity-75">{new Date(invite.createdAt).toLocaleDateString()}</div>
                           </td>
@@ -1474,10 +1474,10 @@ export default function UserManagement() {
       {/* Edit User Modal Overlay */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-2xl p-6 shadow-2xl relative animate-zoomIn">
+          <div className="w-full max-w-md bg-background border border-border rounded-2xl p-6 shadow-2xl relative animate-zoomIn">
             <button 
               onClick={() => setEditingUser(null)}
-              className="absolute top-4 right-4 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-900 transition-all cursor-pointer"
+              className="absolute top-4 right-4 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer"
             >
               <X className="h-4.5 w-4.5" />
             </button>
@@ -1496,7 +1496,7 @@ export default function UserManagement() {
                 <select
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value as 'admin' | 'user')}
-                  className="w-full rounded-lg border border-border bg-neutral-900 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-lg border border-border bg-muted py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="user">Usuario Común</option>
                   <option value="admin">Administrador</option>
@@ -1510,7 +1510,7 @@ export default function UserManagement() {
                   id="editFullAccess"
                   checked={editFullAccess}
                   onChange={(e) => setEditFullAccess(e.target.checked)}
-                  className="rounded border-border bg-neutral-900 text-primary focus:ring-primary h-4 w-4"
+                  className="rounded border-border bg-muted text-primary focus:ring-primary h-4 w-4"
                 />
                 <label htmlFor="editFullAccess" className="text-xs font-medium text-foreground select-none cursor-pointer">
                   Acceso Total (todas las cuentas)
@@ -1524,7 +1524,7 @@ export default function UserManagement() {
                   id="editRequire2FA"
                   checked={editRequire2FA}
                   onChange={(e) => setEditRequire2FA(e.target.checked)}
-                  className="rounded border-border bg-neutral-900 text-primary focus:ring-primary h-4 w-4"
+                  className="rounded border-border bg-muted text-primary focus:ring-primary h-4 w-4"
                 />
                 <label htmlFor="editRequire2FA" className="text-xs font-medium text-foreground select-none cursor-pointer">
                   Exigir 2FA Obligatorio
@@ -1547,7 +1547,7 @@ export default function UserManagement() {
                       <button
                         type="button"
                         onClick={() => setEditDropdownOpen(!editDropdownOpen)}
-                        className="w-full flex items-center justify-between rounded-lg border border-border bg-neutral-900 py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
+                        className="w-full flex items-center justify-between rounded-lg border border-border bg-muted py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none text-left cursor-pointer"
                       >
                         <span className="truncate">
                           {editSelectedAddresses.length === 0 
@@ -1560,14 +1560,14 @@ export default function UserManagement() {
                       {editDropdownOpen && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setEditDropdownOpen(false)} />
-                          <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-2 shadow-xl animate-fadeIn">
+                          <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-border bg-background p-2 shadow-xl animate-fadeIn">
                             <div className="space-y-1">
                               {mailboxes.map(box => {
                                 const isChecked = editSelectedAddresses.includes(box.email);
                                 return (
                                   <label 
                                     key={box._id} 
-                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-neutral-900 cursor-pointer select-none text-xs text-foreground text-left"
+                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer select-none text-xs text-foreground text-left"
                                   >
                                     <input
                                       type="checkbox"
@@ -1579,7 +1579,7 @@ export default function UserManagement() {
                                           setEditSelectedAddresses([...editSelectedAddresses, box.email]);
                                         }
                                       }}
-                                      className="rounded border-border bg-neutral-950 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                      className="rounded border-border bg-background text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
                                     />
                                     <div className="truncate flex-1 min-w-0">
                                       <p className="font-semibold text-[11px] truncate">{box.name}</p>
@@ -1606,7 +1606,7 @@ export default function UserManagement() {
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="flex-1 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-muted-foreground hover:text-foreground py-2 rounded-lg text-xs font-semibold shadow transition-all cursor-pointer text-center"
+                  className="flex-1 bg-muted hover:bg-muted/80 border border-border text-muted-foreground hover:text-foreground py-2 rounded-lg text-xs font-semibold shadow transition-all cursor-pointer text-center"
                 >
                   Cancelar
                 </button>

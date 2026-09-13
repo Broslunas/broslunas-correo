@@ -221,17 +221,17 @@ function StandaloneViewContent() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[hsl(222_47%_4%)]">
-        <div className="h-8 w-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--primary)) transparent transparent transparent' }} />
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
   if (!email) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[hsl(222_47%_4%)] text-slate-200">
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
         <p className="text-sm font-semibold">Correo no encontrado o no tienes permiso para verlo.</p>
-        <button onClick={() => window.close()} className="mt-4 px-4 py-2 text-xs font-bold rounded-lg" style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}>
+        <button onClick={() => window.close()} className="mt-4 px-4 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">
           Cerrar ventana
         </button>
       </div>
@@ -239,7 +239,7 @@ function StandaloneViewContent() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[hsl(222_47%_4%)]">
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
       <EmailReader
         email={email}
         onUpdateEmailStatus={handleUpdateEmailStatus}
@@ -256,8 +256,8 @@ function StandaloneViewContent() {
 export default function StandaloneViewPage() {
   return (
     <Suspense fallback={
-      <div className="flex h-screen w-screen items-center justify-center bg-[hsl(222_47%_4%)]">
-        <div className="h-8 w-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--primary)) transparent transparent transparent' }} />
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     }>
       <StandaloneViewContent />

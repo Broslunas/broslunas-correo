@@ -24,15 +24,20 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const theme = localStorage.getItem('webmail_theme') || 'theme-aurora-frost';
-                const isLight = theme === 'theme-sakura-light';
-                document.documentElement.className = isLight ? theme : 'dark ' + theme;
+                const saved = localStorage.getItem('theme') || localStorage.getItem('webmail_theme');
+                const isDark = saved === 'dark' || (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
               } catch (_) {}
             `,
           }}
         />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-        <meta name="theme-color" content="#060a14" />
+        <meta name="theme-color" content="#f6f8fc" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#111318" media="(prefers-color-scheme: dark)" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

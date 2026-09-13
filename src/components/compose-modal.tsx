@@ -924,7 +924,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     background: 'transparent',
     border: 'none',
     outline: 'none',
-    color: 'hsl(210 40% 90%)',
+    color: 'inherit',
     fontSize: '13px',
     width: '100%',
   };
@@ -934,17 +934,17 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     alignItems: 'center',
     gap: '8px',
     padding: '8px 0',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    borderBottom: '1px solid hsl(var(--border))',
   };
 
   return (
     /* Backdrop overlay on mobile */
     <div
-      className={`fixed inset-0 z-50 flex transition-all duration-300 ${isMaximized ? 'items-center justify-center p-4 bg-slate-950/20' : 'items-end sm:items-end sm:justify-end sm:p-4'}`}
+      className={`fixed inset-0 z-50 flex transition-all duration-300 ${isMaximized ? 'items-center justify-center p-4 bg-black/40' : 'items-end sm:items-end sm:justify-end sm:p-4'}`}
       style={{ pointerEvents: 'none' }}
     >
       <div
-        className="w-full flex flex-col rounded-t-2xl sm:rounded-2xl overflow-hidden animate-slideInUp"
+        className="w-full flex flex-col rounded-t-2xl sm:rounded-2xl overflow-hidden animate-slideInUp bg-card border border-border text-foreground shadow-2xl"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -954,44 +954,25 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           width: isMaximized ? '95vw' : 'auto',
           maxWidth: isMaximized ? 'none' : '42rem',
           minWidth: isMaximized ? 'none' : 'min(100vw, 640px)',
-          background: 'rgba(8,14,30,0.96)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(32px)',
-          WebkitBackdropFilter: 'blur(32px)',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(45,212,191,0.08)',
           position: 'relative',
           transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {isDragging && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md border-2 border-dashed rounded-t-2xl sm:rounded-2xl pointer-events-none animate-fadeIn" style={{ borderColor: 'hsl(var(--primary)/0.5)' }}>
-            <Upload className="h-10 w-10 animate-bounce mb-3" style={{ color: 'hsl(var(--primary))' }} />
-            <p className="text-sm font-semibold text-white">Suelte los archivos aquí para adjuntar</p>
-            <p className="text-xs text-white/50 mt-1">Límite de 10 MB por archivo</p>
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-md border-2 border-dashed border-primary rounded-t-2xl sm:rounded-2xl pointer-events-none animate-fadeIn">
+            <Upload className="h-10 w-10 animate-bounce mb-3 text-primary" />
+            <p className="text-sm font-semibold text-foreground">Suelte los archivos aquí para adjuntar</p>
+            <p className="text-xs text-muted-foreground mt-1">Límite de 10 MB por archivo</p>
           </div>
         )}
-        {/* Top shimmer */}
-        <div
-          className="shrink-0 h-px w-full"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(45,212,191,0.4), transparent)' }}
-        />
 
         {/* Header */}
-        <div
-          className="shrink-0 flex items-center justify-between px-5 py-3.5"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-        >
+        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
           <div className="flex items-center gap-2.5">
-            <div
-              className="h-7 w-7 rounded-lg flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, rgba(45,212,191,0.2), rgba(34,211,238,0.1))',
-                border: '1px solid rgba(45,212,191,0.25)',
-              }}
-            >
-              <PenSquare className="h-3.5 w-3.5" style={{ color: 'hsl(174 72% 60%)' }} />
+            <div className="h-7 w-7 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
+              <PenSquare className="h-3.5 w-3.5" />
             </div>
-            <h3 className="text-sm font-semibold" style={{ color: 'hsl(210 40% 92%)' }}>
+            <h3 className="text-sm font-semibold text-foreground">
               {initialData?.forwardMode ? 'Reenviar correo' : initialData ? 'Responder correo' : 'Mensaje nuevo'}
             </h3>
           </div>
@@ -1003,14 +984,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Abrir en ventana aparte"
                 onClick={handlePopOut}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  color: 'hsl(215 20% 55%)',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'hsl(210 40% 90%)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'hsl(215 20% 55%)'; }}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </button>
@@ -1022,14 +996,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title={isMaximized ? "Restaurar tamaño" : "Maximizar"}
                 onClick={() => setIsMaximized(!isMaximized)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  color: 'hsl(215 20% 55%)',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'hsl(210 40% 90%)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'hsl(215 20% 55%)'; }}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 {isMaximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
               </button>
@@ -1039,14 +1006,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             <button
               type="button"
               onClick={onClose}
-              className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                color: 'hsl(215 20% 55%)',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'hsl(210 40% 90%)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'hsl(215 20% 55%)'; }}
+              className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1057,17 +1017,14 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
         <form onSubmit={handleSend} className="flex-1 flex flex-col overflow-hidden min-h-0">
 
           {/* Fields */}
-          <div
-            className="shrink-0 px-5 py-1"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-          >
+          <div className="shrink-0 px-5 py-1 border-b border-border bg-card">
             {/* FROM */}
             <div style={rowStyle}>
-              <span className="text-xs font-medium w-14 shrink-0" style={{ color: 'hsl(215 20% 50%)' }}>De:</span>
+              <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">De:</span>
               {senderLoading ? (
-                <span className="text-xs animate-pulse" style={{ color: 'hsl(215 20% 45%)' }}>Cargando...</span>
+                <span className="text-xs animate-pulse text-muted-foreground">Cargando...</span>
               ) : senderMailboxes.length === 0 ? (
-                <span className="text-xs font-semibold" style={{ color: 'hsl(0 78% 60%)' }}>
+                <span className="text-xs font-semibold text-destructive">
                   Sin cuentas de correo registradas.
                 </span>
               ) : (
@@ -1075,9 +1032,10 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   value={from}
                   onChange={(e) => handleFromChange(e.target.value)}
                   style={{ ...inputStyle, cursor: 'pointer', fontWeight: 600 }}
+                  className="bg-card text-foreground"
                 >
                   {senderMailboxes.map((box, idx) => (
-                    <option key={`${box.email || ''}-${idx}`} value={box.email} style={{ background: '#0a0f1e' }}>
+                    <option key={`${box.email || ''}-${idx}`} value={box.email} className="bg-card text-foreground">
                       {box.name} &lt;{box.email}&gt;
                     </option>
                   ))}
@@ -1087,7 +1045,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
             {/* TO */}
             <div style={rowStyle}>
-              <span className="text-xs font-medium w-14 shrink-0" style={{ color: 'hsl(215 20% 50%)' }}>Para:</span>
+              <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">Para:</span>
               <input
                 type="text"
                 required
@@ -1095,12 +1053,12 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 onChange={(e) => setTo(e.target.value)}
                 placeholder="destinatario@ejemplo.com"
                 style={{ ...inputStyle, flex: 1 }}
+                className="text-foreground placeholder:text-muted-foreground"
               />
               <button
                 type="button"
                 onClick={() => setShowCcBcc(!showCcBcc)}
-                className="flex items-center gap-1 text-[10px] font-semibold transition-colors cursor-pointer shrink-0"
-                style={{ color: 'hsl(174 72% 55%)' }}
+                className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline transition-colors cursor-pointer shrink-0"
               >
                 CC/CCO {showCcBcc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
@@ -1110,23 +1068,25 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             {showCcBcc && (
               <>
                 <div style={rowStyle}>
-                  <span className="text-xs font-medium w-14 shrink-0" style={{ color: 'hsl(215 20% 50%)' }}>CC:</span>
+                  <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">CC:</span>
                   <input
                     type="text"
                     value={cc}
                     onChange={(e) => setCc(e.target.value)}
                     placeholder="copia@ejemplo.com"
                     style={{ ...inputStyle, flex: 1 }}
+                    className="text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
                 <div style={rowStyle}>
-                  <span className="text-xs font-medium w-14 shrink-0" style={{ color: 'hsl(215 20% 50%)' }}>CCO:</span>
+                  <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">CCO:</span>
                   <input
                     type="text"
                     value={bcc}
                     onChange={(e) => setBcc(e.target.value)}
                     placeholder="copiaoculta@ejemplo.com"
                     style={{ ...inputStyle, flex: 1 }}
+                    className="text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </>
@@ -1134,20 +1094,21 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
             {/* SUBJECT */}
             <div style={{ ...rowStyle, borderBottom: 'none' }}>
-              <span className="text-xs font-medium w-14 shrink-0" style={{ color: 'hsl(215 20% 50%)' }}>Asunto:</span>
+              <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">Asunto:</span>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Asunto del correo"
                 style={{ ...inputStyle, flex: 1, fontWeight: 600 }}
+                className="text-foreground placeholder:text-muted-foreground font-semibold"
               />
             </div>
           </div>
 
           {/* Formatting toolbar */}
           <div
-            className="shrink-0 flex flex-wrap items-center gap-1.5 px-4 py-2 select-none border-b border-white/5 bg-white/[0.01]"
+            className="shrink-0 flex flex-wrap items-center gap-1.5 px-4 py-2 select-none border-b border-border bg-muted/30"
             onClick={() => {
               // Close dropdowns when clicking toolbar background
               setShowFontDropdown(false);
@@ -1161,7 +1122,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Deshacer"
                 onClick={() => handleFormat('undo')}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <Undo2 className="h-3.5 w-3.5" />
               </button>
@@ -1169,13 +1130,13 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Rehacer"
                 onClick={() => handleFormat('redo')}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <Redo2 className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            <div className="h-4 w-px bg-white/10 mx-1 shrink-0" />
+            <div className="h-4 w-px bg-border mx-1 shrink-0" />
 
             {/* GROUP 2: Typography (Font and Size) */}
             <div className="flex items-center gap-1.5">
@@ -1189,20 +1150,19 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     setShowSizeDropdown(false);
                     setShowColorDropdown(false);
                   }}
-                  className="h-7 px-2 flex items-center gap-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer text-white/70 hover:bg-white/5 hover:text-white"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                  className="h-7 px-2 flex items-center gap-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer text-foreground bg-card border border-border hover:bg-muted"
                 >
                   <span className="truncate max-w-[70px]">Fuente</span>
-                  <ChevronDown className="h-3 w-3 opacity-60" />
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
                 </button>
                 {showFontDropdown && (
-                  <div className="absolute top-full left-0 mt-1 z-50 w-44 rounded-xl border border-white/10 bg-slate-950/95 backdrop-blur-md p-1 shadow-2xl animate-fadeIn">
+                  <div className="absolute top-full left-0 mt-1 z-50 w-44 rounded-xl border border-border bg-card p-1 shadow-2xl animate-fadeIn">
                     {fontFamilies.map((f) => (
                       <button
                         key={f.value}
                         type="button"
                         onClick={() => handleFontFamily(f.value)}
-                        className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-white/80 transition-colors" onMouseEnter={e => { e.currentTarget.style.background='hsl(var(--primary)/0.1)'; e.currentTarget.style.color='hsl(var(--primary))'; }} onMouseLeave={e => { e.currentTarget.style.background=''; e.currentTarget.style.color=''; }}
+                        className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                         style={{ fontFamily: f.value }}
                       >
                         {f.name}
@@ -1222,20 +1182,19 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     setShowFontDropdown(false);
                     setShowColorDropdown(false);
                   }}
-                  className="h-7 px-2 flex items-center gap-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer text-white/70 hover:bg-white/5 hover:text-white"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                  className="h-7 px-2 flex items-center gap-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer text-foreground bg-card border border-border hover:bg-muted"
                 >
                   <span>Tamaño</span>
-                  <ChevronDown className="h-3 w-3 opacity-60" />
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
                 </button>
                 {showSizeDropdown && (
-                  <div className="absolute top-full left-0 mt-1 z-50 w-28 rounded-xl border border-white/10 bg-slate-950/95 backdrop-blur-md p-1 shadow-2xl animate-fadeIn">
+                  <div className="absolute top-full left-0 mt-1 z-50 w-28 rounded-xl border border-border bg-card p-1 shadow-2xl animate-fadeIn">
                     {fontSizes.map((s) => (
                       <button
                         key={s.value}
                         type="button"
                         onClick={() => handleFontSize(s.value)}
-                        className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-white/80 transition-colors" onMouseEnter={e => { e.currentTarget.style.background='hsl(var(--primary)/0.1)'; e.currentTarget.style.color='hsl(var(--primary))'; }} onMouseLeave={e => { e.currentTarget.style.background=''; e.currentTarget.style.color=''; }}
+                        className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                       >
                         {s.name}
                       </button>
@@ -1245,7 +1204,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               </div>
             </div>
 
-            <div className="h-4 w-px bg-white/10 mx-1 shrink-0" />
+            <div className="h-4 w-px bg-border mx-1 shrink-0" />
 
             {/* GROUP 3: Core Style buttons */}
             <div className="flex items-center gap-0.5">
@@ -1261,7 +1220,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   title={title}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat(cmd)}
-                  className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                  className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <Icon className="h-3.5 w-3.5" />
                 </button>
@@ -1278,28 +1237,24 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     setShowFontDropdown(false);
                     setShowSizeDropdown(false);
                   }}
-                  className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5"
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'hsl(var(--primary))'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = ''; }}
+                  className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-primary"
                 >
                   <Palette className="h-3.5 w-3.5" />
                 </button>
                 {showColorDropdown && (
-                  <div className="absolute top-full left-0 mt-1 z-50 w-48 rounded-xl border border-white/10 bg-slate-950/95 backdrop-blur-md p-2 shadow-2xl animate-fadeIn">
-                    <div className="flex gap-1 mb-2 p-0.5 rounded-lg bg-white/5">
+                  <div className="absolute top-full left-0 mt-1 z-50 w-48 rounded-xl border border-border bg-card p-2 shadow-2xl animate-fadeIn">
+                    <div className="flex gap-1 mb-2 p-0.5 rounded-lg bg-muted">
                       <button
                         type="button"
                         onClick={() => setSelectedColorTab('text')}
-                        className={`flex-1 py-1 rounded-md text-[10px] font-semibold text-center transition-all ${selectedColorTab === 'text' ? 'text-white/60' : 'text-white/60 hover:text-white'}`}
-                        style={selectedColorTab === 'text' ? { background: 'hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' } : {}}
+                        className={`flex-1 py-1 rounded-md text-[10px] font-semibold text-center transition-all ${selectedColorTab === 'text' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
                       >
                         Texto
                       </button>
                       <button
                         type="button"
                         onClick={() => setSelectedColorTab('bg')}
-                        className={`flex-1 py-1 rounded-md text-[10px] font-semibold text-center transition-all ${selectedColorTab === 'bg' ? 'text-white/60' : 'text-white/60 hover:text-white'}`}
-                        style={selectedColorTab === 'bg' ? { background: 'hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))' } : {}}
+                        className={`flex-1 py-1 rounded-md text-[10px] font-semibold text-center transition-all ${selectedColorTab === 'bg' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
                       >
                         Fondo
                       </button>
@@ -1319,7 +1274,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                             }
                             setShowColorDropdown(false);
                           }}
-                          className="h-6 w-6 rounded-md border border-white/10 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                          className="h-6 w-6 rounded-md border border-border hover:scale-110 active:scale-95 transition-all cursor-pointer"
                           style={{ backgroundColor: color.hex }}
                         />
                       ))}
@@ -1335,7 +1290,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                           }
                           setShowColorDropdown(false);
                         }}
-                        className="h-6 w-6 rounded-md border border-white/10 bg-transparent flex items-center justify-center text-[9px] text-white/50 hover:text-white cursor-pointer"
+                        className="h-6 w-6 rounded-md border border-border bg-transparent flex items-center justify-center text-[9px] text-muted-foreground hover:text-foreground cursor-pointer"
                       >
                         Reset
                       </button>
@@ -1345,7 +1300,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               </div>
             </div>
 
-            <div className="h-4 w-px bg-white/10 mx-1 shrink-0" />
+            <div className="h-4 w-px bg-border mx-1 shrink-0" />
 
             {/* GROUP 4: Alignments */}
             <div className="flex items-center gap-0.5">
@@ -1361,14 +1316,14 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   title={title}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleFormat(cmd)}
-                  className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                  className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <Icon className="h-3.5 w-3.5" />
                 </button>
               ))}
             </div>
 
-            <div className="h-4 w-px bg-white/10 mx-1 shrink-0" />
+            <div className="h-4 w-px bg-border mx-1 shrink-0" />
 
             {/* GROUP 5: Lists & Layout */}
             <div className="flex items-center gap-0.5">
@@ -1377,7 +1332,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 title="Lista con viñetas"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleFormat('insertUnorderedList')}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <List className="h-3.5 w-3.5" />
               </button>
@@ -1386,7 +1341,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 title="Lista numerada"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleFormat('insertOrderedList')}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <ListOrdered className="h-3.5 w-3.5" />
               </button>
@@ -1395,7 +1350,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 title="Reducir sangría"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleFormat('outdent')}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <span className="text-[10px] font-bold">«</span>
               </button>
@@ -1404,7 +1359,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 title="Aumentar sangría"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleFormat('indent')}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <span className="text-[10px] font-bold">»</span>
               </button>
@@ -1413,13 +1368,13 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 title="Cita"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleFormat('formatBlock', 'blockquote')}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <Quote className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            <div className="h-4 w-px bg-white/10 mx-1 shrink-0" />
+            <div className="h-4 w-px bg-border mx-1 shrink-0" />
 
             {/* GROUP 6: Extras (Link, HTML Import, Clean format) */}
             <div className="flex items-center gap-0.5">
@@ -1427,7 +1382,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Insertar enlace"
                 onClick={handleOpenLinkModal}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-white"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <LinkIcon className="h-3.5 w-3.5" />
               </button>
@@ -1435,7 +1390,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Importar HTML"
                 onClick={() => setShowHtmlModal(true)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer" style={{ color: 'hsl(var(--primary))' }}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-primary hover:bg-muted"
               >
                 <Code className="h-3.5 w-3.5" />
               </button>
@@ -1443,7 +1398,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Adjuntar archivo"
                 onClick={() => fileInputRef.current?.click()}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5" onMouseEnter={e => e.currentTarget.style.color='hsl(var(--primary))'} onMouseLeave={e => e.currentTarget.style.color=''}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-primary"
               >
                 <Paperclip className="h-3.5 w-3.5" />
               </button>
@@ -1451,7 +1406,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 title="Adjuntar desde Google Drive"
                 onClick={handleGoogleDriveAttach}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5" onMouseEnter={e => e.currentTarget.style.color='hsl(var(--primary))'} onMouseLeave={e => e.currentTarget.style.color=''}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-primary"
               >
                 <GoogleDriveIcon className="h-3.5 w-3.5" />
               </button>
@@ -1471,7 +1426,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 title="Eliminar formato"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleFormat('removeFormat')}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all cursor-pointer text-white/60 hover:bg-white/5 hover:text-red-400"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-destructive"
               >
                 <Trash className="h-3.5 w-3.5" />
               </button>
@@ -1480,19 +1435,16 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
           {/* AI Assistant Panel */}
           {showAiAssistant && (
-            <div
-              className="shrink-0 px-5 py-3.5 border-b border-white/5 space-y-3"
-              style={{ background: 'rgba(45,212,191,0.02)' }}
-            >
+            <div className="shrink-0 px-5 py-3.5 border-b border-border bg-muted/40 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'hsl(var(--primary))' }}>
+                <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-primary">
                   <Sparkles className="h-3.5 w-3.5 animate-pulse" />
                   Asistente de Redacción Gemini IA
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowAiAssistant(false)}
-                  className="text-slate-500 hover:text-slate-300 text-[10px] cursor-pointer"
+                  className="text-muted-foreground hover:text-foreground text-[10px] cursor-pointer"
                 >
                   Cerrar
                 </button>
@@ -1504,11 +1456,11 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   placeholder={
-                    initialData?.subject 
-                      ? "Ej: Aceptar invitación cortésmente, pedir agendar para el miércoles..." 
+                    initialData?.subject
+                      ? "Ej: Aceptar invitación cortésmente, pedir agendar para el miércoles..."
                       : "Ej: Escribe un correo formal para solicitar el estado del proyecto..."
                   }
-                  className="flex-1 px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none"
+                  className="flex-1 px-3 py-2 rounded-xl text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -1520,8 +1472,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   type="button"
                   disabled={aiLoading || !aiPrompt.trim()}
                   onClick={handleGenerateAiText}
-                  className="px-4 py-2 disabled:opacity-50 text-xs font-bold shrink-0 cursor-pointer transition-all flex items-center gap-1.5 rounded-xl"
-                  style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
+                  className="px-4 py-2 disabled:opacity-50 text-xs font-bold shrink-0 cursor-pointer transition-colors flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {aiLoading ? (
                     <>
@@ -1536,58 +1487,55 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
               {/* Format selection */}
               <div className="flex items-center gap-4 text-xs pt-1 select-none">
-                <span className="font-semibold text-white/40">Formato:</span>
-                <label className="flex items-center gap-1.5 text-white/80 cursor-pointer text-[11px] hover:text-white">
+                <span className="font-semibold text-muted-foreground">Formato:</span>
+                <label className="flex items-center gap-1.5 text-foreground cursor-pointer text-[11px]">
                   <input
                     type="radio"
                     name="aiFormat"
                     value="html"
                     checked={aiFormat === 'html'}
                     onChange={() => setAiFormat('html')}
-                    style={{ accentColor: 'hsl(var(--primary))' }} className="cursor-pointer"
+                    className="cursor-pointer accent-primary"
                   />
                   Formato enriquecido (HTML)
                 </label>
-                <label className="flex items-center gap-1.5 text-white/80 cursor-pointer text-[11px] hover:text-white">
+                <label className="flex items-center gap-1.5 text-foreground cursor-pointer text-[11px]">
                   <input
                     type="radio"
                     name="aiFormat"
                     value="text"
                     checked={aiFormat === 'text'}
                     onChange={() => setAiFormat('text')}
-                    style={{ accentColor: 'hsl(var(--primary))' }} className="cursor-pointer"
+                    className="cursor-pointer accent-primary"
                   />
                   Texto plano
                 </label>
               </div>
 
               {aiError && (
-                <p className="text-[11px] text-red-400 font-medium">{aiError}</p>
+                <p className="text-[11px] text-destructive font-medium">{aiError}</p>
               )}
             </div>
           )}
 
           {/* Editor body */}
-          <div
-            className="flex-1 overflow-y-auto px-5 py-4 min-h-0"
-          >
+          <div className="flex-1 overflow-y-auto px-5 py-4 min-h-0 bg-card">
             <div
               ref={editorRef}
               contentEditable
               suppressContentEditableWarning
               onInput={() => setEditorContent(editorRef.current?.innerHTML || '')}
               onBlur={() => setEditorContent(editorRef.current?.innerHTML || '')}
-              className="editor-content w-full min-h-[180px] leading-relaxed text-sm"
+              className="editor-content w-full min-h-[180px] leading-relaxed text-sm text-foreground outline-none"
               data-placeholder="Comienza a escribir tu mensaje aquí..."
-              style={{ color: 'hsl(210 40% 88%)', outline: 'none' }}
             />
           </div>
 
           {/* Attachments Section */}
           {attachments.length > 0 && (
-            <div className="shrink-0 px-5 py-2.5 space-y-2 max-h-[140px] overflow-y-auto border-t border-white/5 bg-white/[0.01]">
+            <div className="shrink-0 px-5 py-2.5 space-y-2 max-h-[140px] overflow-y-auto border-t border-border bg-muted/20">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--primary))' }}>Archivos Adjuntos ({attachments.length})</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Archivos Adjuntos ({attachments.length})</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {attachments.map((att, idx) => {
@@ -1598,15 +1546,15 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                   return (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-2 rounded-xl border transition-all text-xs bg-white/5 border-white/5"
+                      className="flex items-center justify-between p-2 rounded-xl border border-border bg-card transition-all text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         {/* Thumbnail / Icon */}
-                        <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 shrink-0 overflow-hidden">
+                        <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-muted border border-border shrink-0 overflow-hidden">
                           {att.isUploading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: 'hsl(var(--primary))' }} />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                           ) : hasError ? (
-                            <X className="h-3.5 w-3.5 text-red-400" />
+                            <X className="h-3.5 w-3.5 text-destructive" />
                           ) : isImage && att.key ? (
                             <img
                               src={`/api/attachments?key=${encodeURIComponent(att.key)}&filename=${encodeURIComponent(att.filename)}`}
@@ -1614,18 +1562,18 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                               className="h-full w-full object-cover"
                             />
                           ) : isPdf ? (
-                            <FileText className="h-4 w-4 text-red-400" />
+                            <FileText className="h-4 w-4 text-destructive" />
                           ) : (
-                            <FileText className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
+                            <FileText className="h-4 w-4 text-primary" />
                           )}
                         </div>
 
                         {/* File Details */}
                         <div className="truncate">
-                          <p className={`font-medium truncate ${hasError ? 'text-red-400' : 'text-white/80'}`} title={att.filename}>
+                          <p className={`font-medium truncate ${hasError ? 'text-destructive' : 'text-foreground'}`} title={att.filename}>
                             {att.filename}
                           </p>
-                          <p className="text-[10px] text-white/40">
+                          <p className="text-[10px] text-muted-foreground">
                             {hasError ? att.error : formatBytes(att.size)}
                           </p>
                         </div>
@@ -1637,7 +1585,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                         onClick={() => {
                           setAttachments(prev => prev.filter((_, i) => i !== idx));
                         }}
-                        className="h-6 w-6 rounded-lg flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-white/5 transition-all cursor-pointer"
+                        className="h-6 w-6 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-muted transition-colors cursor-pointer"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -1649,54 +1597,46 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           )}
 
           {/* Footer */}
-          <div
-            className="shrink-0 flex items-center justify-between px-5 py-3"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-          >
+          <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-border bg-card">
             <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
               {/* AI Assistant Button */}
               <button
                 type="button"
                 title="Redactar con IA"
                 onClick={() => setShowAiAssistant(!showAiAssistant)}
-                className={`h-8 px-3.5 flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0`}
-                style={showAiAssistant
-                  ? { background: 'hsl(var(--primary)/0.2)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary)/0.3)' }
-                  : { background: 'hsl(var(--primary)/0.1)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary)/0.2)' }
-                }
+                className={`h-8 px-3.5 flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                  showAiAssistant
+                    ? 'bg-primary/20 text-primary border border-primary/40'
+                    : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15'
+                }`}
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 <span>Redactor IA</span>
               </button>
 
-              <div className="h-4 w-px bg-white/10 mx-1 shrink-0" />
+              <div className="h-4 w-px bg-border mx-1 shrink-0" />
 
-              <div className="flex items-center gap-2 text-[11px] text-white/50 truncate">
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground truncate">
                 {autoSaveStatus === 'saving' && (
-                  <span className="flex items-center gap-1.5 animate-pulse font-medium shrink-0" style={{ color: 'hsl(var(--primary))' }}>
+                  <span className="flex items-center gap-1.5 animate-pulse font-medium shrink-0 text-primary">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Sincronizando...
                   </span>
                 )}
                 {autoSaveStatus === 'saved' && (
-                  <span className="flex items-center gap-1.5 text-emerald-400/90 font-medium shrink-0">
+                  <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium shrink-0">
                     <Check className="h-3.5 w-3.5" />
                     Sincronizado {lastSavedTime && `a las ${lastSavedTime}`}
                   </span>
                 )}
                 {autoSaveStatus === 'error' && (
-                  <span className="text-red-400 font-medium shrink-0">
+                  <span className="text-destructive font-medium shrink-0">
                     Error al sincronizar borrador
                   </span>
                 )}
                 {error && (
                   <span
-                    className="px-2.5 py-1 rounded-lg truncate"
-                    style={{
-                      background: 'rgba(239,68,68,0.1)',
-                      border: '1px solid rgba(239,68,68,0.2)',
-                      color: 'hsl(0 78% 65%)',
-                    }}
+                    className="px-2.5 py-1 rounded-lg truncate bg-destructive/10 border border-destructive/20 text-destructive"
                     title={error}
                   >
                     {error}
@@ -1710,7 +1650,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 disabled={loading}
                 onClick={handleDiscardDraft}
-                className="h-8 w-8 flex items-center justify-center rounded-xl transition-all cursor-pointer text-white/40 hover:text-red-400 hover:bg-red-500/10 mr-1"
+                className="h-8 w-8 flex items-center justify-center rounded-xl transition-colors cursor-pointer text-muted-foreground hover:text-destructive hover:bg-destructive/10 mr-1"
                 title="Descartar borrador"
               >
                 <Trash className="h-4 w-4" />
@@ -1719,12 +1659,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 type="button"
                 disabled={loading}
                 onClick={onClose}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all disabled:opacity-50 cursor-pointer"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  color: 'hsl(215 20% 60%)',
-                }}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer bg-muted hover:bg-muted/80 text-foreground border border-border"
               >
                 Cancelar
               </button>
@@ -1732,12 +1667,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                 id="btn-send-email"
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100 cursor-pointer"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(174 72% 52%), hsl(192 85% 58%))',
-                  color: 'hsl(222 47% 4%)',
-                  boxShadow: '0 4px 16px rgba(45,212,191,0.2)',
-                }}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 hover:opacity-95 active:scale-98 disabled:opacity-50 cursor-pointer bg-primary text-primary-foreground shadow-sm"
               >
                 {loading ? (
                   <>
@@ -1757,51 +1687,51 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
         {/* Link Insertion Modal */}
         {showLinkModal && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/95 p-5 shadow-2xl animate-fadeInUp">
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+            <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl animate-fadeInUp text-foreground">
               <div className="flex justify-between items-center mb-4">
-                <h4 className="text-sm font-semibold text-white">Insertar Enlace</h4>
+                <h4 className="text-sm font-semibold text-foreground">Insertar Enlace</h4>
                 <button
                   type="button"
                   onClick={() => setShowLinkModal(false)}
-                  className="text-white/60 hover:text-white cursor-pointer"
+                  className="text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
               <form onSubmit={handleInsertLink} className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-medium text-white/50 mb-1">Texto a mostrar</label>
+                  <label className="block text-[11px] font-medium text-muted-foreground mb-1">Texto a mostrar</label>
                   <input
                     type="text"
                     value={linkText}
                     onChange={(e) => setLinkText(e.target.value)}
                     placeholder="Texto del enlace"
-                    className="w-full px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-white/50 mb-1">Dirección URL</label>
+                  <label className="block text-[11px] font-medium text-muted-foreground mb-1">Dirección URL</label>
                   <input
                     type="text"
                     required
                     value={linkUrl}
                     onChange={(e) => setLinkUrl(e.target.value)}
                     placeholder="https://ejemplo.com"
-                    className="w-full px-3 py-2 rounded-xl text-xs bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none" style={{ '--tw-ring-color': 'hsl(var(--primary))' } as React.CSSProperties}
+                    className="w-full px-3 py-2 rounded-xl text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowLinkModal(false)}
-                    className="px-3.5 py-1.5 rounded-xl text-xs text-white/60 hover:bg-white/5 hover:text-white cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl text-xs text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 rounded-xl text-xs font-semibold shadow-md hover:opacity-90 active:scale-95 transition-transform cursor-pointer" style={{ background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)))', color: 'hsl(var(--primary-foreground))' }}
+                    className="px-4 py-1.5 rounded-xl text-xs font-semibold shadow-xs hover:opacity-90 active:scale-95 transition-transform cursor-pointer bg-primary text-primary-foreground"
                   >
                     Insertar
                   </button>
@@ -1813,30 +1743,30 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
         {/* HTML Import Modal */}
         {showHtmlModal && (
-          <div className="absolute inset-0 z-50 flex flex-col p-5 bg-slate-950/90 backdrop-blur-md">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
+          <div className="absolute inset-0 z-50 flex flex-col p-5 bg-card/95 backdrop-blur-md text-foreground">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
               <div className="flex items-center gap-2">
-                <Code className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
-                <h4 className="text-sm font-semibold text-white">Importar Código HTML</h4>
+                <Code className="h-4 w-4 text-primary" />
+                <h4 className="text-sm font-semibold text-foreground">Importar Código HTML</h4>
               </div>
               <button
                 type="button"
                 onClick={() => setShowHtmlModal(false)}
-                className="text-white/60 hover:text-white cursor-pointer"
+                className="text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            
+
             <div className="flex-1 flex flex-col min-h-0 space-y-4">
               {/* File upload section */}
-              <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-muted/40 border border-border">
                 <div>
-                  <span className="block text-xs font-medium text-white/80">Cargar desde un archivo</span>
-                  <span className="block text-[10px] text-white/55">Selecciona un archivo HTML local (.html)</span>
+                  <span className="block text-xs font-medium text-foreground">Cargar desde un archivo</span>
+                  <span className="block text-[10px] text-muted-foreground">Selecciona un archivo HTML local (.html)</span>
                 </div>
-                <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors">
-                  <Upload className="h-3.5 w-3.5" style={{ color: 'hsl(var(--primary))' }} />
+                <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-card border border-border text-foreground hover:bg-muted cursor-pointer transition-colors">
+                  <Upload className="h-3.5 w-3.5 text-primary" />
                   <span>Examinar</span>
                   <input
                     type="file"
@@ -1849,54 +1779,54 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
               {/* Code Textarea */}
               <div className="flex-1 flex flex-col min-h-0">
-                <label className="block text-[11px] font-medium text-white/50 mb-1">
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">
                   O pega el código HTML directamente:
                 </label>
                 <textarea
                   value={htmlCode}
                   onChange={(e) => setHtmlCode(e.target.value)}
-                  placeholder={`<div style="font-family: Arial, sans-serif; padding: 20px; color: #e2e8f0;">\n  <h1 style="color: #2dd4bf;">¡Hola!</h1>\n  <p>Este es un correo diseñado...</p>\n</div>`}
-                  className="flex-1 w-full p-4 rounded-xl text-xs font-mono bg-slate-950 border border-white/10 text-emerald-400 placeholder-white/20 focus:outline-none resize-none overflow-y-auto"
+                  placeholder={`<div style="font-family: Arial, sans-serif; padding: 20px;">\n  <h1>¡Hola!</h1>\n  <p>Este es un correo diseñado...</p>\n</div>`}
+                  className="flex-1 w-full p-4 rounded-xl text-xs font-mono bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none resize-none overflow-y-auto"
                 />
               </div>
 
               {/* Import Options */}
               <div className="flex items-center gap-6 p-1 text-xs">
-                <label className="flex items-center gap-2 text-white/80 cursor-pointer">
+                <label className="flex items-center gap-2 text-foreground cursor-pointer">
                   <input
                     type="radio"
                     name="importMode"
                     checked={importMode === 'replace'}
                     onChange={() => setImportMode('replace')}
-                    style={{ accentColor: 'hsl(var(--primary))' }}
+                    className="cursor-pointer accent-primary"
                   />
                   <span>Reemplazar todo el contenido</span>
                 </label>
-                <label className="flex items-center gap-2 text-white/80 cursor-pointer">
+                <label className="flex items-center gap-2 text-foreground cursor-pointer">
                   <input
                     type="radio"
                     name="importMode"
                     checked={importMode === 'insert'}
                     onChange={() => setImportMode('insert')}
-                    style={{ accentColor: 'hsl(var(--primary))' }}
+                    className="cursor-pointer accent-primary"
                   />
                   <span>Insertar en la posición del cursor</span>
                 </label>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowHtmlModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-white/60 hover:bg-white/5 hover:text-white cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={handleImportHtml}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold shadow-md hover:opacity-90 active:scale-95 transition-transform cursor-pointer" style={{ background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)))', color: 'hsl(var(--primary-foreground))' }}
+                  className="px-5 py-2 rounded-xl text-xs font-semibold shadow-xs hover:opacity-90 active:scale-95 transition-transform cursor-pointer bg-primary text-primary-foreground"
                 >
                   Importar HTML
                 </button>
