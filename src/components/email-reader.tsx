@@ -973,7 +973,7 @@ export default function EmailReader({
             <div className="flex items-center justify-between mb-2">
               <h4 className="font-bold flex items-center gap-1.5 uppercase tracking-wider text-[10px] text-primary">
                 <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                Resumen por Gemini IA
+                Resumen por IA
               </h4>
               {aiSummary && (
                 <button

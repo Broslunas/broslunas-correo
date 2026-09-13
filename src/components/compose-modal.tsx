@@ -1616,7 +1616,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-primary">
                   <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                  Asistente de Redacción Gemini IA
+                  Asistente de Redacción IA
                 </span>
                 <button
                   type="button"

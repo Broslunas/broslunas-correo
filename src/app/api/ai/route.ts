@@ -34,62 +34,44 @@ async function getAuthenticatedUser(request: NextRequest): Promise<{ success: bo
   }
 }
 
-// Call Gemini API with fallback models if the first model fails
-async function callGeminiAPI(prompt: string, customSystemInstruction?: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY no configurada');
+// Call AI router (OpenAI-compatible) API
+async function callAIAPI(prompt: string, customSystemInstruction?: string): Promise<string> {
+  const apiKey = process.env.AI_ROUTER_API_KEY || process.env.AI_API_KEY || 'sk-38193f062aa4aa21-taxj8m-0aa6036f';
+  const endpoint = (process.env.AI_ROUTER_ENDPOINT || process.env.AI_ENDPOINT || 'https://ai.broslunas.com/v1').replace(/\/+$/, '');
+  const model = process.env.AI_MODEL || 'rotate-top';
+
+  const messages: { role: 'system' | 'user'; content: string }[] = [];
+  if (customSystemInstruction) {
+    messages.push({ role: 'system', content: customSystemInstruction });
   }
-  const modelToTry = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  messages.push({ role: 'user', content: prompt });
 
-  // List of models to try in sequence as fallbacks
-  const models = Array.from(new Set([
-    modelToTry,
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-  ]));
+  const response = await fetch(`${endpoint}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.3,
+    }),
+  });
 
-  let lastError: any = null;
-
-  for (const model of models) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            systemInstruction: customSystemInstruction ? { parts: [{ text: customSystemInstruction }] } : undefined,
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 2048,
-            },
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          return text;
-        }
-      } else {
-        const errorText = await response.text();
-        console.error(`Gemini call failed for model ${model}:`, errorText);
-        lastError = new Error(`API error (${response.status}): ${errorText}`);
-      }
-    } catch (err: any) {
-      console.error(`Gemini call exception for model ${model}:`, err);
-      lastError = err;
-    }
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('AI router call failed:', errorText);
+    throw new Error(`Error en API de IA (${response.status}): ${errorText}`);
   }
 
-  throw lastError || new Error('No se pudo obtener respuesta de la API de Gemini');
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) {
+    throw new Error('Respuesta vacía del servicio de IA');
+  }
+
+  return text;
 }
 
 export async function POST(request: NextRequest) {
@@ -118,7 +100,7 @@ ${emailContext.body.slice(0, 10000)}
 
 Resumen estructurado:`;
 
-      const summary = await callGeminiAPI(prompt, systemInstruction);
+      const summary = await callAIAPI(prompt, systemInstruction);
       return NextResponse.json({ text: summary });
     }
 
@@ -146,7 +128,7 @@ ${promptText || 'Responder cordialmente.'}
 
 Borrador de respuesta (solo el contenido de la respuesta):`;
 
-      const draft = await callGeminiAPI(prompt, systemInstruction);
+      const draft = await callAIAPI(prompt, systemInstruction);
       return NextResponse.json({ text: draft });
     }
 
@@ -168,7 +150,7 @@ ${promptText}
 
 Contenido generado:`;
 
-      const generated = await callGeminiAPI(prompt, systemInstruction);
+      const generated = await callAIAPI(prompt, systemInstruction);
       return NextResponse.json({ text: generated });
     }
 
@@ -187,7 +169,7 @@ Devuelve un objeto JSON con las siguientes claves:
 
 JSON esperado:`;
 
-      const generated = await callGeminiAPI(prompt, systemInstruction);
+      const generated = await callAIAPI(prompt, systemInstruction);
       let cleanJsonText = generated.replace(/```json/gi, '').replace(/```/gi, '').trim();
       try {
         const resultObj = JSON.parse(cleanJsonText);
@@ -196,7 +178,7 @@ JSON esperado:`;
           body: resultObj.body || ''
         });
       } catch (parseErr) {
-        console.error('Failed to parse Gemini response as JSON:', cleanJsonText);
+        console.error('Failed to parse AI response as JSON:', cleanJsonText);
         return NextResponse.json({ 
           subject: 'Respuesta automática: {{subject}}',
           body: cleanJsonText
