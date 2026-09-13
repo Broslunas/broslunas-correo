@@ -127,7 +127,7 @@ export default function Sidebar({
         }}
       >
         {/* Header with Hamburger & Logo */}
-        <div className="flex items-center h-16 px-4 gap-3 shrink-0">
+        <div className={`flex items-center h-16 shrink-0 transition-all ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-3'}`}>
           <button
             onClick={toggleCollapse}
             aria-label={isCollapsed ? 'Expandir panel lateral' : 'Contraer panel lateral'}
@@ -152,14 +152,14 @@ export default function Sidebar({
         </div>
 
         {/* Compose Button (Gmail FAB Style) */}
-        <div className="px-3.5 py-2 shrink-0">
+        <div className={`py-2 shrink-0 flex items-center justify-center transition-all ${isCollapsed ? 'px-0' : 'px-3.5'}`}>
           <button
             id="btn-compose-desktop"
             onClick={onComposeClick}
             title={isCollapsed ? 'Redactar' : undefined}
             className={`group flex items-center transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg active:scale-95 shrink-0 bg-[#c2e7ff] text-[#001d35] hover:brightness-95 dark:bg-[#c2e7ff] dark:text-[#001d35] dark:hover:brightness-105 font-sans ${
               isCollapsed
-                ? 'h-14 w-14 mx-auto justify-center rounded-2xl'
+                ? 'h-12 w-12 justify-center rounded-2xl'
                 : 'h-14 w-full px-5 justify-start gap-4 rounded-2xl'
             }`}
           >
