@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  UserPlus, 
-  Trash2, 
-  Edit3, 
-  ShieldCheck, 
-  User, 
-  Mail, 
-  Check, 
-  Clock, 
-  Loader2, 
-  AlertCircle, 
-  RefreshCw, 
+import {
+  UserPlus,
+  Trash2,
+  Edit3,
+  ShieldCheck,
+  User,
+  Mail,
+  Check,
+  Clock,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
   CheckCircle,
   X,
   Globe,
-  ChevronDown
+  ChevronDown,
+  HardDrive,
+  Database,
+  Sliders,
+  Flame,
+  Ban
 } from 'lucide-react';
 
 interface AllowedUser {
@@ -24,6 +29,9 @@ interface AllowedUser {
   twoFactorEnabled: boolean;
   require2FA?: boolean;
   assignedAddresses: string[];
+  storageLimitMB?: number;
+  dailySendLimit?: number;
+  status?: 'active' | 'suspended';
   addedBy: string;
   createdAt: string;
 }
@@ -51,7 +59,7 @@ export default function UserManagement() {
   const [success, setSuccess] = useState('');
 
   // Domain states
-  const [activeTab, setActiveTab] = useState<'users' | 'domains' | 'mailboxes' | 'invitations'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'domains' | 'mailboxes' | 'invitations' | 'storage'>('users');
   const [domains, setDomains] = useState<AllowedDomain[]>([]);
   const [newDomain, setNewDomain] = useState('');
   const [domainsLoading, setDomainsLoading] = useState(false);
@@ -61,6 +69,11 @@ export default function UserManagement() {
   const [newMailboxEmail, setNewMailboxEmail] = useState('');
   const [newMailboxName, setNewMailboxName] = useState('');
   const [mailboxesLoading, setMailboxesLoading] = useState(false);
+
+  // Storage and Limits states
+  const [storageStats, setStorageStats] = useState<any>(null);
+  const [storageLoading, setStorageLoading] = useState(false);
+  const [purgeLoading, setPurgeLoading] = useState(false);
 
   // Invitation states
   const [invitations, setInvitations] = useState<any[]>([]);
@@ -79,7 +92,9 @@ export default function UserManagement() {
   const [newSelectedAddresses, setNewSelectedAddresses] = useState<string[]>([]);
   const [newDropdownOpen, setNewDropdownOpen] = useState(false);
   const [newRequire2FA, setNewRequire2FA] = useState(false);
-  
+  const [newStorageLimitMB, setNewStorageLimitMB] = useState(0);
+  const [newDailySendLimit, setNewDailySendLimit] = useState(0);
+
   // Edit user modal states
   const [editingUser, setEditingUser] = useState<AllowedUser | null>(null);
   const [editRole, setEditRole] = useState<'admin' | 'user'>('user');
@@ -87,6 +102,9 @@ export default function UserManagement() {
   const [editSelectedAddresses, setEditSelectedAddresses] = useState<string[]>([]);
   const [editDropdownOpen, setEditDropdownOpen] = useState(false);
   const [editRequire2FA, setEditRequire2FA] = useState(false);
+  const [editStorageLimitMB, setEditStorageLimitMB] = useState(0);
+  const [editDailySendLimit, setEditDailySendLimit] = useState(0);
+  const [editStatus, setEditStatus] = useState<'active' | 'suspended'>('active');
 
   // Load authorized users list
   const fetchUsers = async () => {
@@ -472,6 +490,55 @@ export default function UserManagement() {
     }
   };
 
+  // Load storage stats
+  const fetchStorageStats = async () => {
+    setStorageLoading(true);
+    try {
+      const res = await fetch('/api/admin/storage');
+      if (res.ok) {
+        const data = await res.json();
+        setStorageStats(data);
+      }
+    } catch (err) {
+      console.error('Error fetching storage stats:', err);
+    } finally {
+      setStorageLoading(false);
+    }
+  };
+
+  const handlePurge = async (folder?: string, olderThanDays?: number) => {
+    const label = folder === 'trash' && olderThanDays
+      ? `la papelera con más de ${olderThanDays} días`
+      : folder === 'spam'
+      ? 'todo el correo no deseado (spam)'
+      : `la carpeta ${folder}`;
+    if (!confirm(`¿Estás seguro de que deseas purgar ${label}? Esta acción eliminará permanentemente correos y sus adjuntos de Cloudflare R2.`)) {
+      return;
+    }
+    setPurgeLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/emails', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder, olderThanDays })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccess(data.message || 'Purga completada con éxito');
+        fetchStorageStats();
+      } else {
+        setError(data.error || 'Error al ejecutar purga');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error al comunicar con el servidor durante la purga.');
+    } finally {
+      setPurgeLoading(false);
+    }
+  };
+
   // Open edit modal
   const startEdit = (user: AllowedUser) => {
     setEditingUser(user);
@@ -480,6 +547,9 @@ export default function UserManagement() {
     setEditFullAccess(isWildcard);
     setEditSelectedAddresses(isWildcard ? [] : [...user.assignedAddresses]);
     setEditRequire2FA(!!user.require2FA);
+    setEditStorageLimitMB(user.storageLimitMB || 0);
+    setEditDailySendLimit(user.dailySendLimit || 0);
+    setEditStatus(user.status || 'active');
   };
 
   // Handle Update User submission (from Edit modal)
@@ -491,8 +561,8 @@ export default function UserManagement() {
     setSuccess('');
     setActionLoading(true);
 
-    const assignedAddresses = editFullAccess 
-      ? ['*'] 
+    const assignedAddresses = editFullAccess
+      ? ['*']
       : editSelectedAddresses;
 
     if (assignedAddresses.length === 0) {
@@ -509,7 +579,10 @@ export default function UserManagement() {
           email: editingUser.email,
           role: editRole,
           assignedAddresses,
-          require2FA: editRequire2FA
+          require2FA: editRequire2FA,
+          storageLimitMB: Number(editStorageLimitMB),
+          dailySendLimit: Number(editDailySendLimit),
+          status: editStatus
         })
       });
 
@@ -519,6 +592,7 @@ export default function UserManagement() {
         setSuccess(`Usuario ${editingUser.email} actualizado correctamente.`);
         setEditingUser(null);
         fetchUsers();
+        if (activeTab === 'storage') fetchStorageStats();
       } else {
         setError(data.error || 'Error al actualizar usuario');
       }
@@ -547,7 +621,9 @@ export default function UserManagement() {
               ? fetchDomains
               : activeTab === 'mailboxes'
               ? fetchMailboxes
-              : fetchInvitations
+              : activeTab === 'invitations'
+              ? fetchInvitations
+              : fetchStorageStats
           }
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors cursor-pointer"
           title="Refrescar lista"
@@ -559,7 +635,9 @@ export default function UserManagement() {
               ? domainsLoading
               : activeTab === 'mailboxes'
               ? mailboxesLoading
-              : invitationsLoading
+              : activeTab === 'invitations'
+              ? invitationsLoading
+              : storageLoading
           ) ? 'animate-spin' : ''}`} />
         </button>
       </header>
@@ -623,6 +701,22 @@ export default function UserManagement() {
           }`}
         >
           Enlaces de Invitación
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('storage');
+            setError('');
+            setSuccess('');
+            fetchStorageStats();
+          }}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border shrink-0 flex items-center gap-1.5 ${
+            activeTab === 'storage'
+              ? 'bg-primary/10 border-primary/20 text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          <HardDrive className="h-3.5 w-3.5" />
+          Almacenamiento y Límites
         </button>
       </div>
 
@@ -852,7 +946,14 @@ export default function UserManagement() {
                             {user.email[0].toUpperCase()}
                           </div>
                           <div>
-                            <p className="truncate max-w-[160px] font-semibold">{user.email}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="truncate max-w-[160px] font-semibold">{user.email}</p>
+                              {user.status === 'suspended' && (
+                                <span className="px-1.5 py-0.2 text-[8px] font-bold uppercase rounded bg-red-500/10 text-red-400 border border-red-500/20 select-none">
+                                  Suspendido
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[9px] text-muted-foreground/60 select-none">
                               Agregado por: {user.addedBy || 'System'}
                             </p>
@@ -1469,12 +1570,216 @@ export default function UserManagement() {
             </div>
           </section>
         </div>
+      ) : activeTab === 'storage' ? (
+        /* Main Viewport for Storage and Limits */
+        <div className="flex-1 flex flex-col overflow-hidden p-6 gap-6 animate-fadeIn">
+          {/* Top KPI row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+            <div className="bg-card border border-border p-4 rounded-xl backdrop-blur-md relative overflow-hidden">
+              <div className="flex items-center justify-between text-muted-foreground mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider">Almacenamiento Total</span>
+                <HardDrive className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {storageStats?.global?.totalStorageMB ?? '...'} <span className="text-sm font-normal text-muted-foreground">MB</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                DB + Adjuntos en Cloudflare R2
+              </p>
+            </div>
+
+            <div className="bg-card border border-border p-4 rounded-xl backdrop-blur-md relative overflow-hidden">
+              <div className="flex items-center justify-between text-muted-foreground mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider">Adjuntos (R2)</span>
+                <Database className="h-4 w-4 text-blue-400" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {storageStats?.global ? (storageStats.global.totalAttachmentBytes / (1024 * 1024)).toFixed(2) : '...'} <span className="text-sm font-normal text-muted-foreground">MB</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {storageStats?.global?.totalAttachments ?? 0} archivos subidos
+              </p>
+            </div>
+
+            <div className="bg-card border border-border p-4 rounded-xl backdrop-blur-md relative overflow-hidden">
+              <div className="flex items-center justify-between text-muted-foreground mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider">Correos Totales</span>
+                <Mail className="h-4 w-4 text-emerald-400" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {storageStats?.global?.totalEmails ?? '...'}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {storageStats?.global ? ((storageStats.global.dbSizeBytes || 0) / (1024 * 1024)).toFixed(2) : '...'} MB en base de datos
+              </p>
+            </div>
+
+            <div className="bg-card border border-border p-4 rounded-xl backdrop-blur-md relative overflow-hidden">
+              <div className="flex items-center justify-between text-muted-foreground mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider">Spam y Papelera</span>
+                <Trash2 className="h-4 w-4 text-amber-400" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {(storageStats?.global?.trashCount ?? 0) + (storageStats?.global?.spamCount ?? 0)}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {storageStats?.global?.spamCount ?? 0} spam / {storageStats?.global?.trashCount ?? 0} papelera
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Purge and Maintenance Bar */}
+          <div className="bg-card border border-border/80 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <Flame className="h-4 w-4 text-orange-400" />
+              <div>
+                <p className="text-xs font-bold text-foreground">Mantenimiento y Purga de Disco</p>
+                <p className="text-[10px] text-muted-foreground">Elimina correos antiguos y libera espacio en MongoDB y Cloudflare R2</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={purgeLoading}
+                onClick={() => handlePurge('spam')}
+                className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+              >
+                Vaciar Spam
+              </button>
+              <button
+                type="button"
+                disabled={purgeLoading}
+                onClick={() => handlePurge('trash', 30)}
+                className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+              >
+                Vaciar Papelera &gt; 30 días
+              </button>
+              <button
+                type="button"
+                disabled={purgeLoading}
+                onClick={() => handlePurge('trash')}
+                className="px-3 py-1.5 rounded-lg border border-border bg-muted hover:bg-muted/80 text-foreground text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+              >
+                Vaciar Toda la Papelera
+              </button>
+            </div>
+          </div>
+
+          {/* User Limits & Storage Table */}
+          <section className="flex-1 flex flex-col min-w-0 bg-card border border-border rounded-xl overflow-hidden backdrop-blur-md">
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                <Sliders className="h-4 w-4 text-primary" />
+                Cuotas y Límites por Usuario
+              </h3>
+              <span className="text-[11px] text-muted-foreground">
+                {storageStats?.users?.length || 0} usuario(s)
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-x-auto min-h-0">
+              {storageLoading ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : !storageStats?.users || storageStats.users.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                  <HardDrive className="h-8 w-8 opacity-30 mb-2" />
+                  <p className="text-xs">No hay datos de almacenamiento para mostrar.</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-card/80 backdrop-blur border-b border-border text-muted-foreground/80 font-medium text-[10px] uppercase tracking-wider select-none z-10">
+                    <tr>
+                      <th className="py-3 px-4">Usuario</th>
+                      <th className="py-3 px-4">Estado</th>
+                      <th className="py-3 px-4">Almacenamiento Usado</th>
+                      <th className="py-3 px-4">Cuota Máxima</th>
+                      <th className="py-3 px-4">Envíos Hoy / Límite</th>
+                      <th className="py-3 px-4 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {storageStats.users.map((u: any) => {
+                      const matchedUser = users.find(usr => usr.email === u.email);
+                      return (
+                        <tr key={u.email} className="hover:bg-muted/40 transition-all">
+                          <td className="py-3.5 px-4 font-mono text-xs text-foreground select-text">
+                            <div>{u.email}</div>
+                            <div className="text-[10px] text-muted-foreground">{u.emailCount} correos en sistema</div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {u.status === 'suspended' ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded">
+                                <Ban className="h-3 w-3" /> Suspendido
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                                <Check className="h-3 w-3" /> Activo
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 min-w-[160px]">
+                            <div className="text-xs font-semibold text-foreground">
+                              {u.usedMB} MB
+                              {u.storageLimitMB > 0 && (
+                                <span className="text-[10px] font-normal text-muted-foreground ml-1">
+                                  ({u.percentUsed}%)
+                                </span>
+                              )}
+                            </div>
+                            {u.storageLimitMB > 0 ? (
+                              <div className="w-full bg-muted rounded-full h-1.5 mt-1 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    (u.percentUsed || 0) >= 90
+                                      ? 'bg-red-500'
+                                      : (u.percentUsed || 0) >= 70
+                                      ? 'bg-amber-500'
+                                      : 'bg-primary'
+                                  }`}
+                                  style={{ width: `${Math.min(100, u.percentUsed || 0)}%` }}
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">Sin cuota límite</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-foreground">
+                            {u.storageLimitMB > 0 ? `${u.storageLimitMB} MB` : 'Ilimitado'}
+                          </td>
+                          <td className="py-3.5 px-4 text-foreground">
+                            <span className="font-semibold">{u.sentToday}</span>
+                            <span className="text-muted-foreground"> / {u.dailySendLimit > 0 ? `${u.dailySendLimit}/día` : 'Ilimitado'}</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (matchedUser) {
+                                  startEdit(matchedUser);
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded bg-muted hover:bg-muted/80 text-foreground border border-border text-[11px] font-medium transition-all cursor-pointer"
+                            >
+                              Configurar
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {/* Edit User Modal Overlay */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-background border border-border rounded-2xl p-6 shadow-2xl relative animate-zoomIn">
+          <div className="w-full max-w-md bg-background border border-border rounded-2xl p-6 shadow-2xl relative animate-zoomIn max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setEditingUser(null)}
               className="absolute top-4 right-4 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer"
@@ -1600,6 +1905,54 @@ export default function UserManagement() {
                   </p>
                 </div>
               )}
+
+              {/* Status Select */}
+              <div className="space-y-1.5 pt-1 border-t border-border/40">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                  Estado de la Cuenta
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as 'active' | 'suspended')}
+                  className="w-full rounded-lg border border-border bg-muted py-2.5 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="active">Activo (Acceso y Envíos Permitidos)</option>
+                  <option value="suspended">Suspendido (Bloqueo Inmediato)</option>
+                </select>
+              </div>
+
+              {/* Limits Configuration */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Cuota Almacenamiento (MB)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0 = Ilimitado"
+                    value={editStorageLimitMB}
+                    onChange={(e) => setEditStorageLimitMB(Number(e.target.value))}
+                    className="w-full rounded-lg border border-border bg-muted py-2 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-[9px] text-muted-foreground">0 para sin límite</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block">
+                    Límite Envíos / Día
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0 = Ilimitado"
+                    value={editDailySendLimit}
+                    onChange={(e) => setEditDailySendLimit(Number(e.target.value))}
+                    className="w-full rounded-lg border border-border bg-muted py-2 px-3 text-xs text-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-[9px] text-muted-foreground">0 para sin límite</p>
+                </div>
+              </div>
 
               {/* Action buttons */}
               <div className="flex gap-2.5 pt-2">

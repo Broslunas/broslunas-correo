@@ -48,7 +48,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no autorizado' }, { status: 403 });
     }
 
+    if (user.status === 'suspended') {
+      return NextResponse.json({ error: 'Tu cuenta ha sido suspendida. Contacta a un administrador.' }, { status: 403 });
+    }
+
     assignedAddresses = user.assignedAddresses || [];
+
+    // Check daily send limit
+    if (user.dailySendLimit && user.dailySendLimit > 0) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const isFull = assignedAddresses.includes('*');
+      const sentToday = await db.collection('emails').countDocuments({
+        ...(isFull ? {} : { 'from.address': { $in: assignedAddresses } }),
+        folder: 'sent',
+        date: { $gte: startOfDay }
+      });
+      if (sentToday >= user.dailySendLimit) {
+        return NextResponse.json({
+          error: `Has alcanzado tu límite diario de envíos (${user.dailySendLimit} correos/día).`
+        }, { status: 429 });
+      }
+    }
+
+    // Check storage quota limit
+    if (user.storageLimitMB && user.storageLimitMB > 0) {
+      const isFull = assignedAddresses.includes('*');
+      const userFilter = isFull ? {} : {
+        $or: [
+          { 'from.address': { $in: assignedAddresses } },
+          { 'to.address': { $in: assignedAddresses } }
+        ]
+      };
+      const emailCount = await db.collection('emails').countDocuments(userFilter);
+      const userAttAgg = await db.collection('emails').aggregate([
+        { $match: userFilter },
+        { $unwind: '$attachments' },
+        { $group: { _id: null, totalBytes: { $sum: '$attachments.size' } } }
+      ]).toArray();
+      const usedBytes = (emailCount * 2048) + (userAttAgg[0]?.totalBytes || 0);
+      const limitBytes = user.storageLimitMB * 1024 * 1024;
+      if (usedBytes >= limitBytes) {
+        return NextResponse.json({
+          error: `Has superado tu cuota de almacenamiento (${user.storageLimitMB} MB). Elimina correos o archivos antes de enviar.`
+        }, { status: 413 });
+      }
+    }
 
     // 2. Parse request body
     const body = await request.json().catch(() => ({}));

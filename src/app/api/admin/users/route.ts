@@ -52,6 +52,9 @@ export async function GET(request: NextRequest) {
       twoFactorEnabled: !!u.twoFactorEnabled,
       require2FA: u.require2FA === undefined ? false : !!u.require2FA,
       assignedAddresses: u.assignedAddresses || [],
+      storageLimitMB: typeof u.storageLimitMB === 'number' ? u.storageLimitMB : 0,
+      dailySendLimit: typeof u.dailySendLimit === 'number' ? u.dailySendLimit : 0,
+      status: u.status || 'active',
       addedBy: u.addedBy || 'System',
       createdAt: u.createdAt,
       updatedAt: u.updatedAt
@@ -71,7 +74,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { email, role, assignedAddresses, require2FA } = body;
+    const { email, role, assignedAddresses, require2FA, storageLimitMB, dailySendLimit, status } = body;
 
     // Validate inputs
     if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -124,6 +127,9 @@ export async function POST(request: NextRequest) {
       twoFactorEnabled: false,
       require2FA: require2FA === true,
       assignedAddresses: cleanAddresses,
+      storageLimitMB: typeof storageLimitMB === 'number' && storageLimitMB >= 0 ? storageLimitMB : 0,
+      dailySendLimit: typeof dailySendLimit === 'number' && dailySendLimit >= 0 ? dailySendLimit : 0,
+      status: status === 'suspended' ? 'suspended' : 'active',
       addedBy: auth.email,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -158,7 +164,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { email, role, assignedAddresses, require2FA } = body;
+    const { email, role, assignedAddresses, require2FA, storageLimitMB, dailySendLimit, status } = body;
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'El correo del usuario es obligatorio' }, { status: 400 });
@@ -173,6 +179,21 @@ export async function PATCH(request: NextRequest) {
 
     if (require2FA !== undefined) {
       updateFields.require2FA = require2FA === true;
+    }
+
+    if (typeof storageLimitMB === 'number') {
+      updateFields.storageLimitMB = Math.max(0, storageLimitMB);
+    }
+
+    if (typeof dailySendLimit === 'number') {
+      updateFields.dailySendLimit = Math.max(0, dailySendLimit);
+    }
+
+    if (status === 'active' || status === 'suspended') {
+      if (cleanEmail === auth.email && status === 'suspended') {
+        return NextResponse.json({ error: 'No puedes suspender tu propia cuenta de administrador.' }, { status: 400 });
+      }
+      updateFields.status = status;
     }
 
     const { db } = await connectToDatabase();
