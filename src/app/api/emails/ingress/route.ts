@@ -67,9 +67,6 @@ export async function POST(request: Request) {
     
     const allowedDomains = await db.collection('domains').find({}).toArray();
     const allowedDomainNames = new Set(allowedDomains.map(d => d.domain.toLowerCase()));
-    
-    const tempMailDomainsStr = process.env.NEXT_PUBLIC_TEMPMAIL_DOMAINS || '';
-    tempMailDomainsStr.split(',').map(d => d.trim().toLowerCase()).filter(Boolean).forEach(d => allowedDomainNames.add(d));
 
     if (allowedDomainNames.size > 0) {
       const hasAllowedRecipient = recipientDomains.some(domain => allowedDomainNames.has(domain));
@@ -91,68 +88,56 @@ export async function POST(request: Request) {
         }))
       : [];
 
-    // 5. Check if any recipient is a temp mail alias (temp_mail_sessions)
-    const tempMailSession = await db.collection('temp_mail_sessions').findOne({
-      address: { $in: recipients },
-    });
-
-    // 6. Auto-classify folder based on content
+    // 5. Auto-classify folder based on content
     let detectedFolder = 'inbox';
-
-    if (tempMailSession) {
-      // Force temp_mail folder for disposable alias emails
-      detectedFolder = 'temp_mail';
-    }
 
     const textToAnalyze = `${subject} ${bodyText} ${bodyHtml}`.toLowerCase();
     const senderToAnalyze = from.address.toLowerCase();
 
-    if (!tempMailSession) {
-      // 1. Social Media classification
-      const socialDomains = ['linkedin.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'github.com', 'gitlab.com', 'pinterest.com', 'reddit.com'];
-      const isSocialSender = socialDomains.some(domain => senderToAnalyze.endsWith(domain) || senderToAnalyze.includes('@' + domain));
-      const socialKeywords = ['nuevo seguidor', 'solicitud de amistad', 'mencionó', 'comentó', 'te sigue', 'retweet', 'notificación de github', 'pull request', 'issue', 'social'];
-      const isSocialKeyword = socialKeywords.some(kw => textToAnalyze.includes(kw));
+    // 1. Social Media classification
+    const socialDomains = ['linkedin.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'github.com', 'gitlab.com', 'pinterest.com', 'reddit.com'];
+    const isSocialSender = socialDomains.some(domain => senderToAnalyze.endsWith(domain) || senderToAnalyze.includes('@' + domain));
+    const socialKeywords = ['nuevo seguidor', 'solicitud de amistad', 'mencionó', 'comentó', 'te sigue', 'retweet', 'notificación de github', 'pull request', 'issue', 'social'];
+    const isSocialKeyword = socialKeywords.some(kw => textToAnalyze.includes(kw));
 
-      if (isSocialSender || isSocialKeyword) {
-        detectedFolder = 'social';
+    if (isSocialSender || isSocialKeyword) {
+      detectedFolder = 'social';
+    }
+    // 2. Commercial / Promotional classification
+    else {
+      const commercialKeywords = [
+        'oferta', 'descuento', 'promoción', 'promo', 'compra', 'pedido', 'factura', 'pago', 'descuentos', 'tienda', 'shop',
+        'sale', 'order', 'invoice', 'payment', 'receipt', 'boleta', 'voucher', 'cupón', 'coupon', 'adquiere', 'suscripción',
+        'suscribete', 'comprar', 'precio', 'tarifa', 'servicio', 'anuncio', 'publicidad'
+      ];
+      const isCommercialKeyword = commercialKeywords.some(kw => textToAnalyze.includes(kw));
+      const commercialDomains = ['paypal.com', 'stripe.com', 'amazon.', 'aliexpress', 'ebay', 'shopify', 'netflix', 'spotify', 'booking.com'];
+      const isCommercialSender = commercialDomains.some(domain => senderToAnalyze.includes(domain));
+
+      if (isCommercialKeyword || isCommercialSender) {
+        detectedFolder = 'commercial';
       }
-      // 2. Commercial / Promotional classification
+      // 3. Newsletter / Boletines classification
       else {
-        const commercialKeywords = [
-          'oferta', 'descuento', 'promoción', 'promo', 'compra', 'pedido', 'factura', 'pago', 'descuentos', 'tienda', 'shop',
-          'sale', 'order', 'invoice', 'payment', 'receipt', 'boleta', 'voucher', 'cupón', 'coupon', 'adquiere', 'suscripción',
-          'suscribete', 'comprar', 'precio', 'tarifa', 'servicio', 'anuncio', 'publicidad'
+        const newsletterKeywords = [
+          'newsletter', 'boletín', 'boletin', 'weekly digest', 'weekly', 'daily digest', 'digest', 'monthly',
+          'novedades', 'resumen semanal', 'leído de la semana', 'suscrito', 'suscribirse', 'unsubscribe'
         ];
-        const isCommercialKeyword = commercialKeywords.some(kw => textToAnalyze.includes(kw));
-        const commercialDomains = ['paypal.com', 'stripe.com', 'amazon.', 'aliexpress', 'ebay', 'shopify', 'netflix', 'spotify', 'booking.com'];
-        const isCommercialSender = commercialDomains.some(domain => senderToAnalyze.includes(domain));
+        const isNewsletterKeyword = newsletterKeywords.some(kw => textToAnalyze.includes(kw));
 
-        if (isCommercialKeyword || isCommercialSender) {
-          detectedFolder = 'commercial';
+        if (isNewsletterKeyword) {
+          detectedFolder = 'newsletter';
         }
-        // 3. Newsletter / Boletines classification
+        // 4. Work classification
         else {
-          const newsletterKeywords = [
-            'newsletter', 'boletín', 'boletin', 'weekly digest', 'weekly', 'daily digest', 'digest', 'monthly',
-            'novedades', 'resumen semanal', 'leído de la semana', 'suscrito', 'suscribirse', 'unsubscribe'
+          const workKeywords = [
+            'reunión', 'proyecto', 'tarea', 'urgente', 'avance', 'minuta', 'trabajo', 'oficina', 'cliente',
+            'presupuesto', 'propuesta', 'agenda', 'meeting', 'project', 'task', 'client', 'deadline'
           ];
-          const isNewsletterKeyword = newsletterKeywords.some(kw => textToAnalyze.includes(kw));
+          const isWorkKeyword = workKeywords.some(kw => textToAnalyze.includes(kw));
 
-          if (isNewsletterKeyword) {
-            detectedFolder = 'newsletter';
-          }
-          // 4. Work classification
-          else {
-            const workKeywords = [
-              'reunión', 'proyecto', 'tarea', 'urgente', 'avance', 'minuta', 'trabajo', 'oficina', 'cliente',
-              'presupuesto', 'propuesta', 'agenda', 'meeting', 'project', 'task', 'client', 'deadline'
-            ];
-            const isWorkKeyword = workKeywords.some(kw => textToAnalyze.includes(kw));
-
-            if (isWorkKeyword) {
-              detectedFolder = 'work';
-            }
+          if (isWorkKeyword) {
+            detectedFolder = 'work';
           }
         }
       }

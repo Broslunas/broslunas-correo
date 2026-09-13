@@ -9,7 +9,7 @@ function buildCatchAllQuery(userAssignedAddresses, registeredEmails, requestedFo
   const andClauses = [];
   if (requestedFolder === 'catchall') {
     const catchAllFilter = {
-      folder: { $nin: ['trash', 'spam', 'sent', 'drafts', 'temp_mail'] }
+      folder: { $nin: ['trash', 'spam', 'sent', 'drafts'] }
     };
     if (registeredEmails.length > 0) {
       catchAllFilter.to = { $nin: registeredEmails };
@@ -32,7 +32,7 @@ const authorizedQuery = buildCatchAllQuery(['*'], ['info@domain.com', 'admin@dom
 assert.deepStrictEqual(authorizedQuery, {
   $and: [
     {
-      folder: { $nin: ['trash', 'spam', 'sent', 'drafts', 'temp_mail'] },
+      folder: { $nin: ['trash', 'spam', 'sent', 'drafts'] },
       to: { $nin: ['info@domain.com', 'admin@domain.com'] },
       cc: { $nin: ['info@domain.com', 'admin@domain.com'] },
       bcc: { $nin: ['info@domain.com', 'admin@domain.com'] }
@@ -45,7 +45,7 @@ const emptyMailboxesQuery = buildCatchAllQuery(['*'], [], 'catchall');
 assert.deepStrictEqual(emptyMailboxesQuery, {
   $and: [
     {
-      folder: { $nin: ['trash', 'spam', 'sent', 'drafts', 'temp_mail'] }
+      folder: { $nin: ['trash', 'spam', 'sent', 'drafts'] }
     }
   ]
 });

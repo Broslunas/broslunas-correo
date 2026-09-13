@@ -25,7 +25,6 @@ import {
   ChevronRight,
   FileText,
   Settings,
-  Clock,
   Menu,
   Star,
   AtSign,
@@ -95,7 +94,6 @@ export default function Sidebar({
 
     { id: 'spam', label: 'Spam', icon: AlertOctagon, group: 'system' },
     { id: 'trash', label: 'Papelera', icon: Trash2, group: 'system' },
-    { id: 'tempmail', label: 'Buzón Temporal', icon: Clock, group: 'system' },
   ];
 
   const handleLogout = async () => {
@@ -195,13 +193,7 @@ export default function Sidebar({
                 )}
                 <div className="relative group shrink-0">
                   <button
-                    onClick={() => {
-                      if (folder.id === 'tempmail') {
-                        window.location.href = '/tempmail';
-                      } else {
-                        onFolderChange(folder.id);
-                      }
-                    }}
+                    onClick={() => onFolderChange(folder.id)}
                     className={`flex items-center gap-4 transition-all duration-150 cursor-pointer ${
                       isCollapsed
                         ? 'h-10 w-10 mx-auto justify-center rounded-full'
@@ -488,11 +480,7 @@ export default function Sidebar({
                         key={folder.id}
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          if (folder.id === 'tempmail') {
-                            window.location.href = '/tempmail';
-                          } else {
-                            onFolderChange(folder.id);
-                          }
+                          onFolderChange(folder.id);
                         }}
                         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors cursor-pointer text-left text-xs font-semibold ${
                           isActive

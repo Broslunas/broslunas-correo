@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     // 1. Folder condition (handle virtual 'unread', 'starred', and 'catchall' folders)
     if (folder === 'unread') {
-      andClauses.push({ isRead: false, folder: { $nin: ['trash', 'spam', 'sent', 'temp_mail'] } });
+      andClauses.push({ isRead: false, folder: { $nin: ['trash', 'spam', 'sent'] } });
     } else if (folder === 'starred') {
       andClauses.push({ isStarred: true, folder: { $nin: ['trash', 'spam'] } });
     } else if (folder === 'catchall') {
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
         .filter(Boolean);
 
       const catchAllFilter: any = {
-        folder: { $nin: ['trash', 'spam', 'sent', 'drafts', 'temp_mail'] }
+        folder: { $nin: ['trash', 'spam', 'sent', 'drafts'] }
       };
       if (registeredEmails.length > 0) {
         catchAllFilter.to = { $nin: registeredEmails };

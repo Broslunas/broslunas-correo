@@ -27,14 +27,6 @@
     --glass-bg: rgba(255, 255, 255, 0.85);
     --glass-border: rgba(0, 0, 0, 0.08);
     --glass-hover: rgba(0, 0, 0, 0.04);
-
-    /* Tempmail semantic bridge */
-    --tm-bg: hsl(var(--background));
-    --tm-fg: hsl(var(--foreground));
-    --tm-border: hsl(var(--border));
-    --tm-card-bg: hsl(var(--card));
-    --tm-accent: hsl(var(--primary));
-    --tm-accent-s: hsl(var(--primary)/0.75);
   }
 
   .dark {
@@ -61,14 +53,6 @@
     --glass-bg: rgba(30, 31, 36, 0.85);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-hover: rgba(255, 255, 255, 0.05);
-
-    /* Tempmail semantic bridge */
-    --tm-bg: hsl(var(--background));
-    --tm-fg: hsl(var(--foreground));
-    --tm-border: hsl(var(--border));
-    --tm-card-bg: hsl(var(--card));
-    --tm-accent: hsl(var(--primary));
-    --tm-accent-s: hsl(var(--primary)/0.75);
   }
 }
 
