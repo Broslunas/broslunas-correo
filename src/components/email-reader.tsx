@@ -807,7 +807,7 @@ export default function EmailReader({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-card animate-fadeIn">
       {/* Top action toolbar */}
-      <div className="shrink-0 min-h-14 flex items-center justify-between px-3 sm:px-4 md:px-6 gap-2 border-b border-border bg-card overflow-x-auto no-scrollbar">
+      <div className="shrink-0 h-14 flex items-center justify-between px-3 sm:px-4 md:px-6 gap-2 border-b border-border bg-card relative z-20">
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Mobile back button */}
           {onBack && (
@@ -917,8 +917,8 @@ export default function EmailReader({
 
             {moveDropdownOpen && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setMoveDropdownOpen(false)} />
-                <div className="absolute right-0 mt-1 rounded-xl border border-border bg-card p-1 shadow-xl z-20 w-40 animate-fadeIn">
+                <div className="fixed inset-0 z-20" onClick={() => setMoveDropdownOpen(false)} />
+                <div className="absolute right-0 top-full mt-1.5 rounded-xl border border-border bg-card p-1 shadow-2xl z-30 w-44 animate-fadeIn">
                   {[
                     { id: 'inbox', label: 'Principal' },
                     { id: 'personal', label: 'Personal' },
