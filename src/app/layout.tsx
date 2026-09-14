@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
+import ModalProvider from '@/components/modal-provider';
 
 export const metadata: Metadata = {
   title: 'Broslunas Correo — Bandeja de Entrada',
@@ -65,6 +66,7 @@ export default function RootLayout({
       <body className="antialiased font-sans">
         {children}
         <Toaster richColors position="bottom-right" />
+        <ModalProvider />
       </body>
     </html>
   );

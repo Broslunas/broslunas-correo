@@ -23,6 +23,7 @@ import {
   FolderOpen
 } from 'lucide-react';
 import AdminDrive from './admin-drive';
+import { showAlert } from '@/lib/modal';
 
 interface AllowedUser {
   _id: string;
@@ -469,7 +470,7 @@ export default function UserManagement() {
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
-    alert('¡Enlace de invitación copiado al portapapeles!');
+    showAlert('¡Enlace de invitación copiado al portapapeles!', { type: 'success' });
   };
 
   // Handle Add User submission
