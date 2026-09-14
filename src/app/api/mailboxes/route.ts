@@ -40,15 +40,28 @@ export async function GET(request: NextRequest) {
       .sort({ email: 1 })
       .toArray();
 
-    let authorizedMailboxes = [];
+    let authorizedMailboxes: any[] = [];
 
     if (assignedAddresses.includes('*')) {
       // Wildcard access: Can send from any registered mailbox
       authorizedMailboxes = allMailboxes;
     } else {
       // Filter only registered mailboxes that match the user's assigned addresses
-      const assignedSet = new Set(assignedAddresses.map(addr => addr.toLowerCase()));
-      authorizedMailboxes = allMailboxes.filter(m => assignedSet.has(m.email.toLowerCase()));
+      const assignedSet = new Set(assignedAddresses.map(addr => addr.trim().toLowerCase()));
+      authorizedMailboxes = allMailboxes.filter(m => assignedSet.has((m.email || '').trim().toLowerCase()));
+
+      // Fallback: Ensure all explicitly assigned addresses are present even if not created in mailboxes collection yet
+      const registeredEmails = new Set(authorizedMailboxes.map(m => (m.email || '').trim().toLowerCase()));
+      for (const addr of assignedAddresses) {
+        const clean = (addr || '').trim().toLowerCase();
+        if (clean && clean !== '*' && !registeredEmails.has(clean)) {
+          authorizedMailboxes.push({
+            email: clean,
+            name: clean.split('@')[0],
+            signature: ''
+          });
+        }
+      }
     }
 
     const result = authorizedMailboxes.map(m => ({

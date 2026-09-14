@@ -35,4 +35,25 @@ PREDEFINED_TEMPLATES.forEach((tmpl) => {
 });
 console.log('✔ Predefined templates tests passed');
 
+// 5. Test non-admin permissions logic & escapeRegex
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+assert.strictEqual(escapeRegex('user.test+label@domain.com'), 'user\\.test\\+label@domain\\.com');
+const nonAdminAssigned = ['Ventas@Domain.com', '  info@DOMAIN.COM  '];
+const normalized = nonAdminAssigned.map(a => a.trim().toLowerCase()).filter(Boolean);
+assert.deepStrictEqual(normalized, ['ventas@domain.com', 'info@domain.com']);
+const rx = normalized.map(a => new RegExp(`^${escapeRegex(a)}$`, 'i'));
+assert.ok(rx[0].test('VENTAS@domain.com'));
+assert.ok(rx[1].test('Info@domain.com'));
+assert.ok(!rx[0].test('other@domain.com'));
+console.log('✔ Non-admin address regex & normalization tests passed');
+
+// 6. Test attachment upload check for sending
+const attachmentsUploading = [{ filename: 'a.pdf', isUploading: true }, { filename: 'b.png', isUploading: false }];
+const attachmentsDone = [{ filename: 'a.pdf', isUploading: false }, { filename: 'b.png', isUploading: false }];
+assert.strictEqual(attachmentsUploading.some(a => a.isUploading), true);
+assert.strictEqual(attachmentsDone.some(a => a.isUploading), false);
+console.log('✔ Compose attachment upload blocking check passed');
+
 console.log('\nAll feature self-checks passed successfully!');

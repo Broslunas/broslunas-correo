@@ -967,6 +967,11 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     e.preventDefault();
     setError('');
 
+    if (attachments.some(att => att.isUploading)) {
+      setError('Espera a que terminen de subirse los archivos adjuntos.');
+      return;
+    }
+
     if (!to.trim()) {
       setError('El destinatario (Para) es requerido.');
       return;
@@ -1955,10 +1960,16 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               <button
                 id="btn-send-email"
                 type="submit"
-                disabled={loading}
+                disabled={loading || attachments.some(att => att.isUploading)}
+                title={attachments.some(att => att.isUploading) ? 'Espera a que terminen de subirse los archivos adjuntos' : 'Enviar correo'}
                 className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 hover:opacity-95 active:scale-98 disabled:opacity-50 cursor-pointer bg-primary text-primary-foreground shadow-sm"
               >
-                {loading ? (
+                {attachments.some(att => att.isUploading) ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Subiendo archivos...
+                  </>
+                ) : loading ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Enviando...

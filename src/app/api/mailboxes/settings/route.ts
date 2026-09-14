@@ -30,7 +30,10 @@ async function verifyUserAndMailbox(request: NextRequest, targetEmail: string) {
       return { authorized: false, errorResponse: NextResponse.json({ error: 'Usuario no autorizado' }, { status: 403 }) };
     }
 
-    const assignedAddresses: string[] = user.assignedAddresses || [];
+    const rawAssigned: any[] = user.assignedAddresses || [];
+    const assignedAddresses = rawAssigned
+      .map(a => (typeof a === 'string' ? a.trim().toLowerCase() : ''))
+      .filter(Boolean);
     const cleanTargetEmail = targetEmail.trim().toLowerCase();
 
     if (!assignedAddresses.includes('*') && !assignedAddresses.includes(cleanTargetEmail)) {
@@ -68,7 +71,15 @@ export async function GET(request: NextRequest) {
 
     const mailbox = await db.collection('mailboxes').findOne({ email: cleanTargetEmail });
     if (!mailbox) {
-      return NextResponse.json({ error: 'La cuenta de correo especificada no está registrada' }, { status: 404 });
+      return NextResponse.json({
+        settings: {
+          email: cleanTargetEmail,
+          autoReplyEnabled: false,
+          autoReplySubject: 'Respuesta automática: {{subject}}',
+          autoReplyBody: 'Hola,\n\nGracias por su mensaje. Hemos recibido su correo y le responderemos lo antes posible.\n\nSaludos cordiales.',
+          signature: '',
+        }
+      });
     }
 
     return NextResponse.json({
@@ -103,12 +114,6 @@ export async function PATCH(request: NextRequest) {
 
     const { db, cleanTargetEmail } = verification;
 
-    // Check if the mailbox exists
-    const mailbox = await db.collection('mailboxes').findOne({ email: cleanTargetEmail });
-    if (!mailbox) {
-      return NextResponse.json({ error: 'La cuenta de correo especificada no existe en el sistema' }, { status: 404 });
-    }
-
     // Prepare update object
     const updateFields: Record<string, any> = {};
     if (autoReplyEnabled !== undefined) updateFields.autoReplyEnabled = Boolean(autoReplyEnabled);
@@ -122,7 +127,16 @@ export async function PATCH(request: NextRequest) {
 
     await db.collection('mailboxes').updateOne(
       { email: cleanTargetEmail },
-      { $set: updateFields }
+      {
+        $set: updateFields,
+        $setOnInsert: {
+          email: cleanTargetEmail,
+          name: cleanTargetEmail.split('@')[0],
+          status: 'active',
+          createdAt: new Date()
+        }
+      },
+      { upsert: true }
     );
 
     // Send email notification of modified settings

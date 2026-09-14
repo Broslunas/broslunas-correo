@@ -8,6 +8,10 @@ export const dynamic = 'force-dynamic';
 const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced_in_env_local';
 const JWT_SECRET = new TextEncoder().encode(secret);
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function getAuthenticatedUser(request: NextRequest): Promise<{ success: boolean; email?: string; assignedAddresses?: string[]; errorResponse?: NextResponse }> {
   const token = request.cookies.get('webmail_session')?.value;
   if (!token) {
@@ -25,10 +29,15 @@ async function getAuthenticatedUser(request: NextRequest): Promise<{ success: bo
       return { success: false, errorResponse: NextResponse.json({ error: 'Usuario no autorizado' }, { status: 403 }) };
     }
 
+    const rawAssigned: any[] = user.assignedAddresses || [];
+    const assignedAddresses = rawAssigned
+      .map(a => (typeof a === 'string' ? a.trim().toLowerCase() : ''))
+      .filter(Boolean);
+
     return {
       success: true,
       email,
-      assignedAddresses: user.assignedAddresses || [],
+      assignedAddresses,
     };
   } catch (err) {
     return { success: false, errorResponse: NextResponse.json({ error: 'Sesión inválida' }, { status: 401 }) };
@@ -125,7 +134,8 @@ export async function PUT(request: NextRequest) {
     // Double check that the draft belongs to the allowed addresses of the user
     const draftQuery: any = { _id: new ObjectId(id), folder: 'drafts' };
     if (!assignedAddresses.includes('*')) {
-      draftQuery['from.address'] = { $in: assignedAddresses };
+      const addressRegexes = assignedAddresses.map(a => new RegExp(`^${escapeRegex(a)}$`, 'i'));
+      draftQuery['from.address'] = { $in: addressRegexes };
     }
 
     const draft = await db.collection('emails').findOne(draftQuery);
@@ -186,7 +196,8 @@ export async function DELETE(request: NextRequest) {
 
     const query: any = { _id: new ObjectId(id), folder: 'drafts' };
     if (!assignedAddresses.includes('*')) {
-      query['from.address'] = { $in: assignedAddresses };
+      const addressRegexes = assignedAddresses.map(a => new RegExp(`^${escapeRegex(a)}$`, 'i'));
+      query['from.address'] = { $in: addressRegexes };
     }
 
     const result = await db.collection('emails').deleteOne(query);

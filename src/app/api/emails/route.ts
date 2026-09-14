@@ -9,6 +9,10 @@ export const dynamic = 'force-dynamic';
 const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced_in_env_local';
 const JWT_SECRET = new TextEncoder().encode(secret);
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Helper to authenticate session and retrieve user permissions in real-time
 async function getAuthenticatedUser(request: NextRequest): Promise<{ success: boolean; email?: string; assignedAddresses?: string[]; errorResponse?: NextResponse }> {
   const token = request.cookies.get('webmail_session')?.value;
@@ -27,10 +31,15 @@ async function getAuthenticatedUser(request: NextRequest): Promise<{ success: bo
       return { success: false, errorResponse: NextResponse.json({ error: 'Usuario no autorizado' }, { status: 403 }) };
     }
 
+    const rawAssigned: any[] = user.assignedAddresses || [];
+    const assignedAddresses = rawAssigned
+      .map(a => (typeof a === 'string' ? a.trim().toLowerCase() : ''))
+      .filter(Boolean);
+
     return {
       success: true,
       email,
-      assignedAddresses: user.assignedAddresses || [],
+      assignedAddresses,
     };
   } catch (err) {
     return { success: false, errorResponse: NextResponse.json({ error: 'Sesión inválida' }, { status: 401 }) };
@@ -53,11 +62,12 @@ export async function GET(request: NextRequest) {
       const query: any = { _id: new ObjectId(id) };
 
       if (!assignedAddresses.includes('*')) {
+        const addressRegexes = assignedAddresses.map(a => new RegExp(`^${escapeRegex(a)}$`, 'i'));
         query.$or = [
-          { to: { $in: assignedAddresses } },
-          { cc: { $in: assignedAddresses } },
-          { bcc: { $in: assignedAddresses } },
-          { 'from.address': { $in: assignedAddresses } }
+          { to: { $in: addressRegexes } },
+          { cc: { $in: addressRegexes } },
+          { bcc: { $in: addressRegexes } },
+          { 'from.address': { $in: addressRegexes } }
         ];
       }
 
@@ -71,11 +81,12 @@ export async function GET(request: NextRequest) {
       if (email.threadId) {
         const threadQuery: any = { threadId: email.threadId };
         if (!assignedAddresses.includes('*')) {
+          const addressRegexes = assignedAddresses.map(a => new RegExp(`^${escapeRegex(a)}$`, 'i'));
           threadQuery.$or = [
-            { to: { $in: assignedAddresses } },
-            { cc: { $in: assignedAddresses } },
-            { bcc: { $in: assignedAddresses } },
-            { 'from.address': { $in: assignedAddresses } }
+            { to: { $in: addressRegexes } },
+            { cc: { $in: addressRegexes } },
+            { bcc: { $in: addressRegexes } },
+            { 'from.address': { $in: addressRegexes } }
           ];
         }
         threadEmails = await db.collection('emails').find(threadQuery).sort({ date: 1 }).toArray();
@@ -139,31 +150,50 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Account filter and Access limit conditions
+    const addressRegexes = assignedAddresses.map(a => new RegExp(`^${escapeRegex(a)}$`, 'i'));
+
     if (account) {
       // Filter specifically by this account
-      if (folder === 'sent') {
-        andClauses.push({ 'from.address': account });
+      const accountRegex = new RegExp(`^${escapeRegex(account)}$`, 'i');
+      if (folder === 'sent' || folder === 'drafts') {
+        andClauses.push({ 'from.address': accountRegex });
+      } else if (folder === 'trash' || folder === 'starred') {
+        andClauses.push({
+          $or: [
+            { to: accountRegex },
+            { cc: accountRegex },
+            { bcc: accountRegex },
+            { 'from.address': accountRegex }
+          ]
+        });
       } else {
         andClauses.push({
           $or: [
-            { to: account },
-            { cc: account },
-            { bcc: account }
+            { to: accountRegex },
+            { cc: accountRegex },
+            { bcc: accountRegex }
           ]
         });
       }
     } else if (!assignedAddresses.includes('*')) {
-      // Fallback: Limit view to only user's assigned addresses
+      // Fallback: Limit view to user's assigned addresses
       if (folder === 'sent' || folder === 'drafts') {
-        // Can only view emails sent or drafted from their assigned addresses
-        andClauses.push({ 'from.address': { $in: assignedAddresses } });
-      } else {
-        // Can only view emails received by their assigned addresses (to, cc, bcc)
+        andClauses.push({ 'from.address': { $in: addressRegexes } });
+      } else if (folder === 'trash' || folder === 'starred') {
         andClauses.push({
           $or: [
-            { to: { $in: assignedAddresses } },
-            { cc: { $in: assignedAddresses } },
-            { bcc: { $in: assignedAddresses } }
+            { to: { $in: addressRegexes } },
+            { cc: { $in: addressRegexes } },
+            { bcc: { $in: addressRegexes } },
+            { 'from.address': { $in: addressRegexes } }
+          ]
+        });
+      } else {
+        andClauses.push({
+          $or: [
+            { to: { $in: addressRegexes } },
+            { cc: { $in: addressRegexes } },
+            { bcc: { $in: addressRegexes } }
           ]
         });
       }
@@ -253,11 +283,12 @@ export async function PATCH(request: NextRequest) {
     const updateQuery: any = { _id: { $in: objectIds } };
 
     if (!assignedAddresses.includes('*')) {
+      const addressRegexes = assignedAddresses.map(a => new RegExp(`^${escapeRegex(a)}$`, 'i'));
       updateQuery.$or = [
-        { to: { $in: assignedAddresses } },
-        { cc: { $in: assignedAddresses } },
-        { bcc: { $in: assignedAddresses } },
-        { 'from.address': { $in: assignedAddresses } }
+        { to: { $in: addressRegexes } },
+        { cc: { $in: addressRegexes } },
+        { bcc: { $in: addressRegexes } },
+        { 'from.address': { $in: addressRegexes } }
       ];
     }
 
@@ -298,11 +329,12 @@ export async function DELETE(request: NextRequest) {
     const deleteQuery: any = { _id: { $in: objectIds } };
 
     if (!assignedAddresses.includes('*')) {
+      const addressRegexes = assignedAddresses.map(a => new RegExp(`^${escapeRegex(a)}$`, 'i'));
       deleteQuery.$or = [
-        { to: { $in: assignedAddresses } },
-        { cc: { $in: assignedAddresses } },
-        { bcc: { $in: assignedAddresses } },
-        { 'from.address': { $in: assignedAddresses } }
+        { to: { $in: addressRegexes } },
+        { cc: { $in: addressRegexes } },
+        { bcc: { $in: addressRegexes } },
+        { 'from.address': { $in: addressRegexes } }
       ];
     }
 

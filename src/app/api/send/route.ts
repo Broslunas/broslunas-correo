@@ -10,6 +10,10 @@ export const dynamic = 'force-dynamic';
 const secret = process.env.JWT_SECRET || 'default_secret_that_should_be_replaced_in_env_local';
 const JWT_SECRET = new TextEncoder().encode(secret);
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function streamToBuffer(stream: any): Promise<Buffer> {
   if (stream.transformToByteArray) {
     const bytes = await stream.transformToByteArray();
@@ -52,7 +56,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Tu cuenta ha sido suspendida. Contacta a un administrador.' }, { status: 403 });
     }
 
-    assignedAddresses = user.assignedAddresses || [];
+    const rawAssigned: any[] = user.assignedAddresses || [];
+    assignedAddresses = rawAssigned
+      .map(a => (typeof a === 'string' ? a.trim().toLowerCase() : ''))
+      .filter(Boolean);
 
     // Check daily send limit
     if (user.dailySendLimit && user.dailySendLimit > 0) {
@@ -131,11 +138,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify if the sender is registered in the mailboxes collection
-    const mailbox = await db.collection('mailboxes').findOne({ email: cleanFrom });
-    if (!mailbox && !assignedAddresses.includes('*')) {
-      return NextResponse.json({
-        error: `La cuenta de correo remitente (${cleanFrom}) no está registrada en el servidor. Regístrala en la sección de administración primero.`
-      }, { status: 400 });
+    const mailbox = await db.collection('mailboxes').findOne({
+      email: { $regex: new RegExp(`^${escapeRegex(cleanFrom)}$`, 'i') }
+    });
+
+    // Auto-register mailbox if missing but authorized (wildcard or assigned address)
+    if (!mailbox) {
+      await db.collection('mailboxes').insertOne({
+        email: cleanFrom,
+        name: (customFromName as string)?.trim() || cleanFrom.split('@')[0],
+        storageLimitMB: 0,
+        dailySendLimit: 0,
+        status: 'active',
+        addedBy: userEmail,
+        createdAt: new Date()
+      }).catch(() => {});
     }
 
     // Check mailbox level suspension and limits
@@ -180,19 +197,6 @@ export async function POST(request: NextRequest) {
           error: `La cuenta (${cleanFrom}) superó su cuota de almacenamiento (${mailbox.storageLimitMB} MB). Elimina correos o archivos antes de enviar.`
         }, { status: 413 });
       }
-    }
-
-    // Auto-register mailbox if user with full access requested it
-    if (!mailbox && assignedAddresses.includes('*') && saveMailbox) {
-      await db.collection('mailboxes').insertOne({
-        email: cleanFrom,
-        name: (customFromName as string)?.trim() || cleanFrom.split('@')[0],
-        storageLimitMB: 0,
-        dailySendLimit: 0,
-        status: 'active',
-        addedBy: userEmail,
-        createdAt: new Date()
-      }).catch(() => {});
     }
 
     const apiKey = process.env.MAILJET_API_KEY;
