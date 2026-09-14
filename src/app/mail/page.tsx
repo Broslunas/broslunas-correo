@@ -1030,12 +1030,13 @@ function MailContent() {
             className={`
               h-full flex-col overflow-hidden w-full
               ${mobileView === 'list' ? 'flex' : 'hidden'}
-              lg:flex lg:w-80 lg:shrink-0
+              ${selectedEmail ? 'lg:flex lg:w-80 lg:shrink-0' : 'lg:flex lg:flex-1'}
             `}
           >
             <EmailList
               emails={emails}
               selectedEmailId={selectedEmail?._id || null}
+              isExpanded={!selectedEmail}
               onSelectEmail={handleSelectEmail}
               onUpdateEmailStatus={handleUpdateEmailStatus}
               folderLabel={getFolderLabel(currentFolder)}
@@ -1068,7 +1069,7 @@ function MailContent() {
             className={`
               h-full flex-col overflow-hidden flex-1 min-w-0
               ${mobileView === 'reader' ? 'flex' : 'hidden'}
-              lg:flex
+              ${selectedEmail ? 'lg:flex' : 'lg:hidden'}
             `}
           >
             <EmailReader
