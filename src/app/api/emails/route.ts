@@ -130,6 +130,10 @@ export async function GET(request: NextRequest) {
         catchAllFilter.bcc = { $nin: registeredEmails };
       }
       andClauses.push(catchAllFilter);
+    } else if (folder === 'inbox') {
+      andClauses.push({
+        folder: { $in: ['inbox', 'commercial', 'newsletter', 'social', 'work', 'personal'] }
+      });
     } else {
       andClauses.push({ folder });
     }
