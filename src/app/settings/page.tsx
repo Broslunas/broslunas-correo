@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/sidebar';
 import ComposeModal from '@/components/compose-modal';
 import TwoFactorModal from '@/components/two-factor-modal';
-import { 
-  Settings as SettingsIcon, 
-  Palette, 
-  Mail, 
-  PenTool, 
-  MessageSquare, 
-  Sparkles, 
-  Loader2, 
-  CheckCircle, 
+import {
+  Settings as SettingsIcon,
+  Palette,
+  Mail,
+  PenTool,
+  MessageSquare,
+  Sparkles,
+  Loader2,
+  CheckCircle,
   AlertCircle,
   Sun,
   Moon,
@@ -28,8 +28,24 @@ import {
   Shield,
   Smartphone,
   Info,
-  Volume2
+  Volume2,
+  Keyboard,
+  RotateCcw,
+  Edit3,
+  Search,
+  X
 } from 'lucide-react';
+import {
+  getAllShortcuts,
+  getCustomShortcuts,
+  saveCustomShortcuts,
+  resetAllShortcuts,
+  CATEGORY_LABELS,
+  ShortcutCategory,
+  ShortcutDefinition,
+  formatKeyBadge,
+  eventToShortcutString
+} from '@/lib/shortcuts';
 
 interface MailboxSettings {
   email: string;
@@ -81,14 +97,47 @@ const themes = [
   },
 ];
 
+type SettingsTab = 'general' | 'accounts' | 'security' | 'notifications' | 'rules' | 'shortcuts';
+const VALID_TABS: SettingsTab[] = ['general', 'accounts', 'security', 'notifications', 'rules', 'shortcuts'];
+
 function SettingsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pageParam = searchParams.get('page') as SettingsTab | null;
+  const initialTab: SettingsTab = pageParam && VALID_TABS.includes(pageParam) ? pageParam : 'general';
+
   const [composeOpen, setComposeOpen] = useState(false);
   const [user, setUser] = useState<{ email: string; name: string; picture: string; role: string; twoFactorEnabled: boolean; assignedAddresses: string[] } | null>(null);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
-  
+
   // Navigation states
-  const [activeTab, setActiveTab] = useState<'general' | 'accounts' | 'security' | 'notifications' | 'rules'>('general');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+
+  // Sync tab with URL search parameter (?page=...)
+  useEffect(() => {
+    const p = searchParams.get('page') as SettingsTab | null;
+    if (p && VALID_TABS.includes(p) && p !== activeTab) {
+      setActiveTab(p);
+    }
+  }, [searchParams, activeTab]);
+
+  const handleTabChange = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    router.replace(`/settings?page=${tab}`, { scroll: false });
+  };
+
+  // Shortcuts state
+  const [shortcutsList, setShortcutsList] = useState<ShortcutDefinition[]>([]);
+  const [shortcutSearch, setShortcutSearch] = useState('');
+  const [recordingId, setRecordingId] = useState<string | null>(null);
+  const [recordingChordFirstKey, setRecordingChordFirstKey] = useState<string>('');
+
+  useEffect(() => {
+    setShortcutsList(getAllShortcuts());
+    const onUpdate = () => setShortcutsList(getAllShortcuts());
+    window.addEventListener('shortcuts-updated', onUpdate);
+    return () => window.removeEventListener('shortcuts-updated', onUpdate);
+  }, []);
 
   // Push status
   const [isPushSupported, setIsPushSupported] = useState(false);
@@ -162,6 +211,86 @@ function SettingsContent() {
   const [newRuleValue, setNewRuleValue] = useState('');
   const [newRuleAction, setNewRuleAction] = useState<'folder' | 'spam' | 'delete'>('folder');
   const [newRuleFolder, setNewRuleFolder] = useState('work');
+
+  // Shortcut recording effect
+  useEffect(() => {
+    if (!recordingId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.key === 'Escape') {
+        setRecordingId(null);
+        setRecordingChordFirstKey('');
+        return;
+      }
+
+      if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+        return;
+      }
+
+      const isModifierCombo = e.ctrlKey || e.altKey || e.metaKey || (e.shiftKey && e.key.length > 1);
+
+      if (isModifierCombo) {
+        const combo = eventToShortcutString(e);
+        if (combo) {
+          saveShortcutKey(recordingId, combo);
+        }
+        return;
+      }
+
+      // Single key or chord
+      const pressed = e.key;
+      if (pressed === 'Enter' && recordingChordFirstKey) {
+        saveShortcutKey(recordingId, recordingChordFirstKey);
+        return;
+      }
+
+      if (!recordingChordFirstKey && (pressed === 'g' || pressed === '*')) {
+        setRecordingChordFirstKey(pressed);
+        return;
+      }
+
+      if (recordingChordFirstKey) {
+        const combo = `${recordingChordFirstKey} ${pressed}`;
+        saveShortcutKey(recordingId, combo);
+        return;
+      }
+
+      // Single normal key
+      saveShortcutKey(recordingId, pressed);
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [recordingId, recordingChordFirstKey]);
+
+  const saveShortcutKey = (id: string, newKey: string) => {
+    const current = getCustomShortcuts();
+    current[id] = newKey;
+    saveCustomShortcuts(current);
+    setRecordingId(null);
+    setRecordingChordFirstKey('');
+    setSuccess(`Atajo guardado: ${newKey}`);
+    setTimeout(() => setSuccess(''), 2500);
+  };
+
+  const handleResetSingleShortcut = (id: string) => {
+    const current = getCustomShortcuts();
+    delete current[id];
+    saveCustomShortcuts(current);
+    setSuccess('Atajo restablecido al valor predeterminado');
+    setTimeout(() => setSuccess(''), 2500);
+  };
+
+  const handleResetAllShortcuts = () => {
+    if (confirm('¿Deseas restablecer todos los atajos de teclado a los valores predeterminados?')) {
+      resetAllShortcuts();
+      setSuccess('Todos los atajos se han restablecido');
+      setTimeout(() => setSuccess(''), 2500);
+    }
+  };
 
   // Load theme & settings on mount
   useEffect(() => {
@@ -796,7 +925,7 @@ function SettingsContent() {
           {/* Nav Items */}
           <nav className="flex-1 px-3 space-y-1 select-none">
             <button
-              onClick={() => setActiveTab('general')}
+              onClick={() => handleTabChange('general')}
               className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-lg transition-all text-left cursor-pointer`}
               style={{
                 background: activeTab === 'general' ? 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.04))' : 'transparent',
@@ -809,7 +938,7 @@ function SettingsContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab('accounts')}
+              onClick={() => handleTabChange('accounts')}
               className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-lg transition-all text-left cursor-pointer`}
               style={{
                 background: activeTab === 'accounts' ? 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.04))' : 'transparent',
@@ -822,7 +951,7 @@ function SettingsContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab('security')}
+              onClick={() => handleTabChange('security')}
               className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-lg transition-all text-left cursor-pointer`}
               style={{
                 background: activeTab === 'security' ? 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.04))' : 'transparent',
@@ -835,7 +964,7 @@ function SettingsContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab('notifications')}
+              onClick={() => handleTabChange('notifications')}
               className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-lg transition-all text-left cursor-pointer`}
               style={{
                 background: activeTab === 'notifications' ? 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.04))' : 'transparent',
@@ -848,7 +977,7 @@ function SettingsContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab('rules')}
+              onClick={() => handleTabChange('rules')}
               className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-lg transition-all text-left cursor-pointer`}
               style={{
                 background: activeTab === 'rules' ? 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.04))' : 'transparent',
@@ -858,6 +987,19 @@ function SettingsContent() {
             >
               <Filter className="h-4 w-4 shrink-0" />
               Filtros y Reglas
+            </button>
+
+            <button
+              onClick={() => handleTabChange('shortcuts')}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-lg transition-all text-left cursor-pointer`}
+              style={{
+                background: activeTab === 'shortcuts' ? 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.04))' : 'transparent',
+                border: activeTab === 'shortcuts' ? '1px solid hsl(var(--primary) / 0.2)' : '1px solid transparent',
+                color: activeTab === 'shortcuts' ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
+              }}
+            >
+              <Keyboard className="h-4 w-4 shrink-0" />
+              Atajos de Teclado
             </button>
           </nav>
 
@@ -1768,7 +1910,7 @@ function SettingsContent() {
                   ) : (
                     <div className="space-y-2">
                       {routingRules.map((rule) => (
-                        <div 
+                        <div
                           key={rule.id}
                           className="flex items-center justify-between p-3.5 rounded-xl border border-neutral-900 bg-neutral-950/40"
                         >
@@ -1794,6 +1936,184 @@ function SettingsContent() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* TAB 6: SHORTCUTS */}
+            {activeTab === 'shortcuts' && (
+              <div className="space-y-6 animate-fadeIn max-w-3xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+                      <Keyboard className="h-4 w-4" />
+                      Atajos de Teclado
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Personaliza cada tecla o combinación de atajos para navegar y operar el correo a máxima velocidad.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetAllShortcuts}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-800 text-muted-foreground hover:text-foreground transition-all cursor-pointer flex items-center gap-1.5 self-start shrink-0"
+                    title="Restablecer todos los atajos a los valores predeterminados"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Restablecer todos
+                  </button>
+                </div>
+
+                {/* Recording banner if active */}
+                {recordingId && (
+                  <div className="p-4 rounded-xl border border-primary/40 bg-primary/10 flex items-center justify-between animate-pulse">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary font-mono text-sm font-bold">
+                        {recordingChordFirstKey ? `${recordingChordFirstKey} ...` : '⌨️'}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          Grabando atajo para: <span className="text-primary">{shortcutsList.find(s => s.id === recordingId)?.name}</span>
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {recordingChordFirstKey
+                            ? `Primera tecla "${recordingChordFirstKey}" detectada. Pulsa la segunda tecla o Enter para dejarla sola.`
+                            : 'Presiona la tecla o combinación (ej. c, j, Enter, Ctrl+B, o acorde tipo g i). Presiona Esc para cancelar.'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setRecordingId(null); setRecordingChordFirstKey(''); }}
+                      className="px-3 py-1 text-xs font-semibold rounded-lg bg-neutral-800 hover:bg-neutral-700 text-foreground transition-colors cursor-pointer"
+                    >
+                      Cancelar (Esc)
+                    </button>
+                  </div>
+                )}
+
+                {/* Filter Search */}
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Filtrar por nombre, descripción o tecla..."
+                    value={shortcutSearch}
+                    onChange={(e) => setShortcutSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 text-xs bg-neutral-900/40 border border-neutral-800 rounded-xl focus:outline-none focus:border-primary placeholder:text-muted-foreground text-foreground"
+                  />
+                  {shortcutSearch && (
+                    <button
+                      onClick={() => setShortcutSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Shortcut categories */}
+                {(['navigation', 'actions', 'reading', 'composing', 'general'] as ShortcutCategory[]).map((cat) => {
+                  const filtered = shortcutsList.filter(s =>
+                    s.category === cat && (
+                      s.name.toLowerCase().includes(shortcutSearch.toLowerCase()) ||
+                      s.description.toLowerCase().includes(shortcutSearch.toLowerCase()) ||
+                      (s.userKey || s.defaultKey).toLowerCase().includes(shortcutSearch.toLowerCase())
+                    )
+                  );
+
+                  if (filtered.length === 0) return null;
+
+                  return (
+                    <div key={cat} className="space-y-3">
+                      <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider px-1">
+                        {CATEGORY_LABELS[cat]}
+                      </h4>
+                      <div className="space-y-2">
+                        {filtered.map((item) => {
+                          const isCustomized = item.userKey && item.userKey !== item.defaultKey;
+                          const isRecording = recordingId === item.id;
+                          const currentKey = item.userKey || item.defaultKey;
+                          const keyBadges = formatKeyBadge(currentKey);
+
+                          return (
+                            <div
+                              key={item.id}
+                              className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                                isRecording
+                                  ? 'border-primary bg-primary/10 shadow-md'
+                                  : 'border-neutral-900 bg-neutral-950/40 hover:bg-neutral-900/40'
+                              }`}
+                            >
+                              <div className="min-w-0 pr-4 space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-foreground">
+                                    {item.name}
+                                  </span>
+                                  {isCustomized && (
+                                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 select-none">
+                                      Personalizado
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-muted-foreground leading-normal">
+                                  {item.description}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {/* Key badge display */}
+                                <div className="flex items-center gap-1">
+                                  {isRecording ? (
+                                    <span className="px-2.5 py-1 text-xs font-mono font-bold bg-primary text-neutral-950 rounded-lg animate-pulse">
+                                      {recordingChordFirstKey ? `${recordingChordFirstKey} + ...` : 'Presiona tecla...'}
+                                    </span>
+                                  ) : (
+                                    keyBadges.map((k, idx) => (
+                                      <React.Fragment key={idx}>
+                                        {idx > 0 && <span className="text-[10px] text-muted-foreground">luego</span>}
+                                        <kbd className="px-2 py-1 text-xs font-mono font-bold bg-neutral-900 border border-neutral-800 rounded-md text-primary shadow-2xs">
+                                          {k}
+                                        </kbd>
+                                      </React.Fragment>
+                                    ))
+                                  )}
+                                </div>
+
+                                {/* Reassign button */}
+                                {!isRecording && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRecordingId(item.id);
+                                      setRecordingChordFirstKey('');
+                                    }}
+                                    className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-foreground transition-all cursor-pointer flex items-center gap-1"
+                                    title="Modificar atajo"
+                                  >
+                                    <Edit3 className="h-3 w-3 text-muted-foreground" />
+                                    Cambiar
+                                  </button>
+                                )}
+
+                                {/* Reset single button */}
+                                {isCustomized && !isRecording && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResetSingleShortcut(item.id)}
+                                    className="p-1.5 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-800 transition-all cursor-pointer"
+                                    title={`Restablecer al valor por defecto (${item.defaultKey})`}
+                                  >
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

@@ -130,7 +130,7 @@ export default function Sidebar({
     });
   };
 
-  // Keyboard shortcut Ctrl+B / Cmd+B for collapse
+  // Keyboard shortcut Ctrl+B / Cmd+B for collapse & custom event
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
@@ -142,8 +142,13 @@ export default function Sidebar({
         toggleCollapse();
       }
     };
+    const handleCustomToggle = () => toggleCollapse();
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('toggle-sidebar', handleCustomToggle);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('toggle-sidebar', handleCustomToggle);
+    };
   }, [toggleCollapse]);
 
   const coreFolders: NavFolder[] = [

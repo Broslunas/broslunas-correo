@@ -1103,6 +1103,24 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     }
   };
 
+  const handleSendRef = useRef(handleSend);
+  handleSendRef.current = handleSend;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleSendRef.current(e as unknown as React.FormEvent);
+      } else if (e.altKey && e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const inputStyle = {
     background: 'transparent',
     border: 'none',

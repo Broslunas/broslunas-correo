@@ -151,6 +151,18 @@ export default function EmailList({
     setBatchFolderOpen(false);
   }, [folderLabel, selectedAccount]);
 
+  // Keyboard shortcut events for selecting/deselecting all
+  useEffect(() => {
+    const handleSelectAll = () => setSelectedIds(new Set(emails.map(e => e._id)));
+    const handleDeselectAll = () => setSelectedIds(new Set());
+    window.addEventListener('select-all-emails', handleSelectAll);
+    window.addEventListener('deselect-all-emails', handleDeselectAll);
+    return () => {
+      window.removeEventListener('select-all-emails', handleSelectAll);
+      window.removeEventListener('deselect-all-emails', handleDeselectAll);
+    };
+  }, [emails]);
+
   const allSelected = emails.length > 0 && selectedIds.size === emails.length;
 
   const toggleSelectAll = () => {

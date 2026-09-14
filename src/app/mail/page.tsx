@@ -8,6 +8,12 @@ import EmailList from '@/components/email-list';
 import EmailReader from '@/components/email-reader';
 import ComposeModal from '@/components/compose-modal';
 import TwoFactorModal from '@/components/two-factor-modal';
+import ShortcutsModal from '@/components/shortcuts-modal';
+import {
+  isInputElement,
+  eventToShortcutString,
+  getAllShortcuts
+} from '@/lib/shortcuts';
 
 interface Attachment {
   filename: string;
@@ -104,6 +110,9 @@ function MailContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const chordTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const chordBufferRef = useRef<string>('');
 
   const pendingSendTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -673,6 +682,280 @@ function MailContent() {
     setComposeOpen(true);
   };
 
+  const executeShortcut = useCallback((actionId: string) => {
+    switch (actionId) {
+      case 'showShortcutsHelp':
+        setShortcutsModalOpen(prev => !prev);
+        break;
+      case 'toggleSidebar':
+        window.dispatchEvent(new CustomEvent('toggle-sidebar'));
+        break;
+      case 'toggleTheme': {
+        const isDark = document.documentElement.classList.contains('dark');
+        if (isDark) {
+          document.documentElement.classList.remove('dark');
+          localStorage.setItem('theme', 'light');
+        } else {
+          document.documentElement.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+        }
+        window.dispatchEvent(new Event('theme-change'));
+        toast.info(isDark ? 'Modo claro activado' : 'Modo oscuro activado');
+        break;
+      }
+      case 'goToInbox':
+        handleFolderChange('inbox');
+        break;
+      case 'goToStarred':
+        handleFolderChange('starred');
+        break;
+      case 'goToUnread':
+        handleFolderChange('unread');
+        break;
+      case 'goToSent':
+        handleFolderChange('sent');
+        break;
+      case 'goToDrafts':
+        handleFolderChange('drafts');
+        break;
+      case 'goToSpam':
+        handleFolderChange('spam');
+        break;
+      case 'goToTrash':
+        handleFolderChange('trash');
+        break;
+      case 'goToSettings':
+        router.push('/settings');
+        break;
+      case 'focusSearch': {
+        const input = document.querySelector('input[placeholder*="Buscar"]') as HTMLInputElement | null;
+        if (input) {
+          input.focus();
+          input.select();
+        }
+        break;
+      }
+      case 'refreshMail':
+        fetchEmails();
+        toast.success('Bandeja sincronizada');
+        break;
+      case 'compose':
+        handleComposeClick();
+        break;
+      case 'selectNext': {
+        if (emails.length === 0) return;
+        if (!selectedEmail) {
+          handleSelectEmail(emails[0]);
+        } else {
+          const idx = emails.findIndex(e => e._id === selectedEmail._id);
+          if (idx !== -1 && idx < emails.length - 1) {
+            handleSelectEmail(emails[idx + 1]);
+          }
+        }
+        break;
+      }
+      case 'selectPrev': {
+        if (emails.length === 0) return;
+        if (selectedEmail) {
+          const idx = emails.findIndex(e => e._id === selectedEmail._id);
+          if (idx > 0) {
+            handleSelectEmail(emails[idx - 1]);
+          }
+        }
+        break;
+      }
+      case 'openSelected': {
+        if (selectedEmail) {
+          setMobileView('reader');
+        } else if (emails.length > 0) {
+          handleSelectEmail(emails[0]);
+        }
+        break;
+      }
+      case 'backToList': {
+        if (selectedEmail) {
+          setSelectedEmail(null);
+          router.push(`/mail?inbox=${folderPart}`);
+          setMobileView('list');
+        }
+        break;
+      }
+      case 'toggleStar': {
+        if (selectedEmail) {
+          handleUpdateEmailStatus([selectedEmail._id], { isStarred: !selectedEmail.isStarred });
+          toast.success(!selectedEmail.isStarred ? 'Destacado' : 'Quitado de destacados');
+        }
+        break;
+      }
+      case 'toggleRead': {
+        if (selectedEmail) {
+          handleUpdateEmailStatus([selectedEmail._id], { isRead: !selectedEmail.isRead });
+          toast.info(!selectedEmail.isRead ? 'Marcado como leído' : 'Marcado como no leído');
+        }
+        break;
+      }
+      case 'deleteEmail': {
+        if (selectedEmail) {
+          if (currentFolder === 'trash') {
+            handleDeletePermanent([selectedEmail._id]);
+          } else {
+            handleUpdateEmailStatus([selectedEmail._id], { folder: 'trash' });
+            toast.success('Movido a la papelera');
+          }
+        }
+        break;
+      }
+      case 'markSpam': {
+        if (selectedEmail) {
+          handleUpdateEmailStatus([selectedEmail._id], { folder: 'spam' });
+          toast.success('Marcado como spam');
+        }
+        break;
+      }
+      case 'reply': {
+        if (selectedEmail) {
+          handleReplyClick(selectedEmail);
+        }
+        break;
+      }
+      case 'replyAll': {
+        if (selectedEmail) {
+          handleReplyAllClick(selectedEmail);
+        }
+        break;
+      }
+      case 'forward': {
+        if (selectedEmail) {
+          handleForwardClick(selectedEmail);
+        }
+        break;
+      }
+      case 'printEmail': {
+        if (selectedEmail) {
+          window.print();
+        }
+        break;
+      }
+      case 'selectAll': {
+        window.dispatchEvent(new CustomEvent('select-all-emails'));
+        break;
+      }
+      case 'deselectAll': {
+        window.dispatchEvent(new CustomEvent('deselect-all-emails'));
+        break;
+      }
+      default:
+        break;
+    }
+  }, [
+    emails,
+    selectedEmail,
+    currentFolder,
+    folderPart,
+    router,
+    fetchEmails,
+    handleSelectEmail,
+    handleUpdateEmailStatus,
+    handleDeletePermanent,
+    handleReplyClick,
+    handleReplyAllClick,
+    handleForwardClick,
+  ]);
+
+  // Global Keyboard Shortcuts Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const inInput = isInputElement(e.target);
+
+      // Allow Esc to close modal or blur
+      if (e.key === 'Escape') {
+        if (shortcutsModalOpen) {
+          e.preventDefault();
+          setShortcutsModalOpen(false);
+          return;
+        }
+        if (composeOpen) {
+          return;
+        }
+        if (selectedEmail) {
+          e.preventDefault();
+          executeShortcut('backToList');
+          return;
+        }
+        if (inInput) {
+          (e.target as HTMLElement).blur();
+          return;
+        }
+      }
+
+      // Ignore single keys inside input fields
+      if (inInput) {
+        return;
+      }
+
+      if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+        return;
+      }
+
+      const shortcuts = getAllShortcuts();
+      const findAction = (keyStr: string) => {
+        return shortcuts.find(s => (s.userKey || s.defaultKey).toLowerCase() === keyStr.toLowerCase());
+      };
+
+      // Handle chord sequence (e.g. "g i")
+      if (chordBufferRef.current) {
+        const fullChord = `${chordBufferRef.current} ${e.key}`;
+        if (chordTimeoutRef.current) clearTimeout(chordTimeoutRef.current);
+        chordBufferRef.current = '';
+
+        const action = findAction(fullChord);
+        if (action) {
+          e.preventDefault();
+          executeShortcut(action.id);
+          return;
+        }
+      }
+
+      // Check if key starts a chord
+      const chordStarters = shortcuts
+        .map(s => (s.userKey || s.defaultKey).toLowerCase())
+        .filter(k => k.includes(' '))
+        .map(k => k.split(' ')[0]);
+
+      if (chordStarters.includes(e.key.toLowerCase())) {
+        chordBufferRef.current = e.key.toLowerCase();
+        if (chordTimeoutRef.current) clearTimeout(chordTimeoutRef.current);
+        chordTimeoutRef.current = setTimeout(() => {
+          chordBufferRef.current = '';
+        }, 1200);
+        e.preventDefault();
+        return;
+      }
+
+      // Non-chord shortcut matching
+      let keyToMatch = '';
+      if (e.ctrlKey || e.altKey || e.metaKey) {
+        keyToMatch = eventToShortcutString(e);
+      } else {
+        keyToMatch = e.key;
+      }
+
+      const match = findAction(keyToMatch);
+      if (match) {
+        e.preventDefault();
+        executeShortcut(match.id);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    shortcutsModalOpen,
+    composeOpen,
+    selectedEmail,
+    executeShortcut
+  ]);
+
   const handleComposeClick = () => {
     setComposeData(null);
     setComposeOpen(true);
@@ -828,6 +1111,12 @@ function MailContent() {
         onStatusChange={(enabled) => {
           setUser(prev => prev ? { ...prev, twoFactorEnabled: enabled } : null);
         }}
+      />
+
+      {/* Shortcuts Help Modal */}
+      <ShortcutsModal
+        isOpen={shortcutsModalOpen}
+        onClose={() => setShortcutsModalOpen(false)}
       />
     </div>
   );
