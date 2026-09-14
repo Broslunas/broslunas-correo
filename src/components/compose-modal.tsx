@@ -37,7 +37,7 @@ import {
   UserCheck,
   Star,
 } from 'lucide-react';
-import { showAlert } from '@/lib/modal';
+import { showAlert, showConfirm } from '@/lib/modal';
 import type { CannedTemplate } from '@/lib/templates';
 
 interface ComposeModalProps {
@@ -736,7 +736,12 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const handleDiscardDraft = async () => {
     const currentId = draftIdRef.current;
     if (currentId) {
-      if (!confirm('¿Estás seguro de que deseas eliminar permanentemente este borrador?')) return;
+      const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar permanentemente este borrador?', {
+        title: 'Eliminar borrador',
+        confirmText: 'Eliminar',
+        destructive: true,
+      });
+      if (!confirmed) return;
       try {
         setLoading(true);
         const res = await fetch(`/api/drafts?id=${currentId}`, {
@@ -1412,7 +1417,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               </button>
 
               {activeSuggestion?.field === 'to' && matchingContacts.length > 0 && (
-                <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-fadeIn">
                   {matchingContacts.map((contact, i) => renderContactSuggestion(contact, 'to', i))}
                 </div>
               )}
@@ -1437,7 +1442,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     className="text-foreground placeholder:text-muted-foreground"
                   />
                   {activeSuggestion?.field === 'cc' && matchingContacts.length > 0 && (
-                    <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                    <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-fadeIn">
                       {matchingContacts.map((contact, i) => renderContactSuggestion(contact, 'cc', i))}
                     </div>
                   )}
@@ -1458,7 +1463,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     className="text-foreground placeholder:text-muted-foreground"
                   />
                   {activeSuggestion?.field === 'bcc' && matchingContacts.length > 0 && (
-                    <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                    <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-fadeIn">
                       {matchingContacts.map((contact, i) => renderContactSuggestion(contact, 'bcc', i))}
                     </div>
                   )}

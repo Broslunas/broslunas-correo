@@ -13,6 +13,10 @@ module.exports = {
         foreground: "hsl(var(--foreground) / <alpha-value>)",
         card: "hsl(var(--card) / <alpha-value>)",
         "card-foreground": "hsl(var(--card-foreground) / <alpha-value>)",
+        popover: {
+          DEFAULT: "hsl(var(--popover) / <alpha-value>)",
+          foreground: "hsl(var(--popover-foreground) / <alpha-value>)",
+        },
         border: "hsl(var(--border) / <alpha-value>)",
         input: "hsl(var(--input) / <alpha-value>)",
         ring: "hsl(var(--ring) / <alpha-value>)",

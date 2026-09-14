@@ -25,6 +25,7 @@ import {
   ExternalLink,
   ChevronDown
 } from 'lucide-react';
+import { showConfirm } from '@/lib/modal';
 
 export interface R2FileItem {
   key: string;
@@ -116,7 +117,12 @@ export default function AdminDrive({ mailboxes = [] }: AdminDriveProps) {
       keysToDelete.length === 1
         ? '¿Estás seguro de que deseas eliminar este archivo permanentemente de Cloudflare R2?'
         : `¿Estás seguro de que deseas eliminar ${keysToDelete.length} archivos permanentemente de Cloudflare R2?`;
-    if (!confirm(msg)) return;
+    const confirmed = await showConfirm(msg, {
+      title: 'Eliminar archivo(s)',
+      confirmText: 'Eliminar',
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     setDeleting(true);
     setError('');
