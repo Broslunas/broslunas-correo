@@ -51,6 +51,16 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
+        <script
+          defer
+          src="https://analytics.broslunas.com/script.js"
+          data-website-id="0d8fd1b0-3b2d-450d-98bd-5ec6f67f2e29"
+        />
+        <script
+          defer
+          src="https://analytics.broslunas.com/recorder.js"
+          data-website-id="0d8fd1b0-3b2d-450d-98bd-5ec6f67f2e29"
+        />
       </head>
       <body className="antialiased font-sans">
         {children}
