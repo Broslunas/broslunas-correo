@@ -30,6 +30,9 @@ import {
   Loader2,
   ChevronsUpDown,
   Paperclip,
+  Printer,
+  FileDown,
+  Ban,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
 
@@ -786,6 +789,165 @@ export default function EmailReader({
     }
   };
 
+  const handlePrintEmail = () => {
+    if (!email) return;
+    const printWindow = window.open('', '_blank');
+    const latest = threadMessages[threadMessages.length - 1] || email;
+    const bodyHtml = latest.body.html || `<p>${(latest.body.text || '').replace(/\n/g, '<br>')}</p>`;
+    const dateStr = new Date(latest.date).toLocaleString('es-ES');
+
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${latest.subject || 'Correo'}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 30px; color: #111; max-width: 800px; margin: 0 auto; line-height: 1.5; }
+    .header { border-bottom: 2px solid #ddd; padding-bottom: 15px; margin-bottom: 20px; }
+    .subject { font-size: 20px; font-weight: bold; margin-bottom: 15px; }
+    .meta { font-size: 13px; color: #555; line-height: 1.6; }
+    .meta strong { color: #222; }
+    .content { font-size: 14px; line-height: 1.6; }
+    @media print {
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="subject">${latest.subject || '(Sin Asunto)'}</div>
+    <div class="meta">
+      <div><strong>De:</strong> ${latest.from.name ? `${latest.from.name} &lt;${latest.from.address}&gt;` : latest.from.address}</div>
+      <div><strong>Para:</strong> ${latest.to.join(', ')}</div>
+      ${latest.cc && latest.cc.length > 0 ? `<div><strong>CC:</strong> ${latest.cc.join(', ')}</div>` : ''}
+      <div><strong>Fecha:</strong> ${dateStr}</div>
+    </div>
+  </div>
+  <div class="content">
+    ${bodyHtml}
+  </div>
+</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+
+  const handleExportEml = () => {
+    if (!email) return;
+    const latest = threadMessages[threadMessages.length - 1] || email;
+    const dateUTC = new Date(latest.date).toUTCString();
+    const messageId = latest.messageId || `<${latest._id}@broslunas.local>`;
+    const bodyContent = latest.body.html || latest.body.text || '';
+
+    const emlLines = [
+      `From: ${latest.from.name ? `"${latest.from.name}" <${latest.from.address}>` : latest.from.address}`,
+      `To: ${latest.to.join(', ')}`,
+      latest.cc && latest.cc.length > 0 ? `Cc: ${latest.cc.join(', ')}` : '',
+      `Subject: ${latest.subject || '(Sin Asunto)'}`,
+      `Date: ${dateUTC}`,
+      `Message-ID: ${messageId}`,
+      latest.inReplyTo ? `In-Reply-To: ${latest.inReplyTo}` : '',
+      latest.references ? `References: ${latest.references}` : '',
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      'Content-Transfer-Encoding: 8bit',
+      '',
+      bodyContent
+    ].filter(line => line !== null && line !== undefined);
+
+    const emlString = emlLines.join('\r\n');
+    const blob = new Blob([emlString], { type: 'message/rfc822' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeSubject = (latest.subject || 'correo').replace(/[^a-z0-9áéíóúñ_\-]/gi, '_').slice(0, 50);
+    a.download = `${safeSubject}.eml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const [blockingSender, setBlockingSender] = useState(false);
+  const [blacklist, setBlacklist] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/api/user/blacklist')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.blacklist)) {
+          setBlacklist(data.blacklist.map((e: string) => e.toLowerCase()));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const isSenderBlocked = useMemo(() => {
+    if (!email?.from?.address) return false;
+    return blacklist.includes(email.from.address.toLowerCase().trim());
+  }, [email, blacklist]);
+
+  const handleBlockSender = async () => {
+    if (!email || !email.from?.address) return;
+    const sender = email.from.address.toLowerCase().trim();
+    if (!confirm(`¿Bloquear al remitente "${sender}"?\n\nLos futuros correos de este remitente se clasificarán automáticamente en Spam y este hilo se moverá a Spam ahora.`)) {
+      return;
+    }
+
+    setBlockingSender(true);
+    try {
+      const res = await fetch('/api/user/blacklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: sender })
+      });
+      if (res.ok) {
+        setBlacklist((prev) => [...prev, sender]);
+        onUpdateEmailStatus(allThreadIds, { folder: 'spam' });
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Error al bloquear remitente');
+      }
+    } catch {
+      alert('Error de red al bloquear remitente');
+    } finally {
+      setBlockingSender(false);
+    }
+  };
+
+  const handleUnblockSender = async () => {
+    if (!email || !email.from?.address) return;
+    const sender = email.from.address.toLowerCase().trim();
+    setBlockingSender(true);
+    try {
+      const res = await fetch('/api/user/blacklist', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: sender })
+      });
+      if (res.ok) {
+        setBlacklist((prev) => prev.filter((e) => e !== sender));
+        onUpdateEmailStatus(allThreadIds, { folder: 'inbox' });
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Error al desbloquear remitente');
+      }
+    } catch {
+      alert('Error de red al desbloquear remitente');
+    } finally {
+      setBlockingSender(false);
+    }
+  };
+
   if (!email) {
     return (
       <div className="flex-1 h-full flex flex-col items-center justify-center p-8 text-center select-none bg-background">
@@ -896,6 +1058,55 @@ export default function EmailReader({
               <ExternalLink className="h-3.5 w-3.5 text-primary shrink-0" />
               <span className="hidden 2xl:inline">Nueva ventana</span>
             </button>
+          )}
+
+          {/* Print button */}
+          <button
+            type="button"
+            onClick={handlePrintEmail}
+            title="Imprimir correo"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
+          >
+            <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="hidden 2xl:inline">Imprimir</span>
+          </button>
+
+          {/* Export .eml button */}
+          <button
+            type="button"
+            onClick={handleExportEml}
+            title="Descargar como archivo .eml"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
+          >
+            <FileDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="hidden 2xl:inline">Exportar</span>
+          </button>
+
+          {/* Block / Unblock sender button */}
+          {email.from?.address && (
+            isSenderBlocked ? (
+              <button
+                type="button"
+                onClick={handleUnblockSender}
+                disabled={blockingSender}
+                title={`Desbloquear remitente ${email.from.address}`}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer shrink-0"
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                <span className="hidden 2xl:inline">Desbloquear</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleBlockSender}
+                disabled={blockingSender}
+                title={`Bloquear remitente ${email.from.address}`}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors cursor-pointer shrink-0"
+              >
+                <Ban className="h-3.5 w-3.5" />
+                <span className="hidden 2xl:inline">Bloquear</span>
+              </button>
+            )
           )}
 
           {/* Categorize / Move dropdown */}
@@ -1084,6 +1295,36 @@ export default function EmailReader({
                 {aiSummary}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Blocked Sender Banner */}
+        {isSenderBlocked && (
+          <div className="rounded-2xl p-4 border border-amber-500/30 bg-amber-500/10 text-xs text-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fadeIn">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+                <AlertOctagon className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  El remitente <span className="font-mono text-amber-700 dark:text-amber-300">&lt;{email.from.address}&gt;</span> está bloqueado.
+                </p>
+                <p className="text-muted-foreground mt-0.5 leading-relaxed">
+                  Sus mensajes se desvían automáticamente a <strong>Spam</strong>. Si este correo te interesa, puedes desbloquear al remitente para restaurar el mensaje a tu bandeja principal.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={handleUnblockSender}
+                disabled={blockingSender}
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                Desbloquear y Restaurar
+              </button>
+            </div>
           </div>
         )}
 

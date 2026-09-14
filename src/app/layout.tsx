@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'Broslunas Correo — Bandeja de Entrada',
@@ -53,6 +54,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased font-sans">
         {children}
+        <Toaster richColors position="bottom-right" />
       </body>
     </html>
   );

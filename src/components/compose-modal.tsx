@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X,
   Send,
@@ -54,6 +54,7 @@ interface ComposeModalProps {
     forwardMode?: boolean;
   } | null;
   assignedAddresses: string[];
+  onQueueSend?: (payload: any) => void;
 }
 
 const fontFamilies = [
@@ -94,7 +95,7 @@ const GoogleDriveIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function ComposeModal({ isOpen, onClose, initialData, assignedAddresses }: ComposeModalProps) {
+export default function ComposeModal({ isOpen, onClose, initialData, assignedAddresses, onQueueSend }: ComposeModalProps) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
@@ -111,6 +112,62 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const [saveAsMailbox, setSaveAsMailbox] = useState(false);
   const [availableDomains, setAvailableDomains] = useState<string[]>([]);
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Contacts Autocomplete
+  const [contacts, setContacts] = useState<{ email: string; name: string }[]>([]);
+  const [activeSuggestion, setActiveSuggestion] = useState<{
+    field: 'to' | 'cc' | 'bcc';
+    query: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/contacts')
+        .then(res => res.json())
+        .then(data => {
+          if (data.contacts) setContacts(data.contacts);
+        })
+        .catch(err => console.error('Error fetching contacts:', err));
+    } else {
+      setActiveSuggestion(null);
+    }
+  }, [isOpen]);
+
+  const handleRecipientChange = (field: 'to' | 'cc' | 'bcc', val: string) => {
+    if (field === 'to') setTo(val);
+    else if (field === 'cc') setCc(val);
+    else setBcc(val);
+
+    const parts = val.split(',');
+    const currentToken = parts[parts.length - 1].trim();
+    if (currentToken.length >= 1) {
+      setActiveSuggestion({ field, query: currentToken.toLowerCase() });
+    } else {
+      setActiveSuggestion(null);
+    }
+  };
+
+  const handleSelectContact = (field: 'to' | 'cc' | 'bcc', contactEmail: string) => {
+    const rawVal = field === 'to' ? to : field === 'cc' ? cc : bcc;
+    const parts = rawVal.split(',');
+    parts.pop();
+    const prefix = parts.map(p => p.trim()).filter(Boolean);
+    const newVal = [...prefix, contactEmail].join(', ') + ', ';
+
+    if (field === 'to') setTo(newVal);
+    else if (field === 'cc') setCc(newVal);
+    else setBcc(newVal);
+
+    setActiveSuggestion(null);
+  };
+
+  const matchingContacts = useMemo(() => {
+    if (!activeSuggestion || !activeSuggestion.query) return [];
+    const q = activeSuggestion.query;
+    return contacts
+      .filter(c => c.email.toLowerCase().includes(q) || (c.name && c.name.toLowerCase().includes(q)))
+      .slice(0, 6);
+  }, [activeSuggestion, contacts]);
 
   const [draftId, setDraftId] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState('');
@@ -1003,26 +1060,34 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
         r2Url: att.key
       }));
 
+    const payload = {
+      from,
+      fromName: customFromName ? customFromName.trim() : undefined,
+      saveMailbox: saveAsMailbox,
+      to: toArray,
+      cc: ccArray,
+      bcc: bccArray,
+      subject,
+      bodyHtml: finalHtml,
+      bodyText: textContent,
+      attachments: activeAttachments,
+      draftId: draftId || undefined,
+      inReplyTo: initialData?.inReplyTo || undefined,
+      references: initialData?.references || undefined,
+    };
+
+    if (onQueueSend) {
+      onQueueSend(payload);
+      onClose();
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from,
-          fromName: customFromName ? customFromName.trim() : undefined,
-          saveMailbox: saveAsMailbox,
-          to: toArray,
-          cc: ccArray,
-          bcc: bccArray,
-          subject,
-          bodyHtml: finalHtml,
-          bodyText: textContent,
-          attachments: activeAttachments,
-          draftId: draftId || undefined,
-          inReplyTo: initialData?.inReplyTo || undefined,
-          references: initialData?.references || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -1241,13 +1306,18 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             </div>
 
             {/* TO */}
-            <div style={rowStyle}>
+            <div style={rowStyle} className="relative">
               <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">Para:</span>
               <input
                 type="text"
                 required
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
+                onChange={(e) => handleRecipientChange('to', e.target.value)}
+                onFocus={() => {
+                  const token = to.split(',').pop()?.trim() || '';
+                  if (token) setActiveSuggestion({ field: 'to', query: token.toLowerCase() });
+                }}
+                onBlur={() => setTimeout(() => setActiveSuggestion(null), 200)}
                 placeholder="destinatario@ejemplo.com"
                 style={{ ...inputStyle, flex: 1 }}
                 className="text-foreground placeholder:text-muted-foreground"
@@ -1259,32 +1329,97 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               >
                 CC/CCO {showCcBcc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
+
+              {activeSuggestion?.field === 'to' && matchingContacts.length > 0 && (
+                <div className="absolute left-14 top-full mt-1 w-72 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                  {matchingContacts.map((contact, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectContact('to', contact.email);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-muted/80 flex flex-col transition-colors cursor-pointer"
+                    >
+                      <span className="text-xs font-medium text-foreground">{contact.name || contact.email}</span>
+                      <span className="text-[11px] text-muted-foreground">{contact.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* CC/BCC */}
             {showCcBcc && (
               <>
-                <div style={rowStyle}>
+                <div style={rowStyle} className="relative">
                   <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">CC:</span>
                   <input
                     type="text"
                     value={cc}
-                    onChange={(e) => setCc(e.target.value)}
+                    onChange={(e) => handleRecipientChange('cc', e.target.value)}
+                    onFocus={() => {
+                      const token = cc.split(',').pop()?.trim() || '';
+                      if (token) setActiveSuggestion({ field: 'cc', query: token.toLowerCase() });
+                    }}
+                    onBlur={() => setTimeout(() => setActiveSuggestion(null), 200)}
                     placeholder="copia@ejemplo.com"
                     style={{ ...inputStyle, flex: 1 }}
                     className="text-foreground placeholder:text-muted-foreground"
                   />
+                  {activeSuggestion?.field === 'cc' && matchingContacts.length > 0 && (
+                    <div className="absolute left-14 top-full mt-1 w-72 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                      {matchingContacts.map((contact, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectContact('cc', contact.email);
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-muted/80 flex flex-col transition-colors cursor-pointer"
+                        >
+                          <span className="text-xs font-medium text-foreground">{contact.name || contact.email}</span>
+                          <span className="text-[11px] text-muted-foreground">{contact.email}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div style={rowStyle}>
+                <div style={rowStyle} className="relative">
                   <span className="text-xs font-medium w-14 shrink-0 text-muted-foreground">CCO:</span>
                   <input
                     type="text"
                     value={bcc}
-                    onChange={(e) => setBcc(e.target.value)}
+                    onChange={(e) => handleRecipientChange('bcc', e.target.value)}
+                    onFocus={() => {
+                      const token = bcc.split(',').pop()?.trim() || '';
+                      if (token) setActiveSuggestion({ field: 'bcc', query: token.toLowerCase() });
+                    }}
+                    onBlur={() => setTimeout(() => setActiveSuggestion(null), 200)}
                     placeholder="copiaoculta@ejemplo.com"
                     style={{ ...inputStyle, flex: 1 }}
                     className="text-foreground placeholder:text-muted-foreground"
                   />
+                  {activeSuggestion?.field === 'bcc' && matchingContacts.length > 0 && (
+                    <div className="absolute left-14 top-full mt-1 w-72 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                      {matchingContacts.map((contact, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectContact('bcc', contact.email);
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-muted/80 flex flex-col transition-colors cursor-pointer"
+                        >
+                          <span className="text-xs font-medium text-foreground">{contact.name || contact.email}</span>
+                          <span className="text-[11px] text-muted-foreground">{contact.email}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}

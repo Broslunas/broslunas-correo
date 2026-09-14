@@ -174,15 +174,21 @@ function SettingsContent() {
       };
       window.addEventListener('theme-change', handleThemeSync);
 
-      // Blacklist load
-      const savedBlacklist = localStorage.getItem('webmail_blacklist');
-      if (savedBlacklist) {
-        setBlacklist(JSON.parse(savedBlacklist));
-      } else {
-        const defaultBlacklist = ['spam-spammer@spammail.com', 'newsletter@sales-unlimited.net'];
-        setBlacklist(defaultBlacklist);
-        localStorage.setItem('webmail_blacklist', JSON.stringify(defaultBlacklist));
-      }
+      // Blacklist load from API (falling back to localStorage)
+      fetch('/api/user/blacklist')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data.blacklist)) {
+            setBlacklist(data.blacklist);
+          } else {
+            const savedBlacklist = localStorage.getItem('webmail_blacklist');
+            if (savedBlacklist) setBlacklist(JSON.parse(savedBlacklist));
+          }
+        })
+        .catch(() => {
+          const savedBlacklist = localStorage.getItem('webmail_blacklist');
+          if (savedBlacklist) setBlacklist(JSON.parse(savedBlacklist));
+        });
 
       // Rules load
       const savedRules = localStorage.getItem('webmail_routing_rules');
@@ -646,7 +652,7 @@ function SettingsContent() {
   };
 
   // Helper to block email sender
-  const handleAddToBlacklist = (e: React.FormEvent) => {
+  const handleAddToBlacklist = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBlockedEmail.trim() || !newBlockedEmail.includes('@')) {
       alert('Por favor introduce un correo electrónico válido');
@@ -657,19 +663,45 @@ function SettingsContent() {
       alert('Este correo ya está en la lista negra');
       return;
     }
-    const updated = [...blacklist, cleanMail];
-    setBlacklist(updated);
-    localStorage.setItem('webmail_blacklist', JSON.stringify(updated));
-    setNewBlockedEmail('');
-    setSuccess(`Remitente ${cleanMail} bloqueado con éxito.`);
+
+    try {
+      const res = await fetch('/api/user/blacklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanMail }),
+      });
+      if (res.ok) {
+        const updated = [...blacklist, cleanMail];
+        setBlacklist(updated);
+        localStorage.setItem('webmail_blacklist', JSON.stringify(updated));
+        setNewBlockedEmail('');
+        setSuccess(`Remitente ${cleanMail} bloqueado con éxito.`);
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Error al bloquear');
+      }
+    } catch {
+      alert('Error al comunicar con el servidor');
+    }
     setTimeout(() => setSuccess(''), 3000);
   };
 
-  const handleRemoveFromBlacklist = (email: string) => {
-    const updated = blacklist.filter(item => item !== email);
-    setBlacklist(updated);
-    localStorage.setItem('webmail_blacklist', JSON.stringify(updated));
-    setSuccess(`Remitente ${email} desbloqueado.`);
+  const handleRemoveFromBlacklist = async (email: string) => {
+    try {
+      const res = await fetch('/api/user/blacklist', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        const updated = blacklist.filter(item => item !== email);
+        setBlacklist(updated);
+        localStorage.setItem('webmail_blacklist', JSON.stringify(updated));
+        setSuccess(`Remitente ${email} desbloqueado.`);
+      }
+    } catch {
+      alert('Error al comunicar con el servidor');
+    }
     setTimeout(() => setSuccess(''), 3000);
   };
 

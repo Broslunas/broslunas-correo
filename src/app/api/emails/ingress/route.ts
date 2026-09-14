@@ -88,13 +88,23 @@ export async function POST(request: Request) {
         }))
       : [];
 
+    // 5. Check user blacklist / blocked senders
+    const senderToAnalyze = from.address.trim().toLowerCase();
+    const isSenderBlocked = await db.collection('users').findOne({
+      $or: [
+        { assignedAddresses: '*' },
+        { assignedAddresses: { $in: recipients } }
+      ],
+      blockedSenders: senderToAnalyze
+    });
+
     // 5. Auto-classify folder based on content
-    let detectedFolder = 'inbox';
+    let detectedFolder = isSenderBlocked ? 'spam' : 'inbox';
 
     const textToAnalyze = `${subject} ${bodyText} ${bodyHtml}`.toLowerCase();
-    const senderToAnalyze = from.address.toLowerCase();
 
-    // 1. Social Media classification
+    if (!isSenderBlocked) {
+      // 1. Social Media classification
     const socialDomains = ['linkedin.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'github.com', 'gitlab.com', 'pinterest.com', 'reddit.com'];
     const isSocialSender = socialDomains.some(domain => senderToAnalyze.endsWith(domain) || senderToAnalyze.includes('@' + domain));
     const socialKeywords = ['nuevo seguidor', 'solicitud de amistad', 'mencionó', 'comentó', 'te sigue', 'retweet', 'notificación de github', 'pull request', 'issue', 'social'];
@@ -141,6 +151,7 @@ export async function POST(request: Request) {
           }
         }
       }
+    }
     }
 
     // 6. Resolve thread ID
