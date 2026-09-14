@@ -971,12 +971,12 @@ export default function EmailReader({
       {/* Top action toolbar */}
       <div className="shrink-0 h-14 flex items-center justify-between px-3 sm:px-4 md:px-6 gap-2 border-b border-border bg-card relative z-20">
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Mobile back button */}
+          {/* Back/Close button */}
           {onBack && (
             <button
               onClick={onBack}
-              title="Volver"
-              className="lg:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors cursor-pointer mr-1 shrink-0"
+              title="Cerrar correo (Esc)"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors cursor-pointer mr-1 shrink-0"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Volver</span>
