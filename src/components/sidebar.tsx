@@ -28,8 +28,10 @@ import {
   Menu,
   Star,
   AtSign,
+  HardDrive,
 } from 'lucide-react';
 import ThemeToggle from '@/components/theme-toggle';
+import { formatBytes } from '@/lib/utils';
 
 interface SidebarProps {
   currentFolder: string;
@@ -61,6 +63,26 @@ export default function Sidebar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [storage, setStorage] = useState<{
+    usedBytes: number;
+    limitBytes: number;
+    percent: number;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/user/storage')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && typeof data.usedBytes === 'number') {
+          setStorage({
+            usedBytes: data.usedBytes,
+            limitBytes: data.limitBytes,
+            percent: data.percent,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
@@ -230,6 +252,55 @@ export default function Sidebar({
 
         {/* Footer Actions */}
         <div className="flex flex-col gap-1.5 px-3 py-3 border-t border-border bg-background shrink-0">
+          {/* Storage Quota Indicator */}
+          {storage && (
+            <div className={`py-1 ${isCollapsed ? 'flex justify-center' : 'flex flex-col gap-1 px-1'}`}>
+              {isCollapsed ? (
+                <div className="relative group shrink-0">
+                  <div
+                    className={`h-8 w-8 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+                      storage.percent > 90
+                        ? 'text-destructive bg-destructive/10'
+                        : storage.percent > 75
+                        ? 'text-amber-500 bg-amber-500/10'
+                        : 'text-primary bg-primary/10'
+                    }`}
+                  >
+                    <HardDrive className="h-4 w-4" />
+                  </div>
+                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 bg-foreground text-background shadow-lg">
+                    {storage.percent}% usado ({formatBytes(storage.usedBytes)} de {formatBytes(storage.limitBytes)})
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-muted/40 p-2.5 rounded-xl border border-border/50 mb-1">
+                  <div className="flex items-center justify-between text-[11px] mb-1 font-medium">
+                    <span className="flex items-center gap-1.5 text-foreground">
+                      <HardDrive className="h-3 w-3 text-muted-foreground" />
+                      Almacenamiento
+                    </span>
+                    <span className="text-muted-foreground font-semibold">{storage.percent}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        storage.percent > 90
+                          ? 'bg-destructive'
+                          : storage.percent > 75
+                          ? 'bg-amber-500'
+                          : 'bg-primary'
+                      }`}
+                      style={{ width: `${Math.max(3, storage.percent)}%` }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    {formatBytes(storage.usedBytes)} de {formatBytes(storage.limitBytes)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Theme Toggle Button */}
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between px-2'} h-10 rounded-full hover:bg-muted/70 transition-colors`}>
             {!isCollapsed && (

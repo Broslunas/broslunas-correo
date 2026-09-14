@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import Sidebar from '@/components/sidebar';
 import EmailList from '@/components/email-list';
 import EmailReader from '@/components/email-reader';
@@ -103,6 +104,68 @@ function MailContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  const pendingSendTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleQueueSend = (payload: any) => {
+    if (pendingSendTimerRef.current) {
+      clearTimeout(pendingSendTimerRef.current);
+      pendingSendTimerRef.current = null;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          toast.success('Correo enviado correctamente');
+          if (currentFolder === 'sent' || currentFolder === 'drafts') {
+            fetchEmails();
+          }
+        } else {
+          toast.error(data.error || 'Error al enviar el correo');
+        }
+      } catch (err) {
+        console.error('Error sending queued email:', err);
+        toast.error('Error al conectar con el servidor de envío');
+      } finally {
+        pendingSendTimerRef.current = null;
+      }
+    }, 5000);
+
+    pendingSendTimerRef.current = timer;
+
+    toast('Enviando correo en 5s...', {
+      duration: 5000,
+      action: {
+        label: 'Deshacer',
+        onClick: () => {
+          if (pendingSendTimerRef.current) {
+            clearTimeout(pendingSendTimerRef.current);
+            pendingSendTimerRef.current = null;
+          }
+          toast.dismiss();
+          setComposeData({
+            id: payload.draftId,
+            from: payload.from,
+            to: Array.isArray(payload.to) ? payload.to.join(', ') : (payload.to || ''),
+            cc: Array.isArray(payload.cc) ? payload.cc.join(', ') : (payload.cc || ''),
+            bcc: Array.isArray(payload.bcc) ? payload.bcc.join(', ') : (payload.bcc || ''),
+            subject: payload.subject || '',
+            bodyHtml: payload.bodyHtml || '',
+            attachments: payload.attachments || [],
+            inReplyTo: payload.inReplyTo,
+            references: payload.references,
+          });
+          setComposeOpen(true);
+        },
+      },
+    });
+  };
 
   // Reset selected email and mobile view when folder changes in URL
   useEffect(() => {
@@ -755,6 +818,7 @@ function MailContent() {
         }}
         initialData={composeData}
         assignedAddresses={user?.assignedAddresses || []}
+        onQueueSend={handleQueueSend}
       />
 
       {/* 2FA Modal */}
