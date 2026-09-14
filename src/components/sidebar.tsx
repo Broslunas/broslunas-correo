@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import ThemeToggle from '@/components/theme-toggle';
 import { formatBytes } from '@/lib/utils';
+import { showConfirm } from '@/lib/modal';
 
 interface SidebarProps {
   currentFolder: string;
@@ -183,7 +184,12 @@ export default function Sidebar({
   const allFolders = [...coreFolders, ...categoryFolders, ...systemFolders];
 
   const handleLogout = async () => {
-    if (confirm('¿Estás seguro de que deseas cerrar la sesión?')) {
+    const confirmed = await showConfirm('¿Estás seguro de que deseas cerrar la sesión?', {
+      title: 'Cerrar sesión',
+      confirmText: 'Cerrar sesión',
+      destructive: true,
+    });
+    if (confirmed) {
       try {
         const res = await fetch('/api/auth', {
           method: 'POST',

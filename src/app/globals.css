@@ -9,6 +9,8 @@
     --foreground: 0 0% 12%;         /* #1f1f1f primary text */
     --card: 0 0% 100%;              /* #ffffff container / card */
     --card-foreground: 0 0% 12%;    /* #1f1f1f */
+    --popover: 0 0% 100%;           /* #ffffff popover / dropdown */
+    --popover-foreground: 0 0% 12%; /* #1f1f1f */
     --primary: 217 90% 43%;         /* #0b57d0 Google Blue */
     --primary-foreground: 0 0% 100%;/* #ffffff */
     --secondary: 220 20% 93%;       /* #e9eef6 */
@@ -35,6 +37,8 @@
     --foreground: 240 10% 90%;      /* #e2e2e9 */
     --card: 225 9% 13%;             /* #1e1f24 elevated container */
     --card-foreground: 240 10% 90%; /* #e2e2e9 */
+    --popover: 225 12% 16%;         /* #22242a elevated dropdown surface */
+    --popover-foreground: 240 10% 90%; /* #e2e2e9 */
     --primary: 217 90% 80%;         /* #a8c7fa Google Blue dark */
     --primary-foreground: 217 90% 15%;/* #041e49 */
     --secondary: 225 12% 18%;       /* #282a30 */

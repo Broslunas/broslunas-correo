@@ -3,6 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import EmailReader from '@/components/email-reader';
+import { showConfirm } from '@/lib/modal';
 
 interface Attachment {
   filename: string;
@@ -109,7 +110,15 @@ function StandaloneViewContent() {
   };
 
   const handleDeletePermanent = async (ids: string[]) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar permanentemente este correo? Esta acción no se puede deshacer.')) return;
+    const confirmed = await showConfirm(
+      '¿Estás seguro de que quieres eliminar permanentemente este correo? Esta acción no se puede deshacer.',
+      {
+        title: 'Eliminar correo permanentemente',
+        confirmText: 'Eliminar',
+        destructive: true,
+      }
+    );
+    if (!confirmed) return;
     try {
       const res = await fetch('/api/emails', {
         method: 'DELETE',

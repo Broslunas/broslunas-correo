@@ -46,7 +46,7 @@ import {
   formatKeyBadge,
   eventToShortcutString
 } from '@/lib/shortcuts';
-import { showAlert } from '@/lib/modal';
+import { showAlert, showConfirm } from '@/lib/modal';
 
 interface MailboxSettings {
   email: string;
@@ -285,8 +285,16 @@ function SettingsContent() {
     setTimeout(() => setSuccess(''), 2500);
   };
 
-  const handleResetAllShortcuts = () => {
-    if (confirm('¿Deseas restablecer todos los atajos de teclado a los valores predeterminados?')) {
+  const handleResetAllShortcuts = async () => {
+    const confirmed = await showConfirm(
+      '¿Deseas restablecer todos los atajos de teclado a los valores predeterminados?',
+      {
+        title: 'Restablecer atajos',
+        confirmText: 'Restablecer',
+        destructive: true,
+      }
+    );
+    if (confirmed) {
       resetAllShortcuts();
       setSuccess('Todos los atajos se han restablecido');
       setTimeout(() => setSuccess(''), 2500);
@@ -651,7 +659,15 @@ function SettingsContent() {
 
   // Disable 2FA TOTP
   const handleDisable2FA = async () => {
-    if (!confirm('¿Estás seguro de que deseas desactivar la verificación en dos pasos (2FA)? Tu cuenta estará desprotegida.')) {
+    const confirmed = await showConfirm(
+      '¿Estás seguro de que deseas desactivar la verificación en dos pasos (2FA)? Tu cuenta estará desprotegida.',
+      {
+        title: 'Desactivar 2FA',
+        confirmText: 'Desactivar',
+        destructive: true,
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -725,7 +741,15 @@ function SettingsContent() {
   };
 
   const handleDeletePasskey = async (id: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta llave de paso? Ya no podrás usarla para iniciar sesión.')) {
+    const confirmed = await showConfirm(
+      '¿Estás seguro de que deseas eliminar esta llave de paso? Ya no podrás usarla para iniciar sesión.',
+      {
+        title: 'Eliminar llave de paso',
+        confirmText: 'Eliminar',
+        destructive: true,
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -836,8 +860,16 @@ function SettingsContent() {
   };
 
   // Close all other devices sessions (mock)
-  const handleTerminateOtherSessions = () => {
-    if (confirm('¿Cerrar todas las demás sesiones activas en otros dispositivos? Se requerirá iniciar sesión de nuevo en ellos.')) {
+  const handleTerminateOtherSessions = async () => {
+    const confirmed = await showConfirm(
+      '¿Cerrar todas las demás sesiones activas en otros dispositivos? Se requerirá iniciar sesión de nuevo en ellos.',
+      {
+        title: 'Cerrar otras sesiones',
+        confirmText: 'Cerrar sesiones',
+        destructive: true,
+      }
+    );
+    if (confirmed) {
       setSessions(sessions.filter(s => s.current));
       setSuccess('Otras sesiones finalizadas correctamente.');
       setTimeout(() => setSuccess(''), 3500);
