@@ -31,6 +31,7 @@ import {
   ChevronUp,
   Shield,
   Sparkles,
+  Contact,
 } from 'lucide-react';
 import ThemeToggle from '@/components/theme-toggle';
 import { formatBytes } from '@/lib/utils';
@@ -157,6 +158,7 @@ export default function Sidebar({
     { id: 'unread', label: 'No leídos', icon: Mail, group: 'core' },
     { id: 'sent', label: 'Enviados', icon: Send, group: 'core' },
     { id: 'drafts', label: 'Borradores', icon: FileText, group: 'core' },
+    { id: 'contacts', label: 'Contactos', icon: Contact, group: 'core' },
   ];
 
   const categoryFolders: NavFolder[] = [
@@ -603,7 +605,7 @@ export default function Sidebar({
 
       {/* ====== MOBILE BOTTOM NAV (< lg) ====== */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-around px-2 py-2 bg-background/90 backdrop-blur-xl border-t border-border/60 safe-area-pb">
-        {coreFolders.map((folder) => {
+        {coreFolders.slice(0, 4).map((folder) => {
           const Icon = folder.icon;
           const isActive = currentFolder === folder.id;
           return (
@@ -730,6 +732,36 @@ export default function Sidebar({
                 </div>
               </div>
             )}
+
+            {/* Acceso Rápido */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                Gestión
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {coreFolders.slice(4).map((folder) => {
+                  const Icon = folder.icon;
+                  const isActive = currentFolder === folder.id;
+                  return (
+                    <button
+                      key={folder.id}
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onFolderChange(folder.id);
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold ${
+                        isActive
+                          ? 'bg-blue-500/10 text-blue-600 dark:bg-white/[0.08] dark:text-white border-blue-500/30 dark:border-white/15'
+                          : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted/60'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{folder.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Categorías */}
             <div className="space-y-2">

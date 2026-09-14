@@ -34,7 +34,10 @@ import {
   Bookmark,
   Plus,
   Trash2,
+  UserCheck,
+  Star,
 } from 'lucide-react';
+import { showAlert } from '@/lib/modal';
 import type { CannedTemplate } from '@/lib/templates';
 
 interface ComposeModalProps {
@@ -114,7 +117,15 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Contacts Autocomplete
-  const [contacts, setContacts] = useState<{ email: string; name: string }[]>([]);
+  const [contacts, setContacts] = useState<{
+    email: string;
+    name: string;
+    picture?: string;
+    source?: 'registered' | 'saved' | 'interaction';
+    isRegistered?: boolean;
+    starred?: boolean;
+    interactionCount?: number;
+  }[]>([]);
   const [activeSuggestion, setActiveSuggestion] = useState<{
     field: 'to' | 'cc' | 'bcc';
     query: string;
@@ -168,6 +179,58 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       .filter(c => c.email.toLowerCase().includes(q) || (c.name && c.name.toLowerCase().includes(q)))
       .slice(0, 6);
   }, [activeSuggestion, contacts]);
+
+  const renderContactSuggestion = (contact: any, field: 'to' | 'cc' | 'bcc', i: number) => {
+    const initials = ((contact.name || contact.email).slice(0, 2)).toUpperCase();
+    return (
+      <button
+        key={i}
+        type="button"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          handleSelectContact(field, contact.email);
+        }}
+        className="w-full text-left px-3 py-2 hover:bg-muted/80 flex items-center justify-between gap-2.5 transition-colors cursor-pointer border-b border-border/30 last:border-0"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          {contact.picture ? (
+            <img src={contact.picture} alt="" className="h-7 w-7 rounded-lg object-cover shrink-0" />
+          ) : (
+            <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] shrink-0">
+              {initials}
+            </div>
+          )}
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-foreground truncate">
+                {contact.name || contact.email.split('@')[0]}
+              </span>
+              {contact.starred && <Star className="h-3 w-3 fill-amber-500 text-amber-500 shrink-0" />}
+            </div>
+            <span className="text-[11px] text-muted-foreground font-mono truncate">
+              {contact.email}
+            </span>
+          </div>
+        </div>
+
+        <div className="shrink-0">
+          {contact.isRegistered || contact.source === 'registered' ? (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              Registrado
+            </span>
+          ) : contact.source === 'saved' ? (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Guardado
+            </span>
+          ) : contact.interactionCount && contact.interactionCount > 1 ? (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+              Frecuente
+            </span>
+          ) : null}
+        </div>
+      </button>
+    );
+  };
 
   const [draftId, setDraftId] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState('');
@@ -262,7 +325,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
 
   const handleGoogleDriveAttach = () => {
     if (!gapiLoaded || !gisLoaded) {
-      alert('Las APIs de Google se están cargando. Por favor, intenta de nuevo en un momento.');
+      showAlert('Las APIs de Google se están cargando. Por favor, intenta de nuevo en un momento.', { type: 'info' });
       return;
     }
 
@@ -270,7 +333,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     const developerKey = process.env.NEXT_PUBLIC_GOOGLE_DEVELOPER_KEY;
 
     if (!clientId || !developerKey) {
-      alert('La integración con Google Drive no está completamente configurada en el cliente. Asegúrate de configurar NEXT_PUBLIC_GOOGLE_CLIENT_ID y NEXT_PUBLIC_GOOGLE_DEVELOPER_KEY en tus variables de entorno.');
+      showAlert('La integración con Google Drive no está completamente configurada en el cliente. Asegúrate de configurar NEXT_PUBLIC_GOOGLE_CLIENT_ID y NEXT_PUBLIC_GOOGLE_DEVELOPER_KEY en tus variables de entorno.', { type: 'warning' });
       return;
     }
 
@@ -1349,21 +1412,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               </button>
 
               {activeSuggestion?.field === 'to' && matchingContacts.length > 0 && (
-                <div className="absolute left-14 top-full mt-1 w-72 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
-                  {matchingContacts.map((contact, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleSelectContact('to', contact.email);
-                      }}
-                      className="w-full text-left px-3 py-1.5 hover:bg-muted/80 flex flex-col transition-colors cursor-pointer"
-                    >
-                      <span className="text-xs font-medium text-foreground">{contact.name || contact.email}</span>
-                      <span className="text-[11px] text-muted-foreground">{contact.email}</span>
-                    </button>
-                  ))}
+                <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                  {matchingContacts.map((contact, i) => renderContactSuggestion(contact, 'to', i))}
                 </div>
               )}
             </div>
@@ -1387,21 +1437,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     className="text-foreground placeholder:text-muted-foreground"
                   />
                   {activeSuggestion?.field === 'cc' && matchingContacts.length > 0 && (
-                    <div className="absolute left-14 top-full mt-1 w-72 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
-                      {matchingContacts.map((contact, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleSelectContact('cc', contact.email);
-                          }}
-                          className="w-full text-left px-3 py-1.5 hover:bg-muted/80 flex flex-col transition-colors cursor-pointer"
-                        >
-                          <span className="text-xs font-medium text-foreground">{contact.name || contact.email}</span>
-                          <span className="text-[11px] text-muted-foreground">{contact.email}</span>
-                        </button>
-                      ))}
+                    <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                      {matchingContacts.map((contact, i) => renderContactSuggestion(contact, 'cc', i))}
                     </div>
                   )}
                 </div>
@@ -1421,21 +1458,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
                     className="text-foreground placeholder:text-muted-foreground"
                   />
                   {activeSuggestion?.field === 'bcc' && matchingContacts.length > 0 && (
-                    <div className="absolute left-14 top-full mt-1 w-72 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
-                      {matchingContacts.map((contact, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleSelectContact('bcc', contact.email);
-                          }}
-                          className="w-full text-left px-3 py-1.5 hover:bg-muted/80 flex flex-col transition-colors cursor-pointer"
-                        >
-                          <span className="text-xs font-medium text-foreground">{contact.name || contact.email}</span>
-                          <span className="text-[11px] text-muted-foreground">{contact.email}</span>
-                        </button>
-                      ))}
+                    <div className="absolute left-14 top-full mt-1 w-80 max-w-sm bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-fadeIn">
+                      {matchingContacts.map((contact, i) => renderContactSuggestion(contact, 'bcc', i))}
                     </div>
                   )}
                 </div>

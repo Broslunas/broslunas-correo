@@ -6,6 +6,7 @@ import Sidebar from '@/components/sidebar';
 import UserManagement from '@/components/user-management';
 import ComposeModal from '@/components/compose-modal';
 import TwoFactorModal from '@/components/two-factor-modal';
+import { showAlert } from '@/lib/modal';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -77,7 +78,7 @@ export default function AdminPage() {
       } else {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-          alert('Permiso de notificaciones denegado. Habilita las notificaciones en tu navegador.');
+          showAlert('Permiso de notificaciones denegado. Habilita las notificaciones en tu navegador.', { type: 'warning' });
           return;
         }
         const keyRes = await fetch('/api/push/subscribe');
@@ -97,7 +98,7 @@ export default function AdminPage() {
       }
     } catch (err: any) {
       console.error('Error toggling push notifications:', err);
-      alert(`Error al configurar notificaciones: ${err.message || err}`);
+      showAlert(`Error al configurar notificaciones: ${err.message || err}`, { type: 'error' });
     }
   };
 

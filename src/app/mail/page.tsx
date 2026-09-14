@@ -9,6 +9,8 @@ import EmailReader from '@/components/email-reader';
 import ComposeModal from '@/components/compose-modal';
 import TwoFactorModal from '@/components/two-factor-modal';
 import ShortcutsModal from '@/components/shortcuts-modal';
+import ContactsManager from '@/components/contacts-manager';
+import { showAlert } from '@/lib/modal';
 import {
   isInputElement,
   eventToShortcutString,
@@ -85,6 +87,7 @@ function MailContent() {
       case 'spam': return 'spam';
       case 'trash': return 'trash';
       case 'drafts': return 'drafts';
+      case 'contacts': return 'contacts';
       default: return 'inbox';
     }
   };
@@ -257,7 +260,7 @@ function MailContent() {
       } else {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-          alert('Permiso de notificaciones denegado. Habilita las notificaciones en tu navegador.');
+          showAlert('Permiso de notificaciones denegado. Habilita las notificaciones en tu navegador.', { type: 'warning' });
           return;
         }
         const keyRes = await fetch('/api/push/subscribe');
@@ -277,7 +280,7 @@ function MailContent() {
       }
     } catch (err: any) {
       console.error('Error toggling push notifications:', err);
-      alert(`Error al configurar notificaciones: ${err.message || err}`);
+      showAlert(`Error al configurar notificaciones: ${err.message || err}`, { type: 'error' });
     }
   };
 
@@ -337,11 +340,17 @@ function MailContent() {
       case 'spam':  return 'Spam';
       case 'trash': return 'Papelera';
       case 'drafts': return 'Borradores';
+      case 'contacts': return 'Contactos';
       default: return 'Correos';
     }
   };
 
   const fetchEmails = useCallback(async () => {
+    if (currentFolder === 'contacts') {
+      setLoading(false);
+      setSyncing(false);
+      return;
+    }
     const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
     setSyncing(true);
     try {
@@ -399,6 +408,11 @@ function MailContent() {
 
   // Fetch on folder/search/account change with stale-while-revalidate
   useEffect(() => {
+    if (currentFolder === 'contacts') {
+      setLoading(false);
+      setSyncing(false);
+      return;
+    }
     setCurrentPage(1);
     const cacheKey = `emails_cache_${currentFolder}_${searchQuery}_${selectedAccount}`;
     try {
@@ -1023,70 +1037,87 @@ function MailContent() {
           </div>
         )}
 
-        {/* Content: three-column on desktop, adaptive on mobile/tablet */}
-        <div className="flex-1 flex overflow-hidden min-h-0">
-          {/* Email List Panel */}
-          <div
-            className={`
-              h-full flex-col overflow-hidden w-full
-              ${mobileView === 'list' ? 'flex' : 'hidden'}
-              ${selectedEmail ? 'lg:flex lg:w-80 lg:shrink-0' : 'lg:flex lg:flex-1'}
-            `}
-          >
-            <EmailList
-              emails={emails}
-              selectedEmailId={selectedEmail?._id || null}
-              isExpanded={!selectedEmail}
-              onSelectEmail={handleSelectEmail}
-              onUpdateEmailStatus={handleUpdateEmailStatus}
-              folderLabel={getFolderLabel(currentFolder)}
-              searchQuery={searchQuery}
-              onSearchChange={(q) => {
-                setSearchQuery(q);
-                setCurrentPage(1);
-              }}
-              loading={loading}
-              syncing={syncing}
-              onSyncClick={fetchEmails}
-              isPushSupported={isPushSupported}
-              isPushSubscribed={isPushSubscribed}
-              onTogglePush={handleTogglePush}
-              availableAccounts={availableAccounts}
-              selectedAccount={selectedAccount}
-              onAccountChange={(acc) => {
-                setSelectedAccount(acc);
-                setCurrentPage(1);
-              }}
-              hasMore={hasMore}
-              loadingMore={loadingMore}
-              onLoadMore={handleLoadMore}
-              totalCount={totalCount}
-            />
-          </div>
+        {/* Content: Contacts view or email panels */}
+        {currentFolder === 'contacts' ? (
+          <ContactsManager
+            onComposeTo={(email, name) => {
+              setComposeData({
+                to: name ? `"${name}" <${email}>` : email,
+                subject: '',
+                bodyHtml: '',
+              });
+              setComposeOpen(true);
+            }}
+            onSearchEmailsWithContact={(email) => {
+              setSearchQuery(email);
+              router.push(`/mail?inbox=main`);
+            }}
+          />
+        ) : (
+          <div className="flex-1 flex overflow-hidden min-h-0">
+            {/* Email List Panel */}
+            <div
+              className={`
+                h-full flex-col overflow-hidden w-full
+                ${mobileView === 'list' ? 'flex' : 'hidden'}
+                ${selectedEmail ? 'lg:flex lg:w-80 lg:shrink-0' : 'lg:flex lg:flex-1'}
+              `}
+            >
+              <EmailList
+                emails={emails}
+                selectedEmailId={selectedEmail?._id || null}
+                isExpanded={!selectedEmail}
+                onSelectEmail={handleSelectEmail}
+                onUpdateEmailStatus={handleUpdateEmailStatus}
+                folderLabel={getFolderLabel(currentFolder)}
+                searchQuery={searchQuery}
+                onSearchChange={(q) => {
+                  setSearchQuery(q);
+                  setCurrentPage(1);
+                }}
+                loading={loading}
+                syncing={syncing}
+                onSyncClick={fetchEmails}
+                isPushSupported={isPushSupported}
+                isPushSubscribed={isPushSubscribed}
+                onTogglePush={handleTogglePush}
+                availableAccounts={availableAccounts}
+                selectedAccount={selectedAccount}
+                onAccountChange={(acc) => {
+                  setSelectedAccount(acc);
+                  setCurrentPage(1);
+                }}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                onLoadMore={handleLoadMore}
+                totalCount={totalCount}
+              />
+            </div>
 
-          {/* Email Reader Panel */}
-          <main
-            className={`
-              h-full flex-col overflow-hidden flex-1 min-w-0
-              ${mobileView === 'reader' ? 'flex' : 'hidden'}
-              ${selectedEmail ? 'lg:flex' : 'lg:hidden'}
-            `}
-          >
-            <EmailReader
-              email={selectedEmail}
-              userEmail={user?.email}
-              availableAccounts={availableAccounts}
-              onUpdateEmailStatus={handleUpdateEmailStatus}
-              onDeletePermanent={handleDeletePermanent}
-              onReplyClick={handleReplyClick}
-              onReplyAllClick={handleReplyAllClick}
-              onForwardClick={handleForwardClick}
-              onBack={() => {
-                router.push(`/mail?inbox=${folderPart}`);
-              }}
-            />
-          </main>
-        </div>
+            {/* Email Reader Panel */}
+            <main
+              className={`
+                h-full flex-col overflow-hidden flex-1 min-w-0
+                ${mobileView === 'reader' ? 'flex' : 'hidden'}
+                ${selectedEmail ? 'lg:flex' : 'lg:hidden'}
+              `}
+            >
+              <EmailReader
+                email={selectedEmail}
+                userEmail={user?.email}
+                availableAccounts={availableAccounts}
+                onUpdateEmailStatus={handleUpdateEmailStatus}
+                onDeletePermanent={handleDeletePermanent}
+                onReplyClick={handleReplyClick}
+                onReplyAllClick={handleReplyAllClick}
+                onForwardClick={handleForwardClick}
+                onBack={() => {
+                  router.push(`/mail?inbox=${folderPart}`);
+                }}
+              />
+            </main>
+          </div>
+        )}
 
         {/* Bottom nav spacing on mobile (avoid content behind nav bar) */}
         <div className="lg:hidden h-16 shrink-0" />

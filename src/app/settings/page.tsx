@@ -46,6 +46,7 @@ import {
   formatKeyBadge,
   eventToShortcutString
 } from '@/lib/shortcuts';
+import { showAlert } from '@/lib/modal';
 
 interface MailboxSettings {
   email: string;
@@ -482,13 +483,13 @@ function SettingsContent() {
       } else {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-          alert('Permiso de notificaciones denegado. Habilita las notificaciones en tu navegador.');
+          showAlert('Permiso de notificaciones denegado. Habilita las notificaciones en tu navegador.', { type: 'warning' });
           return;
         }
         const keyRes = await fetch('/api/push/subscribe');
         if (!keyRes.ok) throw new Error('No se pudo recuperar la clave pública de notificaciones.');
         const { publicKey } = await keyRes.json();
-        
+
         // Helper to convert base64 VAPID key to Uint8Array
         const urlBase64ToUint8Array = (base64String: string) => {
           const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -515,7 +516,7 @@ function SettingsContent() {
       }
     } catch (err: any) {
       console.error('Error toggling push notifications:', err);
-      alert(`Error al configurar notificaciones: ${err.message || err}`);
+      showAlert(`Error al configurar notificaciones: ${err.message || err}`, { type: 'error' });
     }
   };
 
@@ -784,12 +785,12 @@ function SettingsContent() {
   const handleAddToBlacklist = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBlockedEmail.trim() || !newBlockedEmail.includes('@')) {
-      alert('Por favor introduce un correo electrónico válido');
+      showAlert('Por favor introduce un correo electrónico válido', { type: 'warning' });
       return;
     }
     const cleanMail = newBlockedEmail.trim().toLowerCase();
     if (blacklist.includes(cleanMail)) {
-      alert('Este correo ya está en la lista negra');
+      showAlert('Este correo ya está en la lista negra', { type: 'warning' });
       return;
     }
 
@@ -807,10 +808,10 @@ function SettingsContent() {
         setSuccess(`Remitente ${cleanMail} bloqueado con éxito.`);
       } else {
         const d = await res.json();
-        alert(d.error || 'Error al bloquear');
+        showAlert(d.error || 'Error al bloquear', { type: 'error' });
       }
     } catch {
-      alert('Error al comunicar con el servidor');
+      showAlert('Error al comunicar con el servidor', { type: 'error' });
     }
     setTimeout(() => setSuccess(''), 3000);
   };
@@ -829,7 +830,7 @@ function SettingsContent() {
         setSuccess(`Remitente ${email} desbloqueado.`);
       }
     } catch {
-      alert('Error al comunicar con el servidor');
+      showAlert('Error al comunicar con el servidor', { type: 'error' });
     }
     setTimeout(() => setSuccess(''), 3000);
   };
@@ -856,7 +857,7 @@ function SettingsContent() {
   const handleAddRoutingRule = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRuleValue.trim()) {
-      alert('Por favor introduce un valor clave para el filtro');
+      showAlert('Por favor introduce un valor clave para el filtro', { type: 'warning' });
       return;
     }
     

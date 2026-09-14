@@ -35,6 +35,7 @@ import {
   Ban,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
+import { showAlert } from '@/lib/modal';
 
 interface Attachment {
   filename: string;
@@ -915,10 +916,10 @@ export default function EmailReader({
         onUpdateEmailStatus(allThreadIds, { folder: 'spam' });
       } else {
         const d = await res.json();
-        alert(d.error || 'Error al bloquear remitente');
+        showAlert(d.error || 'Error al bloquear remitente', { type: 'error' });
       }
     } catch {
-      alert('Error de red al bloquear remitente');
+      showAlert('Error de red al bloquear remitente', { type: 'error' });
     } finally {
       setBlockingSender(false);
     }
@@ -939,10 +940,10 @@ export default function EmailReader({
         onUpdateEmailStatus(allThreadIds, { folder: 'inbox' });
       } else {
         const d = await res.json();
-        alert(d.error || 'Error al desbloquear remitente');
+        showAlert(d.error || 'Error al desbloquear remitente', { type: 'error' });
       }
     } catch {
-      alert('Error de red al desbloquear remitente');
+      showAlert('Error de red al desbloquear remitente', { type: 'error' });
     } finally {
       setBlockingSender(false);
     }
