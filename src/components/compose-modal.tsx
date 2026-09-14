@@ -795,8 +795,6 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const saveSelection = () => {
     if (typeof window === 'undefined') return null;
     const sel = window.getSelection();
@@ -1120,6 +1118,8 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   const inputStyle = {
     background: 'transparent',
