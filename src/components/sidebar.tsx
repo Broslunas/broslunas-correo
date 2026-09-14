@@ -205,24 +205,19 @@ export default function Sidebar({
           className={`relative flex items-center transition-all duration-150 cursor-pointer select-none ${
             isCollapsed
               ? 'h-9 w-9 mx-auto justify-center rounded-xl'
-              : 'h-9 w-full px-2.5 justify-start gap-2.5 rounded-xl'
+              : 'h-9 w-full px-3 justify-start gap-2.5 rounded-xl'
           } ${
             isActive
-              ? 'bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary-foreground font-semibold shadow-xs'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium'
+              ? 'bg-blue-500/10 text-blue-600 dark:bg-white/[0.08] dark:text-white font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 font-medium'
           }`}
         >
-          {/* Active indicator bar (expanded mode) */}
-          {isActive && !isCollapsed && (
-            <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary rounded-r-full" />
-          )}
-
           {/* Icon or category dot */}
           <div className="relative flex items-center justify-center shrink-0">
             <Icon
               className={`h-4 w-4 transition-colors ${
                 isActive
-                  ? 'text-primary dark:text-primary-foreground'
+                  ? 'text-blue-600 dark:text-sky-400'
                   : 'text-muted-foreground group-hover:text-foreground'
               }`}
             />
@@ -238,6 +233,11 @@ export default function Sidebar({
             <span className="text-xs truncate tracking-tight flex-1 text-left">
               {folder.label}
             </span>
+          )}
+
+          {/* Active status indicator dot */}
+          {isActive && !isCollapsed && (
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-sky-400 shrink-0" />
           )}
         </button>
 
@@ -323,22 +323,22 @@ export default function Sidebar({
             id="btn-compose-desktop"
             onClick={onComposeClick}
             aria-label="Redactar nuevo correo"
-            className={`group relative flex items-center transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98] shrink-0 bg-primary text-primary-foreground hover:brightness-105 ${
+            className={`group relative flex items-center transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98] shrink-0 bg-blue-600 hover:bg-blue-500 text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white ${
               isCollapsed
                 ? 'h-10 w-10 justify-center rounded-xl'
                 : 'h-10 w-full px-3.5 justify-between rounded-xl'
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <PenSquare className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:rotate-6" />
+              <PenSquare className="h-4 w-4 shrink-0 text-white transition-transform duration-200 group-hover:rotate-6" />
               {!isCollapsed && (
-                <span className="text-xs font-bold tracking-tight truncate animate-fadeIn">
+                <span className="text-xs font-semibold tracking-tight text-white truncate animate-fadeIn">
                   Redactar
                 </span>
               )}
             </div>
             {!isCollapsed && (
-              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono rounded-md bg-primary-foreground/20 text-primary-foreground">
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono rounded bg-white/20 text-white border border-white/10">
                 C
               </kbd>
             )}
@@ -568,7 +568,7 @@ export default function Sidebar({
                 aria-label="Configuración"
                 className={`h-8 w-8 flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
                   currentFolder === 'settings'
-                    ? 'bg-primary/10 text-primary font-bold'
+                    ? 'bg-blue-500/10 text-blue-600 dark:bg-white/[0.08] dark:text-white font-bold'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
@@ -638,7 +638,7 @@ export default function Sidebar({
           }}
           className="flex flex-col items-center gap-1 px-2.5 py-1 transition-transform active:scale-95 cursor-pointer"
         >
-          <div className="h-8 w-8 flex items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <div className="h-8 w-8 flex items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
             <PenSquare className="h-4 w-4" />
           </div>
           <span className="text-[10px] font-bold text-foreground leading-none">
@@ -744,7 +744,7 @@ export default function Sidebar({
                       }}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold ${
                         isActive
-                          ? 'bg-primary/10 text-primary border-primary/30'
+                          ? 'bg-blue-500/10 text-blue-600 dark:bg-white/[0.08] dark:text-white border-blue-500/30 dark:border-white/15'
                           : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted/60'
                       }`}
                     >
@@ -774,7 +774,7 @@ export default function Sidebar({
                       }}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all cursor-pointer text-left text-xs font-semibold ${
                         isActive
-                          ? 'bg-primary/10 text-primary border-primary/30'
+                          ? 'bg-blue-500/10 text-blue-600 dark:bg-white/[0.08] dark:text-white border-blue-500/30 dark:border-white/15'
                           : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted/60'
                       }`}
                     >
@@ -819,7 +819,7 @@ export default function Sidebar({
                 }}
                 className={`w-full flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-semibold transition-colors cursor-pointer ${
                   currentFolder === 'settings'
-                    ? 'bg-primary/10 text-primary border-primary/30'
+                    ? 'bg-blue-500/10 text-blue-600 dark:bg-white/[0.08] dark:text-white border-blue-500/30 dark:border-white/15'
                     : 'bg-background text-foreground hover:bg-muted'
                 }`}
               >
