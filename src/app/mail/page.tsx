@@ -116,10 +116,16 @@ function MailContent() {
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const chordTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const chordBufferRef = useRef<string>('');
+  const [isOffline, setIsOffline] = useState(false);
 
   const pendingSendTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleQueueSend = (payload: any) => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error('Sin conexión a internet. No es posible enviar correos offline.');
+      return;
+    }
+
     if (pendingSendTimerRef.current) {
       clearTimeout(pendingSendTimerRef.current);
       pendingSendTimerRef.current = null;
@@ -376,6 +382,25 @@ function MailContent() {
       setSyncing(false);
     }
   }, [currentFolder, searchQuery, selectedAccount, selectedEmail]);
+
+  useEffect(() => {
+    setIsOffline(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+    const handleOnline = () => {
+      setIsOffline(false);
+      toast.success('Conexión reestablecida. Sincronizando correos...');
+      fetchEmails();
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      toast.warning('Modo sin conexión. Mostrando correos en caché.');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [fetchEmails]);
 
   const hasMore = currentPage < totalPages;
 
@@ -1005,6 +1030,23 @@ function MailContent() {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+
+        {/* Offline indicator banner */}
+        {isOffline && (
+          <div
+            className="shrink-0 flex items-center justify-between px-4 md:px-6 py-2 animate-fadeIn bg-amber-500/10 dark:bg-amber-950/40 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs"
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+              <span>
+                <strong>Modo sin conexión:</strong> Estás desconectado. Mostrando correos y borradores almacenados en caché.
+              </span>
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider bg-amber-500/20 px-2 py-0.5 rounded">
+              Offline
+            </span>
+          </div>
+        )}
 
         {/* 2FA warning banner */}
         {user && !user.twoFactorEnabled && (

@@ -60,7 +60,7 @@
 
 ## ⚙️ 6. Rendimiento, Integración e Infraestructura
 41. **Arquitectura Cloudflare Workers**: Procesamiento ultrarrápido en el Edge para la recepción, enrutamiento y envío ágil de correos.
-42. **Soporte Offline**: Uso de Service Workers para permitir la lectura de correos ya descargados y redacción de borradores sin conexión a internet.
+[x] 42. **Soporte Offline**: Uso de Service Workers para permitir la lectura de correos ya descargados y redacción de borradores sin conexión a internet.
 43. **Búsqueda predictiva y auto-completado de contactos**: Sugerencias inmediatas de correos al empezar a escribir en los campos "Para", "CC" y "CCO".
 44. **API REST / Webhooks**: Integraciones externas para que desarrolladores puedan enviar correos o reaccionar a correos entrantes mediante código.
 45. **Compresión y optimización de adjuntos**: Reducción automática de tamaño en imágenes adjuntas y optimización del almacenamiento en base de datos.

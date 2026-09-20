@@ -708,6 +708,16 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           references: initialData?.references || undefined,
         };
 
+        // Check if offline, store locally to prevent data loss
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          try {
+            localStorage.setItem('broslunas_offline_draft', JSON.stringify({ ...bodyData, savedAt: new Date().toISOString() }));
+            setAutoSaveStatus('saved');
+            setLastSavedTime(`${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} (offline)`);
+          } catch (_) {}
+          return;
+        }
+
         const res = await fetch('/api/drafts', {
           method: draftIdRef.current ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
