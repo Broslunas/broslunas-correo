@@ -76,6 +76,40 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Correo no encontrado' }, { status: 404 });
       }
 
+      // Check self-destruct lifecycle
+      if (email.selfDestruct?.enabled) {
+        const sd = email.selfDestruct;
+        const isExpired = sd.expiresAt && new Date(sd.expiresAt) < new Date();
+        const nextViewCount = (sd.viewCount || 0) + 1;
+        const isOverViews = sd.maxViews && nextViewCount > sd.maxViews;
+
+        if (sd.isBurned || isExpired || isOverViews) {
+          email.body = {
+            text: '[Este mensaje ha sido autodestruido de forma permanente]',
+            html: '<p style="color:#ef4444;font-style:italic;font-weight:bold;">[Este mensaje ha sido autodestruido de forma permanente]</p>',
+          };
+          email.attachments = [];
+          email.selfDestruct.isBurned = true;
+          await db.collection('emails').updateOne(
+            { _id: email._id },
+            {
+              $set: {
+                'body.text': '[Este mensaje ha sido autodestruido de forma permanente]',
+                'body.html': '<p style="color:#ef4444;font-style:italic;font-weight:bold;">[Este mensaje ha sido autodestruido de forma permanente]</p>',
+                attachments: [],
+                'selfDestruct.isBurned': true,
+              },
+            }
+          );
+        } else {
+          await db.collection('emails').updateOne(
+            { _id: email._id },
+            { $inc: { 'selfDestruct.viewCount': 1 } }
+          );
+          email.selfDestruct.viewCount = nextViewCount;
+        }
+      }
+
       // If the email has a threadId, retrieve all messages in the thread
       let threadEmails: any[] = [email];
       if (email.threadId) {

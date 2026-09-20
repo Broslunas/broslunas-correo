@@ -19,7 +19,12 @@ import {
   Folder,
   X,
   Paperclip,
+  Sparkles,
+  PartyPopper,
+  CheckCircle2,
+  SunMedium,
 } from 'lucide-react';
+import { fetchAndCachePlanetAvatar, getDicebearPlanetUrl } from '@/lib/avatar-cache';
 
 interface Email {
   _id: string;
@@ -63,6 +68,22 @@ interface EmailListProps {
 }
 
 function SenderAvatar({ name, address }: { name: string; address: string }) {
+  const seed = (address || name || 'default').trim().toLowerCase();
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchAndCachePlanetAvatar(seed).then((cached) => {
+      if (isMounted && cached) {
+        setAvatarSrc(cached);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [seed]);
+
   const letter = (name || address)[0]?.toUpperCase() ?? '?';
   const colors = [
     ['#2563eb', '#1d4ed8'],
@@ -73,17 +94,37 @@ function SenderAvatar({ name, address }: { name: string; address: string }) {
     ['#ea580c', '#c2410c'],
     ['#4b5563', '#374151'],
   ];
-  const idx = (name || address).charCodeAt(0) % colors.length;
+  const idx = seed.charCodeAt(0) % colors.length;
   const [from, to] = colors[idx];
 
   return (
     <div
-      className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 select-none text-white shadow-xs"
+      className="h-9 w-9 rounded-full shrink-0 select-none shadow-xs overflow-hidden relative border border-border/40"
       style={{
         background: `linear-gradient(135deg, ${from}, ${to})`,
       }}
     >
-      {letter}
+      {!imgError && avatarSrc ? (
+        <img
+          src={avatarSrc}
+          alt={name || address}
+          onError={() => setImgError(true)}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+      ) : !imgError ? (
+        <img
+          src={getDicebearPlanetUrl(seed)}
+          alt={name || address}
+          onError={() => setImgError(true)}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="h-full w-full flex items-center justify-center text-xs font-bold text-white">
+          {letter}
+        </div>
+      )}
     </div>
   );
 }
@@ -509,13 +550,67 @@ export default function EmailList({
             <span className="text-xs text-muted-foreground">Cargando correspondencia...</span>
           </div>
         ) : emails.length === 0 ? (
-          <div className={`flex flex-col items-center justify-center gap-2 text-center px-6 ${isExpanded ? 'h-96 py-20' : 'h-48'}`}>
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-1 text-primary">
-              <Mail className="h-6 w-6" />
+          searchQuery ? (
+            <div className={`flex flex-col items-center justify-center gap-2 text-center px-6 ${isExpanded ? 'h-96 py-20' : 'h-48'}`}>
+              <div className="h-12 w-12 rounded-2xl bg-muted border border-border flex items-center justify-center mb-1 text-muted-foreground">
+                <Search className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">Sin resultados</p>
+              <p className="text-xs text-muted-foreground">No encontramos correos que coincidan con &quot;{searchQuery}&quot;.</p>
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="mt-2 px-3 py-1.5 rounded-xl bg-muted hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors cursor-pointer"
+              >
+                Limpiar búsqueda
+              </button>
             </div>
-            <p className="text-sm font-semibold text-foreground">Bandeja vacía</p>
-            <p className="text-xs text-muted-foreground">No se encontraron correos aquí.</p>
-          </div>
+          ) : (
+            /* Feature 19: Inbox Zero Celebrations */
+            <div className={`flex flex-col items-center justify-center text-center px-6 animate-fadeIn ${isExpanded ? 'h-[450px] py-16' : 'h-72 py-6'}`}>
+              <div className="relative mb-3">
+                <div className="h-16 w-16 rounded-3xl bg-gradient-to-tr from-primary/20 via-primary/10 to-amber-500/20 border border-primary/30 flex items-center justify-center text-primary shadow-lg animate-bounce">
+                  <PartyPopper className="h-8 w-8 text-primary" />
+                </div>
+                <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-amber-500 animate-pulse" />
+                <SunMedium className="absolute -bottom-1 -left-1 h-5 w-5 text-amber-500/80 animate-spin" style={{ animationDuration: '8s' }} />
+              </div>
+
+              <h3 className="text-base font-extrabold text-foreground tracking-tight flex items-center gap-1.5 justify-center">
+                <span>¡Estás al día!</span>
+                <span className="text-primary font-black">Inbox Zero</span>
+              </h3>
+
+              <p className="text-xs text-muted-foreground max-w-xs mt-1 leading-relaxed">
+                Has procesado toda tu correspondencia en {folderLabel}. Disfruta de la tranquilidad o aprovecha los accesos rápidos:
+              </p>
+
+              {/* Quick action shortcuts */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={onSyncClick}
+                  disabled={syncing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card hover:bg-muted border border-border text-foreground text-xs font-medium transition-all shadow-2xs cursor-pointer"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin text-primary' : 'text-muted-foreground'}`} />
+                  <span>Sincronizar</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('email-search');
+                    el?.focus();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card hover:bg-muted border border-border text-foreground text-xs font-medium transition-all shadow-2xs cursor-pointer"
+                >
+                  <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Buscar correo</span>
+                </button>
+              </div>
+            </div>
+          )
         ) : (
           <div className="divide-y divide-border/60">
             {emails.map((email, i) => {
