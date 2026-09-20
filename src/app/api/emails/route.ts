@@ -84,23 +84,23 @@ export async function GET(request: NextRequest) {
         const isOverViews = sd.maxViews && nextViewCount > sd.maxViews;
 
         if (sd.isBurned || isExpired || isOverViews) {
+          // Never delete or overwrite the email data in MongoDB! Only update status flags
+          await db.collection('emails').updateOne(
+            { _id: email._id },
+            {
+              $set: {
+                'selfDestruct.isBurned': true,
+                'selfDestruct.burnedAt': new Date(),
+              },
+            }
+          );
+          // Mask the output in the response so it is inaccessible to the client
           email.body = {
             text: '[Este mensaje ha sido autodestruido de forma permanente]',
             html: '<p style="color:#ef4444;font-style:italic;font-weight:bold;">[Este mensaje ha sido autodestruido de forma permanente]</p>',
           };
           email.attachments = [];
           email.selfDestruct.isBurned = true;
-          await db.collection('emails').updateOne(
-            { _id: email._id },
-            {
-              $set: {
-                'body.text': '[Este mensaje ha sido autodestruido de forma permanente]',
-                'body.html': '<p style="color:#ef4444;font-style:italic;font-weight:bold;">[Este mensaje ha sido autodestruido de forma permanente]</p>',
-                attachments: [],
-                'selfDestruct.isBurned': true,
-              },
-            }
-          );
         } else {
           await db.collection('emails').updateOne(
             { _id: email._id },

@@ -27,15 +27,13 @@ export async function GET(request: NextRequest) {
     const isExpired = record.expiresAt && new Date(record.expiresAt) < new Date();
     if (isExpired) {
       if (!record.isBurned) {
+        // Never delete or wipe data in MongoDB; only mark status flags
         await db.collection('self_destruct_emails').updateOne(
           { _id: record._id },
           {
             $set: {
               isBurned: true,
               burnedAt: new Date(),
-              bodyText: '',
-              bodyHtml: '',
-              attachments: [],
             },
           }
         );
@@ -80,6 +78,7 @@ export async function GET(request: NextRequest) {
     const isOverViews = typeof record.maxViews === 'number' && nextViewCount >= record.maxViews;
 
     if (isOverViews) {
+      // Never delete or wipe data in MongoDB; only mark status flags
       await db.collection('self_destruct_emails').updateOne(
         { _id: record._id },
         {
@@ -87,9 +86,6 @@ export async function GET(request: NextRequest) {
             viewCount: nextViewCount,
             isBurned: true,
             burnedAt: new Date(),
-            bodyText: '',
-            bodyHtml: '',
-            attachments: [],
           },
         }
       );
