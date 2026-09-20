@@ -8,6 +8,7 @@ import {
   CheckCircle,
   ShieldAlert
 } from 'lucide-react';
+import { showConfirm } from '@/lib/modal';
 
 interface TwoFactorModalProps {
   isOpen: boolean;
@@ -154,7 +155,15 @@ export default function TwoFactorModal({ isOpen, onClose, onStatusChange }: TwoF
 
   // Handle Disable 2FA
   const handleDisable2FA = async () => {
-    if (!confirm('¿Estás seguro de que deseas desactivar la verificación en dos pasos (2FA)? Tu cuenta será menos segura.')) {
+    const confirmed = await showConfirm(
+      '¿Estás seguro de que deseas desactivar la verificación en dos pasos (2FA)? Tu cuenta será menos segura.',
+      {
+        title: 'Desactivar 2FA',
+        confirmText: 'Desactivar',
+        destructive: true,
+      }
+    );
+    if (!confirmed) {
       return;
     }
 

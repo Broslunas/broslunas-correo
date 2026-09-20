@@ -10,7 +10,7 @@ import ComposeModal from '@/components/compose-modal';
 import TwoFactorModal from '@/components/two-factor-modal';
 import ShortcutsModal from '@/components/shortcuts-modal';
 import ContactsManager from '@/components/contacts-manager';
-import { showAlert } from '@/lib/modal';
+import { showAlert, showConfirm } from '@/lib/modal';
 import {
   isInputElement,
   eventToShortcutString,
@@ -618,7 +618,15 @@ function MailContent() {
   };
 
   const handleDeletePermanent = async (ids: string[]) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar permanentemente estos correos? Esta acción no se puede deshacer.')) return;
+    const confirmed = await showConfirm(
+      '¿Estás seguro de que quieres eliminar permanentemente estos correos? Esta acción no se puede deshacer.',
+      {
+        title: 'Eliminar correos permanentemente',
+        confirmText: 'Eliminar',
+        destructive: true,
+      }
+    );
+    if (!confirmed) return;
     try {
       const res = await fetch('/api/emails', {
         method: 'DELETE',

@@ -28,6 +28,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { showConfirm } from '@/lib/modal';
 
 export interface Contact {
   _id?: string;
@@ -211,7 +212,12 @@ export default function ContactsManager({
 
   const handleDeleteContact = async (contact: Contact, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (!confirm(`¿Eliminar a "${contact.name || contact.email}" de tus contactos guardados?`)) return;
+    const confirmed = await showConfirm(`¿Eliminar a "${contact.name || contact.email}" de tus contactos guardados?`, {
+      title: 'Eliminar contacto',
+      confirmText: 'Eliminar',
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     try {
       const url = contact._id

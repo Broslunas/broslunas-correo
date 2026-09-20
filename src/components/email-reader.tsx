@@ -1018,7 +1018,15 @@ export default function EmailReader({
   const handleBlockSender = async () => {
     if (!email || !email.from?.address) return;
     const sender = email.from.address.toLowerCase().trim();
-    if (!confirm(`¿Bloquear al remitente "${sender}"?\n\nLos futuros correos de este remitente se clasificarán automáticamente en Spam y este hilo se moverá a Spam ahora.`)) {
+    const confirmed = await showConfirm(
+      `¿Bloquear al remitente "${sender}"?\n\nLos futuros correos de este remitente se clasificarán automáticamente en Spam y este hilo se moverá a Spam ahora.`,
+      {
+        title: 'Bloquear remitente',
+        confirmText: 'Bloquear y mover a Spam',
+        destructive: true,
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
