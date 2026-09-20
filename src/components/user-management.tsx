@@ -23,7 +23,7 @@ import {
   FolderOpen
 } from 'lucide-react';
 import AdminDrive from './admin-drive';
-import { showAlert } from '@/lib/modal';
+import { showAlert, showConfirm } from '@/lib/modal';
 
 interface AllowedUser {
   _id: string;
@@ -199,7 +199,15 @@ export default function UserManagement() {
 
   // Handle Delete Domain
   const handleDeleteDomain = async (domainName: string) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar el dominio "${domainName}"? Esto podría impedir que se asignen cuentas de este dominio o bloquear correos entrantes/salientes.`)) {
+    const confirmed = await showConfirm(
+      `¿Estás seguro de que quieres eliminar el dominio "${domainName}"? Esto podría impedir que se asignen cuentas de este dominio o bloquear correos entrantes/salientes.`,
+      {
+        title: 'Eliminar dominio',
+        confirmText: 'Eliminar',
+        destructive: true,
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -340,7 +348,15 @@ export default function UserManagement() {
 
   // Handle Delete Mailbox
   const handleDeleteMailbox = async (email: string) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar la cuenta de correo "${email}"? Los usuarios ya no podrán enviar mensajes desde esta dirección.`)) {
+    const confirmed = await showConfirm(
+      `¿Estás seguro de que quieres eliminar la cuenta de correo "${email}"? Los usuarios ya no podrán enviar mensajes desde esta dirección.`,
+      {
+        title: 'Eliminar cuenta',
+        confirmText: 'Eliminar',
+        destructive: true,
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -444,7 +460,12 @@ export default function UserManagement() {
   };
 
   const handleDeleteInvitation = async (id: string) => {
-    if (!confirm('¿Estás seguro de que quieres revocar este enlace de invitación?')) return;
+    const confirmed = await showConfirm('¿Estás seguro de que quieres revocar este enlace de invitación?', {
+      title: 'Revocar invitación',
+      confirmText: 'Revocar',
+      destructive: true,
+    });
+    if (!confirmed) return;
     setError('');
     setSuccess('');
     setActionLoading(true);
@@ -528,7 +549,15 @@ export default function UserManagement() {
 
   // Handle Revoke Access (Delete)
   const handleRevokeAccess = async (email: string) => {
-    if (!confirm(`¿Estás seguro de que quieres revocar el acceso a ${email}? Se cerrará su sesión de inmediato.`)) {
+    const confirmed = await showConfirm(
+      `¿Estás seguro de que quieres revocar el acceso a ${email}? Se cerrará su sesión de inmediato.`,
+      {
+        title: 'Revocar acceso',
+        confirmText: 'Revocar acceso',
+        destructive: true,
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -581,7 +610,15 @@ export default function UserManagement() {
       : folder === 'spam'
       ? 'todo el correo no deseado (spam)'
       : `la carpeta ${folder}`;
-    if (!confirm(`¿Estás seguro de que deseas purgar ${label}? Esta acción eliminará permanentemente correos y sus adjuntos de Cloudflare R2.`)) {
+    const confirmed = await showConfirm(
+      `¿Estás seguro de que deseas purgar ${label}? Esta acción eliminará permanentemente correos y sus adjuntos de Cloudflare R2.`,
+      {
+        title: 'Purgar correos',
+        confirmText: 'Purgar',
+        destructive: true,
+      }
+    );
+    if (!confirmed) {
       return;
     }
     setPurgeLoading(true);
