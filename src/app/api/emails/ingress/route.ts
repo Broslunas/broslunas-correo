@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
     // 2. Parse request body
     const body = await request.json().catch(() => ({}));
-    const { from, to, cc, bcc, subject, date, bodyText, bodyHtml, attachments, messageId, inReplyTo, references, authStatus } = body;
+    const { from, to, cc, bcc, subject, date, bodyText, bodyHtml, attachments, messageId, inReplyTo, references, authStatus, listUnsubscribe } = body;
 
     // Validate minimum required fields
     if (!from || !from.address) {
@@ -192,6 +192,31 @@ export async function POST(request: Request) {
         dkim: 'pass',
         dmarc: 'pass',
       },
+      unsubscribeInfo: (() => {
+        let url: string | undefined = typeof listUnsubscribe === 'string' ? listUnsubscribe : undefined;
+        let mailto: string | undefined;
+
+        if (url) {
+          const mailtoMatch = url.match(/<mailto:([^>]+)>/i);
+          const httpMatch = url.match(/<(https?:[^>]+)>/i);
+          if (httpMatch) url = httpMatch[1];
+          if (mailtoMatch) mailto = mailtoMatch[1];
+        }
+
+        if (!url && bodyHtml) {
+          const linkMatch = (bodyHtml as string).match(/<a[^>]+href=["'](https?:\/\/[^"']*(?:unsubscribe|desuscribir|opt-out|dar-de-baja)[^"']*)["'][^>]*>/i);
+          if (linkMatch) url = linkMatch[1];
+        }
+
+        if (url || mailto) {
+          return {
+            hasUnsubscribe: true,
+            url: url?.startsWith('http') ? url : undefined,
+            mailto,
+          };
+        }
+        return undefined;
+      })(),
       createdAt: new Date(),
     };
 

@@ -36,9 +36,16 @@ import {
   Trash2,
   UserCheck,
   Star,
+  CheckCheck,
+  Flame,
+  FileCode2,
+  Timer,
 } from 'lucide-react';
-import { showAlert } from '@/lib/modal';
+import { showAlert, showConfirm } from '@/lib/modal';
 import type { CannedTemplate } from '@/lib/templates';
+import { analyzeGrammarAndStyle } from '@/lib/grammar-style';
+import { markdownToHtml, htmlToMarkdown } from '@/lib/markdown';
+import type { GrammarStyleIssue } from '@/lib/types/email-features';
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -283,6 +290,27 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
   }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Markdown states
+  const [isMarkdownMode, setIsMarkdownMode] = useState(false);
+  const [markdownText, setMarkdownText] = useState('');
+  const [markdownTab, setMarkdownTab] = useState<'write' | 'preview'>('write');
+
+  // Grammar & Style states
+  const [showStylePanel, setShowStylePanel] = useState(false);
+  const [styleIssues, setStyleIssues] = useState<GrammarStyleIssue[]>([]);
+
+  // Self-destruct states
+  const [showSelfDestructModal, setShowSelfDestructModal] = useState(false);
+  const [selfDestructConfig, setSelfDestructConfig] = useState<{
+    enabled: boolean;
+    expiresInHours: number | null;
+    maxViews: number | null;
+  }>({
+    enabled: false,
+    expiresInHours: null,
+    maxViews: null,
+  });
 
   // Google Drive states & scripts loader
   const [gapiLoaded, setGapiLoaded] = useState(false);
@@ -1067,6 +1095,41 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
     reader.readAsText(file);
   };
 
+  const handleToggleMarkdown = () => {
+    if (!isMarkdownMode) {
+      const currentHtml = editorRef.current?.innerHTML || '';
+      setMarkdownText(htmlToMarkdown(currentHtml));
+      setIsMarkdownMode(true);
+    } else {
+      const generatedHtml = markdownToHtml(markdownText);
+      setIsMarkdownMode(false);
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.innerHTML = generatedHtml;
+          setEditorContent(generatedHtml);
+        }
+      }, 50);
+    }
+  };
+
+  const handleRunStyleCheck = () => {
+    const text = isMarkdownMode ? markdownText : (editorRef.current?.innerText || '');
+    const issues = analyzeGrammarAndStyle(text);
+    setStyleIssues(issues);
+    setShowStylePanel(true);
+  };
+
+  const handleApplyStyleFix = (issue: GrammarStyleIssue) => {
+    if (isMarkdownMode) {
+      setMarkdownText(prev => prev.replace(issue.text, issue.replacement));
+    } else if (editorRef.current) {
+      const current = editorRef.current.innerHTML;
+      editorRef.current.innerHTML = current.replace(issue.text, issue.replacement);
+      setEditorContent(editorRef.current.innerHTML);
+    }
+    setStyleIssues(prev => prev.filter(i => i.id !== issue.id));
+  };
+
   const handlePopOut = () => {
     const composeState = {
       to,
@@ -1105,21 +1168,46 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       return;
     }
 
-    const htmlContent = editorRef.current?.innerHTML || '';
-    const textContent = editorRef.current?.innerText || '';
+    // Feature 3: Forgotten attachments detection
+    const rawEditorText = editorRef.current?.innerText || '';
+    const textToScan = `${subject} ${isMarkdownMode ? markdownText : rawEditorText}`;
+    const attachmentKeywordsRegex = /\b(adjunt[oa]s?|adjunté|adjuntamos|anex[oa]s?|archivo\s+adjunto|fichero\s+adjunto|attach(ed|ing|ment)?|enclosed)\b/i;
+    if (attachments.length === 0 && attachmentKeywordsRegex.test(textToScan)) {
+      const confirmed = await showConfirm(
+        'Parece que mencionaste un archivo adjunto, pero no has añadido ninguno. ¿Deseas enviar el correo de todos modos?',
+        {
+          title: '¿Adjunto olvidado?',
+          confirmText: 'Enviar sin adjunto',
+          cancelText: 'Revisar correo',
+          type: 'warning',
+        }
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    const htmlContent = isMarkdownMode
+      ? markdownToHtml(markdownText)
+      : (editorRef.current?.innerHTML || '');
+    const textContent = isMarkdownMode
+      ? markdownText
+      : rawEditorText;
     const toArray = to.split(',').map(email => email.trim()).filter(Boolean);
     const ccArray = cc ? cc.split(',').map(email => email.trim()).filter(Boolean) : [];
     const bccArray = bcc ? bcc.split(',').map(email => email.trim()).filter(Boolean) : [];
 
     // Package the HTML with classic container styles so it looks correct on any client
     let finalHtml = htmlContent;
-    if (editorRef.current) {
+    if (editorRef.current && !isMarkdownMode) {
       const bg = editorRef.current.style.backgroundColor || '#ffffff';
       const fg = editorRef.current.style.color || '#1e293b';
       const font = editorRef.current.style.fontFamily || 'Arial, sans-serif';
       const cleanFg = fg === 'hsl(210 40% 88%)' || fg === 'rgb(212, 218, 232)' ? '#1e293b' : fg;
-      
+
       finalHtml = `<div style="background-color: ${bg}; color: ${cleanFg}; font-family: ${font}; padding: 24px; min-height: 100%; line-height: 1.6; font-size: 14px;">${htmlContent}</div>`;
+    } else if (isMarkdownMode) {
+      finalHtml = `<div style="background-color: #ffffff; color: #1e293b; font-family: Arial, sans-serif; padding: 24px; min-height: 100%; line-height: 1.6; font-size: 14px;">${htmlContent}</div>`;
     }
 
     const activeAttachments = attachments
@@ -1130,6 +1218,14 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
         size: att.size,
         r2Url: att.key
       }));
+
+    const selfDestructPayload = selfDestructConfig.enabled ? {
+      enabled: true,
+      expiresAt: selfDestructConfig.expiresInHours
+        ? new Date(Date.now() + selfDestructConfig.expiresInHours * 60 * 60 * 1000).toISOString()
+        : null,
+      maxViews: selfDestructConfig.maxViews,
+    } : undefined;
 
     const payload = {
       from,
@@ -1145,6 +1241,7 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
       draftId: draftId || undefined,
       inReplyTo: initialData?.inReplyTo || undefined,
       references: initialData?.references || undefined,
+      selfDestruct: selfDestructPayload,
     };
 
     if (onQueueSend) {
@@ -1911,6 +2008,60 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               >
                 <Trash className="h-3.5 w-3.5" />
               </button>
+
+              <div className="h-4 w-px bg-border mx-1 shrink-0" />
+
+              {/* Feature 6: Markdown Toggle */}
+              <button
+                type="button"
+                title={isMarkdownMode ? 'Cambiar a editor visual (WYSIWYG)' : 'Cambiar a modo Markdown'}
+                onClick={handleToggleMarkdown}
+                className={`h-7 px-2 flex items-center gap-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  isMarkdownMode
+                    ? 'bg-primary text-primary-foreground shadow-xs'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                <FileCode2 className="h-3.5 w-3.5" />
+                <span className="text-[10px]">{isMarkdownMode ? 'Markdown' : 'WYSIWYG'}</span>
+              </button>
+
+              {/* Feature 5: Grammar & Style Assistant */}
+              <button
+                type="button"
+                title="Revisar ortografía y estilo"
+                onClick={handleRunStyleCheck}
+                className={`h-7 px-2 flex items-center gap-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  showStylePanel
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                <CheckCheck className="h-3.5 w-3.5" />
+                <span className="text-[10px]">Estilo</span>
+                {styleIssues.length > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[9px] font-bold">
+                    {styleIssues.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Feature 32: Self-destruct button */}
+              <button
+                type="button"
+                title="Configurar correo autodestructible"
+                onClick={() => setShowSelfDestructModal(true)}
+                className={`h-7 px-2 flex items-center gap-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  selfDestructConfig.enabled
+                    ? 'bg-destructive/10 text-destructive border border-destructive/20 font-bold'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                <Flame className={`h-3.5 w-3.5 ${selfDestructConfig.enabled ? 'animate-pulse text-destructive' : ''}`} />
+                <span className="text-[10px]">
+                  {selfDestructConfig.enabled ? 'Autodestrucción' : 'Autodestruir'}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -1999,18 +2150,145 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
             </div>
           )}
 
-          {/* Editor body */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 min-h-0 bg-card">
-            <div
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={() => setEditorContent(editorRef.current?.innerHTML || '')}
-              onBlur={() => setEditorContent(editorRef.current?.innerHTML || '')}
-              className="editor-content w-full min-h-[180px] leading-relaxed text-sm text-foreground outline-none"
-              data-placeholder="Comienza a escribir tu mensaje aquí..."
-            />
-          </div>
+          {/* Feature 5: Style & Grammar Assistant Panel */}
+          {showStylePanel && (
+            <div className="shrink-0 px-5 py-3 border-b border-border bg-muted/40 space-y-2.5 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCheck className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-bold text-foreground">
+                    Corrector de Ortografía y Estilo
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    ({styleIssues.length} {styleIssues.length === 1 ? 'sugerencia' : 'sugerencias'})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRunStyleCheck}
+                    className="text-[10px] font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    Reanalizar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowStylePanel(false)}
+                    className="text-muted-foreground hover:text-foreground text-[10px] cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+
+              {styleIssues.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-1">
+                  ¡Excelente! No se detectaron errores ortográficos, redundancias ni frases excesivamente largas.
+                </p>
+              ) : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {styleIssues.map((issue) => (
+                    <div
+                      key={issue.id}
+                      className="flex items-center justify-between p-2 rounded-xl bg-card border border-border text-xs gap-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                            issue.type === 'spelling' ? 'bg-destructive/10 text-destructive' :
+                            issue.type === 'duplicate' ? 'bg-amber-500/10 text-amber-600' :
+                            'bg-primary/10 text-primary'
+                          }`}>
+                            {issue.type === 'spelling' ? 'Ortografía' : issue.type === 'duplicate' ? 'Repetición' : 'Estilo'}
+                          </span>
+                          <span className="font-semibold text-foreground truncate">&quot;{issue.text}&quot;</span>
+                          {issue.replacement && (
+                            <span className="text-muted-foreground text-[11px]">→ &quot;{issue.replacement}&quot;</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{issue.message}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {issue.replacement && (
+                          <button
+                            type="button"
+                            onClick={() => handleApplyStyleFix(issue)}
+                            className="px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[10px] font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                          >
+                            Corregir
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setStyleIssues(prev => prev.filter(i => i.id !== issue.id))}
+                          className="p-1 rounded-lg text-muted-foreground hover:bg-muted text-[10px] cursor-pointer"
+                          title="Ignorar"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Feature 6: Editor body (WYSIWYG or Markdown) */}
+          {isMarkdownMode ? (
+            <div className="flex-1 flex flex-col px-5 py-3 min-h-0 bg-card">
+              <div className="flex items-center gap-2 mb-2 border-b border-border pb-2">
+                <button
+                  type="button"
+                  onClick={() => setMarkdownTab('write')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                    markdownTab === 'write'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  Escribir Markdown
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMarkdownTab('preview')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                    markdownTab === 'preview'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  Vista previa HTML
+                </button>
+              </div>
+
+              {markdownTab === 'write' ? (
+                <textarea
+                  value={markdownText}
+                  onChange={(e) => setMarkdownText(e.target.value)}
+                  placeholder="# Escribe tu correo en Markdown...&#10;&#10;Puedes usar **negrita**, *cursiva*, [enlaces](https://...), listas y bloques de código."
+                  className="w-full flex-1 min-h-[180px] p-3 font-mono text-xs bg-muted/20 rounded-xl border border-border text-foreground outline-none resize-none focus:ring-1 focus:ring-primary"
+                />
+              ) : (
+                <div
+                  className="w-full flex-1 min-h-[180px] p-4 bg-muted/10 rounded-xl border border-border overflow-y-auto prose prose-sm dark:prose-invert max-w-none text-xs"
+                  dangerouslySetInnerHTML={{ __html: markdownToHtml(markdownText) || '<p class="text-muted-foreground italic">Nada que previsualizar.</p>' }}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto px-5 py-4 min-h-0 bg-card">
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={() => setEditorContent(editorRef.current?.innerHTML || '')}
+                onBlur={() => setEditorContent(editorRef.current?.innerHTML || '')}
+                className="editor-content w-full min-h-[180px] leading-relaxed text-sm text-foreground outline-none"
+                data-placeholder="Comienza a escribir tu mensaje aquí..."
+              />
+            </div>
+          )}
 
           {/* Attachments Section */}
           {attachments.length > 0 && (
@@ -2322,18 +2600,18 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
           </div>
         )}
 
-        {/* Save Custom Template Modal */}
-        {showSaveTemplateModal && (
+        {/* Feature 32: Self-Destruct Configuration Modal */}
+        {showSelfDestructModal && (
           <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
             <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl animate-fadeInUp text-foreground space-y-4">
               <div className="flex justify-between items-center pb-2 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <Bookmark className="h-4 w-4 text-primary" />
-                  <h4 className="text-sm font-semibold text-foreground">Guardar como Plantilla</h4>
+                <div className="flex items-center gap-2 text-destructive">
+                  <Flame className="h-4 w-4" />
+                  <h4 className="text-sm font-semibold text-foreground">Correo Autodestructible</h4>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowSaveTemplateModal(false)}
+                  onClick={() => setShowSelfDestructModal(false)}
                   className="text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <X className="h-4 w-4" />
@@ -2341,38 +2619,72 @@ export default function ComposeModal({ isOpen, onClose, initialData, assignedAdd
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Guarda el contenido y asunto actuales como plantilla personalizada reutilizable.
+                El contenido y los archivos adjuntos se eliminarán permanentemente una vez alcanzada la fecha de expiración o el número máximo de lecturas.
               </p>
 
-              <div>
-                <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                  Nombre de la plantilla
-                </label>
+              {/* Enable toggle */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border border-border cursor-pointer">
+                <span className="text-xs font-semibold text-foreground">Activar autodestrucción</span>
                 <input
-                  type="text"
-                  value={newTemplateTitle}
-                  onChange={(e) => setNewTemplateTitle(e.target.value)}
-                  placeholder="Ej: Agradecimiento reunión, Presupuesto base..."
-                  className="w-full rounded-xl px-3 py-2 text-xs bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  autoFocus
+                  type="checkbox"
+                  checked={selfDestructConfig.enabled}
+                  onChange={(e) => setSelfDestructConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="h-4 w-4 rounded accent-primary cursor-pointer"
                 />
-              </div>
+              </label>
+
+              {selfDestructConfig.enabled && (
+                <div className="space-y-3 pt-1">
+                  {/* Expiration time */}
+                  <div>
+                    <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                      Expiración por tiempo:
+                    </label>
+                    <select
+                      value={selfDestructConfig.expiresInHours || ''}
+                      onChange={(e) => setSelfDestructConfig(prev => ({
+                        ...prev,
+                        expiresInHours: e.target.value ? Number(e.target.value) : null
+                      }))}
+                      className="w-full rounded-xl px-3 py-2 text-xs bg-background border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">Sin límite de tiempo</option>
+                      <option value="1">1 hora</option>
+                      <option value="24">24 horas (1 día)</option>
+                      <option value="72">3 días</option>
+                      <option value="168">7 días</option>
+                    </select>
+                  </div>
+
+                  {/* Expiration views */}
+                  <div>
+                    <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                      Destruir tras visualizaciones:
+                    </label>
+                    <select
+                      value={selfDestructConfig.maxViews || ''}
+                      onChange={(e) => setSelfDestructConfig(prev => ({
+                        ...prev,
+                        maxViews: e.target.value ? Number(e.target.value) : null
+                      }))}
+                      className="w-full rounded-xl px-3 py-2 text-xs bg-background border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">Sin límite de aperturas</option>
+                      <option value="1">1 sola lectura (desaparece al cerrar)</option>
+                      <option value="3">3 aperturas</option>
+                      <option value="5">5 aperturas</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
                 <button
                   type="button"
-                  onClick={() => setShowSaveTemplateModal(false)}
-                  className="px-3.5 py-1.5 rounded-xl text-xs border border-border text-muted-foreground hover:text-foreground cursor-pointer"
+                  onClick={() => setShowSelfDestructModal(false)}
+                  className="px-4 py-1.5 rounded-xl text-xs bg-primary text-primary-foreground font-semibold hover:opacity-95 cursor-pointer shadow-xs"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  disabled={!newTemplateTitle.trim() || savingTemplate}
-                  onClick={handleSaveCustomTemplate}
-                  className="px-4 py-1.5 rounded-xl text-xs bg-primary text-primary-foreground font-semibold hover:opacity-95 disabled:opacity-50 cursor-pointer shadow-xs"
-                >
-                  {savingTemplate ? 'Guardando...' : 'Guardar plantilla'}
+                  Confirmar configuración
                 </button>
               </div>
             </div>

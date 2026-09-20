@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json().catch(() => ({}));
-    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, saveMailbox, attachments, draftId, inReplyTo, references } = body;
+    const { from, to, cc, bcc, subject, bodyHtml, bodyText, fromName: customFromName, saveMailbox, attachments, draftId, inReplyTo, references, selfDestruct } = body;
 
     // Validate inputs
     if (!from || typeof from !== 'string' || !from.includes('@')) {
@@ -385,6 +385,15 @@ export async function POST(request: NextRequest) {
       isRead: true,
       threadId,
       messageId: String(mailjetMessageId),
+      ...(selfDestruct?.enabled ? {
+        selfDestruct: {
+          enabled: true,
+          expiresAt: selfDestruct.expiresAt ? new Date(selfDestruct.expiresAt) : null,
+          maxViews: typeof selfDestruct.maxViews === 'number' ? selfDestruct.maxViews : null,
+          viewCount: 0,
+          isBurned: false,
+        }
+      } : {}),
       ...(inReplyTo ? { inReplyTo } : {}),
       ...(references ? { references } : {}),
     };

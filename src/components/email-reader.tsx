@@ -33,9 +33,18 @@ import {
   Printer,
   FileDown,
   Ban,
+  Share2,
+  Copy,
+  Lock,
+  Flame,
+  Timer,
+  Check,
+  BellOff,
+  X,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
-import { showAlert } from '@/lib/modal';
+import { showAlert, showConfirm } from '@/lib/modal';
+import { fetchAndCachePlanetAvatar, getDicebearPlanetUrl } from '@/lib/avatar-cache';
 
 interface Attachment {
   filename: string;
@@ -64,6 +73,19 @@ interface Email {
   messageId?: string;
   inReplyTo?: string;
   references?: string;
+  unsubscribeInfo?: {
+    hasUnsubscribe: boolean;
+    type?: 'mailto' | 'http' | 'one-click';
+    url?: string;
+    mailto?: string;
+  };
+  selfDestruct?: {
+    enabled: boolean;
+    expiresAt?: string | null;
+    maxViews?: number | null;
+    viewCount?: number;
+    isBurned?: boolean;
+  };
   authStatus?: {
     spf?: 'pass' | 'fail' | 'neutral' | 'softfail' | string;
     dkim?: 'pass' | 'fail' | 'neutral' | string;
@@ -289,6 +311,22 @@ function EmailIframe({ srcdoc }: { srcdoc: string }) {
 }
 
 function SenderAvatar({ name, address }: { name: string; address: string }) {
+  const seed = (address || name || 'default').trim().toLowerCase();
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchAndCachePlanetAvatar(seed).then((cached) => {
+      if (isMounted && cached) {
+        setAvatarSrc(cached);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [seed]);
+
   const letter = (name || address)[0]?.toUpperCase() ?? '?';
   const colors = [
     ['#2563eb', '#1d4ed8'],
@@ -299,16 +337,37 @@ function SenderAvatar({ name, address }: { name: string; address: string }) {
     ['#ea580c', '#c2410c'],
     ['#4b5563', '#374151'],
   ];
-  const idx = (name || address).charCodeAt(0) % colors.length;
+  const idx = seed.charCodeAt(0) % colors.length;
   const [from, to] = colors[idx];
+
   return (
     <div
-      className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 select-none text-white shadow-xs"
+      className="h-9 w-9 rounded-full shrink-0 select-none shadow-xs overflow-hidden relative border border-border/40"
       style={{
         background: `linear-gradient(135deg, ${from}, ${to})`,
       }}
     >
-      {letter}
+      {!imgError && avatarSrc ? (
+        <img
+          src={avatarSrc}
+          alt={name || address}
+          onError={() => setImgError(true)}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+      ) : !imgError ? (
+        <img
+          src={getDicebearPlanetUrl(seed)}
+          alt={name || address}
+          onError={() => setImgError(true)}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="h-full w-full flex items-center justify-center text-xs font-bold text-white">
+          {letter}
+        </div>
+      )}
     </div>
   );
 }
@@ -475,6 +534,65 @@ function ThreadMessageItem({
             <span className="font-bold block">Aviso de seguridad</span>
             <span>{phishingRisk.reason}</span>
           </div>
+        </div>
+      )}
+
+      {/* Self-destruct banner (Feature 32) */}
+      {msg.selfDestruct?.isBurned ? (
+        <div className="mx-5 p-3 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive flex items-center gap-2.5 text-xs font-semibold">
+          <Flame className="h-4 w-4 shrink-0 text-destructive animate-pulse" />
+          <span>Este mensaje ha sido autodestruido de forma permanente. Su contenido y archivos adjuntos han sido eliminados del servidor.</span>
+        </div>
+      ) : msg.selfDestruct?.enabled ? (
+        <div className="mx-5 p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-900 dark:text-rose-200 flex items-center justify-between text-xs gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Flame className="h-4 w-4 text-rose-500 shrink-0" />
+            <span className="font-semibold text-[11px]">Mensaje autodestructible:</span>
+            {typeof msg.selfDestruct.maxViews === 'number' && (
+              <span className="text-[11px] bg-background/80 px-2 py-0.5 rounded-md border border-rose-500/20 font-mono">
+                Visualizaciones: {msg.selfDestruct.viewCount || 1} / {msg.selfDestruct.maxViews}
+              </span>
+            )}
+            {msg.selfDestruct.expiresAt && (
+              <span className="text-[11px] flex items-center gap-1 bg-background/80 px-2 py-0.5 rounded-md border border-rose-500/20">
+                <Timer className="h-3 w-3" />
+                Expira: {new Date(msg.selfDestruct.expiresAt).toLocaleString('es-ES', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Unsubscribe banner (Feature 13) */}
+      {msg.unsubscribeInfo?.hasUnsubscribe && (
+        <div className="mx-5 p-2.5 rounded-xl border border-primary/20 bg-primary/5 flex items-center justify-between text-xs gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-foreground">
+            <Ban className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-[11px]">
+              Este mensaje incluye una opción para cancelar la suscripción.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (msg.unsubscribeInfo?.url) {
+                const confirmed = await showConfirm(
+                  '¿Deseas darte de baja de esta lista de correo? Se abrirá el enlace oficial de desuscripción.',
+                  { title: 'Cancelar suscripción', confirmText: 'Abrir enlace', cancelText: 'Cancelar' }
+                );
+                if (confirmed) {
+                  window.open(msg.unsubscribeInfo.url, '_blank', 'noopener,noreferrer');
+                }
+              } else if (msg.unsubscribeInfo?.mailto) {
+                window.location.href = msg.unsubscribeInfo.mailto;
+              }
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-background border border-border text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
+          >
+            <Ban className="h-3 w-3 text-destructive" />
+            <span>Cancelar suscripción</span>
+          </button>
         </div>
       )}
 
@@ -949,6 +1067,49 @@ export default function EmailReader({
     }
   };
 
+  // Share Email Modal (Feature 43)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareExpiresInDays, setShareExpiresInDays] = useState<number>(7);
+  const [sharePassword, setSharePassword] = useState('');
+  const [shareHideSensitive, setShareHideSensitive] = useState(true);
+  const [shareAllowAttachments, setShareAllowAttachments] = useState(true);
+  const [shareGenerating, setShareGenerating] = useState(false);
+  const [shareResult, setShareResult] = useState<{ url: string; token: string; expiresAt?: string | null } | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleGenerateShareLink = async () => {
+    if (!email) return;
+    setShareGenerating(true);
+    try {
+      const res = await fetch('/api/emails/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailId: email._id,
+          expiresInDays: shareExpiresInDays > 0 ? shareExpiresInDays : null,
+          password: sharePassword.trim() || undefined,
+          hideSensitive: shareHideSensitive,
+          allowAttachments: shareAllowAttachments,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const fullUrl = `${window.location.origin}${data.shareUrl}`;
+        setShareResult({
+          url: fullUrl,
+          token: data.token,
+          expiresAt: data.expiresAt,
+        });
+      } else {
+        showAlert(data.error || 'Error al generar el enlace', { type: 'error' });
+      }
+    } catch {
+      showAlert('Error de red al crear el enlace', { type: 'error' });
+    } finally {
+      setShareGenerating(false);
+    }
+  };
+
   if (!email) {
     return (
       <div className="flex-1 h-full flex flex-col items-center justify-center p-8 text-center select-none bg-background">
@@ -1081,6 +1242,22 @@ export default function EmailReader({
           >
             <FileDown className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="hidden 2xl:inline">Exportar</span>
+          </button>
+
+          {/* Share public link button (Feature 43) */}
+          <button
+            id="btn-share"
+            type="button"
+            onClick={() => {
+              setShareResult(null);
+              setShareCopied(false);
+              setIsShareModalOpen(true);
+            }}
+            title="Compartir correo públicamente con enlace"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 2xl:px-3 rounded-full text-xs border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer shrink-0"
+          >
+            <Share2 className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="hidden 2xl:inline">Compartir</span>
           </button>
 
           {/* Block / Unblock sender button */}
@@ -1417,6 +1594,191 @@ export default function EmailReader({
           </div>
         </div>
       </div>
+
+      {/* Share Email Modal (Feature 43) */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs animate-fadeIn">
+          <div className="fixed inset-0" onClick={() => setIsShareModalOpen(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl z-10 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2 text-foreground font-bold text-sm">
+                <Share2 className="h-4 w-4 text-primary" />
+                <span>Compartir correo públicamente</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {shareResult ? (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-xs flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block">¡Enlace generado con éxito!</span>
+                    <span className="text-[11px]">Cualquier persona con el enlace podrá leer este correo de forma segura.</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    URL pública compartida:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={shareResult.url}
+                      className="flex-1 rounded-xl px-3 py-2 text-xs bg-muted border border-border text-foreground font-mono focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(shareResult.url);
+                        setShareCopied(true);
+                        setTimeout(() => setShareCopied(false), 2500);
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      {shareCopied ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" />
+                          <span>Copiado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          <span>Copiar</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {shareResult.expiresAt && (
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Timer className="h-3 w-3" />
+                    El enlace expirará el {new Date(shareResult.expiresAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}.
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShareResult(null);
+                      setShareCopied(false);
+                    }}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+                  >
+                    Crear otro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsShareModalOpen(false)}
+                    className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-colors cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Genera un enlace público seguro para compartir una vista de solo lectura de este correo sin dar acceso a tu cuenta.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    Duración del enlace:
+                  </label>
+                  <select
+                    value={shareExpiresInDays}
+                    onChange={(e) => setShareExpiresInDays(Number(e.target.value))}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  >
+                    <option value={1}>1 día</option>
+                    <option value={7}>7 días (Recomendado)</option>
+                    <option value={30}>30 días</option>
+                    <option value={0}>Permanente (Sin expiración)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                      Contraseña de acceso (Opcional):
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-normal">Cifrado scrypt</span>
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Dejar en blanco para acceso público"
+                    value={sharePassword}
+                    onChange={(e) => setSharePassword(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="space-y-2 pt-1 border-t border-border/60">
+                  <label className="flex items-center gap-2.5 text-xs text-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={shareHideSensitive}
+                      onChange={(e) => setShareHideSensitive(e.target.checked)}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                    <span>Ocultar destinatarios (To, CC, BCC) por privacidad</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 text-xs text-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={shareAllowAttachments}
+                      onChange={(e) => setShareAllowAttachments(e.target.checked)}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                    <span>Permitir descarga de archivos adjuntos</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setIsShareModalOpen(false)}
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={shareGenerating}
+                    onClick={handleGenerateShareLink}
+                    className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    {shareGenerating ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Generando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="h-3.5 w-3.5" />
+                        <span>Crear enlace</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
