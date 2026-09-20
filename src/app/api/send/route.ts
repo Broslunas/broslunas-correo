@@ -309,7 +309,111 @@ export async function POST(request: NextRequest) {
       ...pastedImageAttachments
     ];
 
-    // 5. Assemble Mailjet payload using the dynamically validated sender
+    // 5. Handle self-destruct email generation if enabled
+    let outgoingText = bodyText || '';
+    let outgoingHtml = processedBodyHtml || bodyText || '';
+    let outgoingAttachments = combinedMailjetAttachments;
+    let burnToken: string | undefined;
+
+    if (selfDestruct?.enabled) {
+      burnToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+      const proto = request.headers.get('x-forwarded-proto') || 'https';
+      const host = request.headers.get('host') || 'localhost:3000';
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
+      const burnUrl = `${baseUrl}/burn/${burnToken}`;
+
+      const maxViews = typeof selfDestruct.maxViews === 'number' ? selfDestruct.maxViews : null;
+      const expiresAt = selfDestruct.expiresAt ? new Date(selfDestruct.expiresAt) : null;
+
+      // Save confidential payload in self_destruct_emails collection
+      await db.collection('self_destruct_emails').insertOne({
+        token: burnToken,
+        senderEmail: cleanFrom,
+        senderName: fromName,
+        recipients: to,
+        cc: cc || [],
+        bcc: bcc || [],
+        subject: subject || '(Sin Asunto)',
+        bodyText: bodyText || '',
+        bodyHtml: processedBodyHtml || bodyText || '',
+        attachments: combinedDbAttachments,
+        maxViews,
+        expiresAt,
+        viewCount: 0,
+        isBurned: false,
+        createdAt: new Date(),
+      });
+
+      const maxViewsLabel = maxViews ? `${maxViews} visualización(es)` : 'Ilimitadas hasta expiración';
+      const expiresLabel = expiresAt ? expiresAt.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }) : 'Sin fecha límite';
+
+      // Prepare simple HTML notification email with button and prior warning notice
+      outgoingText = `Hola,\n\n${fromName} (${cleanFrom}) te ha enviado un mensaje confidencial autodestructible.\n\nAsunto: ${subject || '(Sin Asunto)'}\nCondición: Se destruirá tras ${maxViewsLabel}.\nFecha límite: ${expiresLabel}\n\nPuedes ver el contenido confidencial en el siguiente enlace seguro (se te mostrará una pantalla de confirmación antes de revelarlo):\n${burnUrl}\n\nEste enlace es privado e intransferible.`;
+
+      outgoingHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mensaje Confidencial Autodestructible</title>
+</head>
+<body style="margin:0;padding:24px;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <div style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+    <div style="background:linear-gradient(135deg,#e11d48,#be123c);padding:26px 28px;text-align:center;color:#ffffff;">
+      <div style="display:inline-block;background:rgba(255,255,255,0.2);padding:10px 12px;border-radius:12px;margin-bottom:8px;font-size:22px;">
+        🔥
+      </div>
+      <h2 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-0.02em;">Mensaje Confidencial Autodestructible</h2>
+      <p style="margin:4px 0 0;font-size:12px;opacity:0.9;">Broslunas Correo Seguro</p>
+    </div>
+    <div style="padding:28px;">
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#334155;">
+        <strong>${fromName}</strong> (${cleanFrom}) te ha enviado un correo con autodestrucción programada. Por motivos de privacidad y seguridad, el contenido no se incluye en este email.
+      </p>
+
+      <div style="background:#f1f5f9;border-radius:12px;padding:16px;margin-bottom:24px;border:1px solid #e2e8f0;">
+        <table style="width:100%;font-size:13px;color:#475569;border-collapse:collapse;">
+          <tr>
+            <td style="padding:5px 0;font-weight:600;color:#0f172a;width:130px;">Asunto:</td>
+            <td style="padding:5px 0;color:#0f172a;font-weight:500;">${subject || '(Sin Asunto)'}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;font-weight:600;color:#0f172a;">Autodestrucción:</td>
+            <td style="padding:5px 0;">Tras ${maxViewsLabel}</td>
+          </tr>
+          ${expiresAt ? `
+          <tr>
+            <td style="padding:5px 0;font-weight:600;color:#0f172a;">Fecha límite:</td>
+            <td style="padding:5px 0;">${expiresLabel}</td>
+          </tr>` : ''}
+        </table>
+      </div>
+
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${burnUrl}" style="display:inline-block;background:#e11d48;color:#ffffff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;box-shadow:0 3px 6px rgba(225,29,72,0.3);">
+          Ver contenido confidencial &rarr;
+        </a>
+      </div>
+
+      <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:10px;padding:12px;margin-bottom:20px;">
+        <p style="margin:0;font-size:11px;color:#92400e;line-height:1.5;">
+          ⚠️ <strong>Aviso previo:</strong> Al pulsar el botón accederás a una pantalla previa donde podrás confirmar la lectura antes de que se contabilice la visualización y se consuma el mensaje.
+        </p>
+      </div>
+
+      <p style="margin:0;font-size:11px;color:#94a3b8;word-break:break-all;line-height:1.4;">
+        Enlace directo:<br />
+        <a href="${burnUrl}" style="color:#e11d48;">${burnUrl}</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      outgoingAttachments = [];
+    }
+
+    // 6. Assemble Mailjet payload using the dynamically validated sender
     const threadHeaders: Record<string, string> = {};
     if (inReplyTo) threadHeaders['In-Reply-To'] = inReplyTo;
     if (references) threadHeaders['References'] = references;
@@ -325,15 +429,15 @@ export async function POST(request: NextRequest) {
           Cc: mailjetCc.length > 0 ? mailjetCc : undefined,
           Bcc: mailjetBcc.length > 0 ? mailjetBcc : undefined,
           Subject: subject || '(Sin Asunto)',
-          TextPart: bodyText || '',
-          HTMLPart: processedBodyHtml || bodyText || '',
-          Attachments: combinedMailjetAttachments.length > 0 ? combinedMailjetAttachments : undefined,
+          TextPart: outgoingText,
+          HTMLPart: outgoingHtml,
+          Attachments: outgoingAttachments.length > 0 ? outgoingAttachments : undefined,
           ...(Object.keys(threadHeaders).length > 0 ? { Headers: threadHeaders } : {})
         }
       ]
     };
 
-    // 6. Invoke Mailjet Send API v3.1 using HTTP fetch
+    // 7. Invoke Mailjet Send API v3.1 using HTTP fetch
     const authString = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
     const response = await fetch('https://api.mailjet.com/v3.1/send', {
       method: 'POST',
@@ -356,7 +460,7 @@ export async function POST(request: NextRequest) {
     const responseData = await response.json();
     const mailjetMessageId = responseData.Messages?.[0]?.To?.[0]?.MessageID || `sent-${crypto.randomUUID()}`;
 
-    // 7. Resolve thread ID for conversation continuity
+    // 8. Resolve thread ID for conversation continuity
     const threadId = await resolveThreadId(db, {
       messageId: String(mailjetMessageId),
       inReplyTo: inReplyTo || undefined,
@@ -364,7 +468,7 @@ export async function POST(request: NextRequest) {
       subject: subject || '',
     });
 
-    // 8. Store copy in MongoDB 'sent' folder
+    // 9. Store copy in MongoDB 'sent' folder
     const sentEmailDocument: Record<string, any> = {
       from: {
         name: fromName,
@@ -377,8 +481,8 @@ export async function POST(request: NextRequest) {
       normalizedSubject: normalizeSubject(subject || ''),
       date: new Date(),
       body: {
-        text: bodyText || '',
-        html: processedBodyHtml || bodyText || ''
+        text: outgoingText,
+        html: outgoingHtml,
       },
       attachments: combinedDbAttachments,
       folder: 'sent',
@@ -388,6 +492,7 @@ export async function POST(request: NextRequest) {
       ...(selfDestruct?.enabled ? {
         selfDestruct: {
           enabled: true,
+          token: burnToken,
           expiresAt: selfDestruct.expiresAt ? new Date(selfDestruct.expiresAt) : null,
           maxViews: typeof selfDestruct.maxViews === 'number' ? selfDestruct.maxViews : null,
           viewCount: 0,

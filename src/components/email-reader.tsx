@@ -81,6 +81,7 @@ interface Email {
   };
   selfDestruct?: {
     enabled: boolean;
+    token?: string;
     expiresAt?: string | null;
     maxViews?: number | null;
     viewCount?: number;
@@ -558,6 +559,17 @@ function ThreadMessageItem({
                 <Timer className="h-3 w-3" />
                 Expira: {new Date(msg.selfDestruct.expiresAt).toLocaleString('es-ES', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </span>
+            )}
+            {msg.selfDestruct.token && (
+              <a
+                href={`/burn/${msg.selfDestruct.token}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-rose-700 dark:text-rose-300 hover:underline flex items-center gap-1 shrink-0 ml-auto"
+              >
+                <span>Ver página de autodestrucción</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
             )}
           </div>
         </div>
